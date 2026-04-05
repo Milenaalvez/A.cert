@@ -1,0 +1,61 @@
+/* Variáveis globais */
+:root { 
+    --purple: #db44db;
+    --white: #ffffff;
+    --black: #070000;
+
+    /* Tema padrão */
+    --bg: var(--white);
+    --fontColor: var(--black);
+}
+
+/* Tema claro */
+.light-theme {
+    --bg: var(--purple);
+    --fontColor: var(--black);
+}
+
+/* Tema escuro */
+.dark-theme {
+    --bg: var(--black);
+    --fontColor: var(--purple);
+}
+
+/* O seletor ''*'' é universal e se aplica a todos os elementos da página 
+(exceto quando um seletor de elemento mais específico o substitui).*/
+/* Reset básico */
+
+* {
+    color: var(--fontColor);
+    font-family: Helvetica;
+}
+
+/* Corpo */
+body {
+    background: var(--bg);
+}
+
+/* Texto específico */
+#msg {
+    font-family: monospace;
+}
+
+/* Listas */
+ul li {
+    list-style: circle;
+    font-family: monospace;
+}
+
+ol li {
+    list-style: decimal;
+}
+
+h1 {
+    color: #d830c2;
+}
+
+.container {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+}
