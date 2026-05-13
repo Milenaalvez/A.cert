@@ -38,6 +38,7 @@ const toolData = [
   { nome: "AWS", icon: FaAws, descricao: "Plataforma de serviços em nuvem para hospedagem, armazenamento e computação.", descricaoLonga: "Amazon Web Services é a plataforma de nuvem mais abrangente do mundo, oferecendo mais de 200 serviços de infraestrutura, armazenamento, computação e inteligência artificial. Essencial para deploy, escalabilidade e gerenciamento de aplicações modernas.", nivel: 40, subtitulo: "Plataforma Cloud", tipo: "Cloud Computing", linguagem: "N/A", lancamento: "2006", desenvolvedor: "Amazon", features: ["EC2", "S3", "Lambda", "RDS", "DynamoDB", "CloudFront"], usadoEm: ["Deploy", "Armazenamento", "Serverless", "Infraestrutura"] },
 ];
 
+const base = import.meta.env.BASE_URL;
 const techId = (name: string) => `hud-${name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}`;
 
 function App() {
@@ -107,9 +108,7 @@ function App() {
         >
 
           {/* LOGO */}
-          <h2 className="cyber-nav-logo">
-            Milena OL.
-          </h2>
+          <img src={`${base}logotipo.png`} alt="Milena" className="h-10 md:h-12 w-auto" />
 
           {/* LINKS */}
           <div className="hidden md:flex items-center gap-14">
@@ -132,7 +131,6 @@ function App() {
         </div>
 
       </nav>
-é so 
       {/* GLOW */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#7C3AED] opacity-15 blur-[200px]" />
       <div className="absolute top-[200px] right-0 w-[400px] h-[400px] bg-[#FF1493] opacity-10 blur-[180px]" />
@@ -186,7 +184,7 @@ function App() {
         {/* BOTÕES */}
         <div className="flex items-center gap-3">
           <a
-            href="https://www.linkedin.com/in/milenaalvez/"
+            href="https://www.linkedin.com/in/milena-de-oliveira-alves-6b04052a6"
             target="_blank"
             rel="noopener noreferrer"
             className="hero-btn-primary w-[170px] h-[53px] rounded-[10px] flex items-center justify-center"
@@ -285,7 +283,7 @@ function App() {
               <span className="foto-tech-label">IDENTIFICAÇÃO::AGENTE</span>
               <span className="foto-tech-label-right">HUD::ATIVO</span>
 
-              <img src="/milena.jpeg" alt="Milena Oliveira Alves" className="foto-milena-img" />
+              <img src={`${base}milena.jpeg`} alt="Milena Oliveira Alves" className="foto-milena-img" />
 
               <div className="foto-grid-overlay" />
 
@@ -523,7 +521,7 @@ function App() {
           {[
             {
               titulo: "Netflix Cover",
-              imagem: "/netflix-cover.png",
+              imagem: `${base}netflix-cover.png`,
               imgPosition: "top",
               descricao: "Sistema inspirado na interface da Netflix desenvolvido com HTML, CSS e JavaScript com o objetivo de proporcionar ao usuário uma experiência visual semelhante à de uma plataforma de streaming. O projeto utiliza responsividade, organização de layout e estilização moderna, além de praticar manipulação de elementos e estruturação de interfaces front-end.",
               tags: ["HTML", "JavaScript", "CSS"],
@@ -532,7 +530,7 @@ function App() {
             },
             {
               titulo: "Banco de Horas",
-              imagem: "/banco-de-horas.png",
+              imagem: `${base}banco-de-horas.png`,
               imgPosition: "10px center",
               descricao: "Sistema web de banco de horas desenvolvido com HTML, CSS e JavaScript com o objetivo de proporcionar ao usuário uma forma prática de registrar horários e acompanhar o saldo de horas trabalhadas. O projeto utiliza manipulação do DOM, lógica de programação e atualização dinâmica de dados, além de praticar responsividade e estruturação de interfaces front-end.",
               tags: ["HTML", "JavaScript", "CSS"],
@@ -541,12 +539,12 @@ function App() {
             },
             {
               titulo: "Portfólio",
-              imagem: "/portfolio-novo.png",
+              imagem: `${base}portfolio-novo.png`,
               imgPosition: "center",
               descricao: "Portfólio web desenvolvido com HTML, CSS, JavaScript e React com o objetivo de apresentar projetos, habilidades e informações profissionais de forma moderna e organizada. O projeto utiliza responsividade, componentização e estilização personalizada para proporcionar ao usuário uma navegação intuitiva e uma melhor visualização dos conteúdos e tecnologias utilizadas.",
               tags: ["React", "JavaScript", "Tailwind CSS"],
-              linkProjeto: "",
-              linkGitHub: "",
+              linkProjeto: "https://milenaalvez.github.io/milena-portfolio/#about",
+              linkGitHub: "https://github.com/Milenaalvez/milena-portfolio",
             },
           ].map((projeto) => (
             <div
@@ -619,15 +617,16 @@ function App() {
         <h2
           className="
             w-full md:w-[1152px]
-            text-white
-            text-[28px] md:text-[32px]
-            font-semibold
+            text-[#F0E6FF]
+            text-[28px] md:text-[42px]
+            font-bold
             tracking-[-2px]
             text-center
             font-['Hanken_Grotesk',sans-serif]
             relative
             z-10
           "
+          style={{ textShadow: '0 0 30px rgba(255,20,147,0.15)' }}
         >
           Ferramentas
         </h2>
@@ -896,7 +895,7 @@ function App() {
           <div className="flex items-center gap-6 flex-wrap justify-center">
             <a href="https://github.com/Milenaalvez" target="_blank" rel="noopener noreferrer" className="contact-footer-link">GitHub</a>
             <a href="https://www.behance.net/milenaalves39" target="_blank" rel="noopener noreferrer" className="contact-footer-link">Behance</a>
-            <a href="https://www.linkedin.com/in/milenaalvez/" target="_blank" rel="noopener noreferrer" className="contact-footer-link">LinkedIn</a>
+            <a href="https://www.linkedin.com/in/milena-de-oliveira-alves-6b04052a6" target="_blank" rel="noopener noreferrer" className="contact-footer-link">LinkedIn</a>
             <a href="https://mail.google.com/mail/?view=cm&fs=1&to=milenayor020@gmail.com" target="_blank" rel="noopener noreferrer" className="contact-footer-link">Email</a>
           </div>
 
