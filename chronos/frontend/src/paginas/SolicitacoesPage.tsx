@@ -79,12 +79,25 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const isManager = canAccess(user, "manage_tickets")
+  const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const listPollRef = useRef<ReturnType<typeof setInterval>>()
+  const messageCountRef = useRef(0)
 
   useEffect(() => {
     setLoading(true)
     apiTickets.list(viewMode === "resolver" ? { assignedToMe: true } : undefined).then((data) => {
       setTickets(Array.isArray(data) ? data : [])
     }).catch(() => {}).finally(() => setLoading(false))
+
+    listPollRef.current = setInterval(() => {
+      apiTickets.list(viewMode === "resolver" ? { assignedToMe: true } : undefined).then((data) => {
+        if (Array.isArray(data)) setTickets(data)
+      }).catch(() => {})
+    }, 10000)
+
+    return () => {
+      clearInterval(listPollRef.current)
+    }
   }, [viewMode])
 
   useEffect(() => {
@@ -106,9 +119,27 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
     setDetailLoading(true)
     apiTickets.getById(selectedId).then((data) => {
       setDetailTicket(data)
+      messageCountRef.current = data?.messages?.length || 0
     }).catch(() => {
       setDetailTicket(null)
     }).finally(() => setDetailLoading(false))
+
+    pollRef.current = setInterval(() => {
+      apiTickets.getById(selectedId).then((data) => {
+        if (!data) return
+        setDetailTicket(prev => {
+          const newCount = data.messages?.length || 0
+          const oldCount = prev?.messages?.length || 0
+          if (newCount <= oldCount) return prev
+          return data
+        })
+        messageCountRef.current = data.messages?.length || 0
+      }).catch(() => {})
+    }, 3000)
+
+    return () => {
+      clearInterval(pollRef.current)
+    }
   }, [selectedId])
 
   const filteredTickets = useMemo(() => {
