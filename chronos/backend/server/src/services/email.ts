@@ -36,15 +36,7 @@ async function send(to: string, subject: string, html: string) {
 
 function bannerTop() {
   const imgUrl = 'https://xwitkwbymmucultysyox.supabase.co/storage/v1/object/public/branding/banner%20chronos.png'
-  return `
-    <!--[if !mso]><!-->
-    <img src="${imgUrl}" alt="Chronos" style="width:100%;display:block;max-width:700px;" onerror="this.style.display='none'">
-    <!--<![endif]-->
-    <div style="background:#071A3D;padding:20px;text-align:center;mso-hide:all;">
-      <h1 style="margin:0;color:#ffffff;font-size:24px;letter-spacing:2px;">CHRONOS</h1>
-      <p style="margin:4px 0 0;color:#94A3B8;font-size:13px;">Gestão de Pessoas</p>
-    </div>`
-}
+  return `<img src="${imgUrl}" alt="Chronos" style="width:100%;display:block;max-width:700px;">`
 
 function bannerBottom() {
   const imgUrl = 'https://xwitkwbymmucultysyox.supabase.co/storage/v1/object/public/branding/banner%20final%20do%20email.png'

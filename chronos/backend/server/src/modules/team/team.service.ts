@@ -348,7 +348,7 @@ export async function getMetrics(companyId: string, actorId?: string) {
   const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999)
 
   const [total, active, inactive, verified, justifications, todayRecords, hiresThisMonth, deactivationsThisMonth, hiresPrevMonth, deactivationsPrevMonth] = await Promise.all([
-    prisma.user.count({ where: whereCompany }),
+    prisma.user.count({ where: { ...whereCompany, isActive: true } }),
     prisma.user.count({ where: { ...whereCompany, isActive: true } }),
     prisma.user.count({ where: { ...whereCompany, isActive: false } }),
     prisma.user.count({ where: { ...whereCompany, emailVerified: true } }),

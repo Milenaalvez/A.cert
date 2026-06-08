@@ -74,7 +74,7 @@ export async function getConsolidated(
     const daysWithRecord = new Set(userRecords.filter(r => r.clockIn).map(r => r.date.toISOString().split('T')[0]))
     const totalMins = userRecords.reduce((s, r) => s + (r.totalMinutes || 0), 0)
     const extraMins = userRecords.reduce((s, r) => s + (r.overtimeMinutes || 0), 0)
-    const expectedMins = user.weeklyHours / 5 * weekdayCount * 60
+    const expectedMins = (user.weeklyHours || 40) / 5 * weekdayCount * 60
     const balanceMins = totalMins - expectedMins
     const absences = weekdayCount - daysWithRecord.size
     const lates = userRecords.filter(r => r.status === 'ABSENCE').length

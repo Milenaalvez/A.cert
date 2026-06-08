@@ -226,11 +226,18 @@ export async function addTicketMessage(
     })
   }
 
+  const updateData: any = {}
+  if (isManager && !ticket.assignedTo) {
+    updateData.assignedTo = userId
+  }
   if (ticket.status === 'AGUARDANDO_RESPOSTA' && isManager) {
-    await prisma.ticket.update({ where: { id: ticketId }, data: { status: 'EM_ANALISE' } })
+    updateData.status = 'EM_ANALISE'
   }
   if (ticket.status === 'EM_ANALISE' && !isManager) {
-    await prisma.ticket.update({ where: { id: ticketId }, data: { status: 'AGUARDANDO_RESPOSTA' } })
+    updateData.status = 'AGUARDANDO_RESPOSTA'
+  }
+  if (Object.keys(updateData).length > 0) {
+    await prisma.ticket.update({ where: { id: ticketId }, data: updateData })
   }
 
   const notifyUserId = isManager ? ticket.userId : (ticket.assignedTo || ticket.userId)
@@ -253,7 +260,13 @@ export async function addTicketMessage(
     },
   }).catch(() => {})
 
-  return msg
+  return {
+    message: msg,
+    assignee: isManager && !ticket.assignedTo
+      ? { id: userId, name: msg.user.name, avatar: msg.user.avatar, role: msg.user.role }
+      : null,
+    status: updateData.status || null,
+  }
 }
 
 export async function assignTicket(ticketId: string, userId: string, companyId: string) {
@@ -353,18 +366,16 @@ export async function updateTicketStatus(
     link: `/solicitacoes/${ticketId}`,
   }).catch(() => {})
 
-  if (status === 'RESOLVIDO' || status === 'ENCERRADO') {
-    const { sendTicketUpdateEmail } = await import('../../services/email.js')
-    sendTicketUpdateEmail(
-      ticket.user.email,
-      ticket.user.name,
-      ticket.protocol,
-      ticket.title,
-      status,
-      message,
-      ticketId,
-    ).catch(() => {})
-  }
+  const { sendTicketUpdateEmail } = await import('../../services/email.js')
+  sendTicketUpdateEmail(
+    ticket.user.email,
+    ticket.user.name,
+    ticket.protocol,
+    ticket.title,
+    status,
+    message,
+    ticketId,
+  ).catch(() => {})
 
   prisma.activityLog.create({
     data: {

@@ -157,13 +157,16 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
     if (!messageInput.trim() || !selectedId || sending) return
     setSending(true)
     try {
-      const updated = await apiTickets.addMessage(selectedId, messageInput.trim(), messageFile || undefined)
+      const result = await apiTickets.addMessage(selectedId, messageInput.trim(), messageFile || undefined)
       setMessageInput("")
       setMessageFile(null)
+      const msg = result.message
       setDetailTicket(prev => prev ? {
         ...prev,
-        messages: [...prev.messages, updated],
-        status: updated.status || prev.status,
+        messages: [...prev.messages, msg],
+        status: result.status || prev.status,
+        assignee: result.assignee || prev.assignee,
+        assignedTo: result.assignee?.id || prev.assignedTo,
       } : prev)
       setTickets(prev => prev.map(t => t.id === selectedId ? { ...t, _count: { ...t._count!, messages: (t._count?.messages || 0) + 1 } } : t))
     } catch (err: any) {
@@ -449,9 +452,9 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
 
               {/* Reply + actions */}
               <div className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4">
-                {isManager && detailTicket.status !== "ENCERRADO" && detailTicket.status !== "RESOLVIDO" && (
+                {isManager && (
                   <div className="flex items-center gap-2 mb-3">
-                    {detailTicket.assignedTo !== user?.id && (
+                    {detailTicket.assignedTo !== user?.id && detailTicket.status !== "ENCERRADO" && detailTicket.status !== "RESOLVIDO" && (
                       <button
                         onClick={handleAssign}
                         disabled={assigning}
@@ -461,61 +464,79 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                         {assigning ? "Atribuindo..." : "Pegar solicitação"}
                       </button>
                     )}
-                    {["RESOLVIDO", "ENCERRADO"].map(s => (
+                    {detailTicket.status !== "RESOLVIDO" && detailTicket.status !== "ENCERRADO" && (
                       <button
-                        key={s}
-                        onClick={() => handleStatusChange(s as TicketStatus, undefined)}
-                        className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-                          s === "RESOLVIDO"
-                            ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                            : "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"
-                        }`}
+                        onClick={() => handleStatusChange("RESOLVIDO", undefined)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                       >
-                        {s === "RESOLVIDO" ? "✓ Resolver" : "✕ Encerrar"}
+                        ✓ Resolver
                       </button>
-                    ))}
+                    )}
+                    {detailTicket.status !== "ENCERRADO" && (
+                      <button
+                        onClick={() => handleStatusChange("ENCERRADO", undefined)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 transition-colors"
+                      >
+                        ✕ Encerrar
+                      </button>
+                    )}
+                    {(detailTicket.status === "RESOLVIDO" || detailTicket.status === "ENCERRADO") && (
+                      <button
+                        onClick={() => handleStatusChange("ABERTO", "Reaberto")}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                      >
+                        ↺ Reabrir chamado
+                      </button>
+                    )}
                   </div>
                 )}
 
-                <div className="flex items-end gap-2">
-                  <div className="flex-1 relative">
-                    <textarea
-                      value={messageInput}
-                      onChange={e => setMessageInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSendMessage()
-                        }
-                      }}
-                      placeholder="Digite sua mensagem..."
-                      rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[13px] text-[#F0F3FA] placeholder-[#F0F3FA]/30 outline-none focus:border-[var(--accent-primary)]/40 transition-colors resize-none"
-                    />
-                    {messageFile && (
-                      <div className="flex items-center gap-2 mt-2 px-1">
-                        <Paperclip size={12} className="text-[var(--accent-primary)]" />
-                        <span className="text-[11px] text-[#F0F3FA]/60 truncate flex-1">{messageFile.name}</span>
-                        <button onClick={() => setMessageFile(null)} className="text-[#F0F3FA]/30 hover:text-red-400 transition-colors">
-                          <X size={12} />
-                        </button>
-                      </div>
-                    )}
+                {detailTicket.status !== "ENCERRADO" && (
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={messageInput}
+                        onChange={e => setMessageInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSendMessage()
+                          }
+                        }}
+                        placeholder="Digite sua mensagem..."
+                        rows={2}
+                        className="w-full px-3 py-2.5 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[13px] text-[#F0F3FA] placeholder-[#F0F3FA]/30 outline-none focus:border-[var(--accent-primary)]/40 transition-colors resize-none"
+                      />
+                      {messageFile && (
+                        <div className="flex items-center gap-2 mt-2 px-1">
+                          <Paperclip size={12} className="text-[var(--accent-primary)]" />
+                          <span className="text-[11px] text-[#F0F3FA]/60 truncate flex-1">{messageFile.name}</span>
+                          <button onClick={() => setMessageFile(null)} className="text-[#F0F3FA]/30 hover:text-red-400 transition-colors">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <label className="w-9 h-9 rounded-lg flex items-center justify-center text-[#F0F3FA]/40 hover:text-[#F0F3FA]/70 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                        <Paperclip size={16} />
+                        <input type="file" className="hidden" onChange={e => setMessageFile(e.target.files?.[0] || null)} />
+                      </label>
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!messageInput.trim() || sending}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--accent-primary)] text-white disabled:opacity-30 hover:brightness-110 transition-all"
+                      >
+                        {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <label className="w-9 h-9 rounded-lg flex items-center justify-center text-[#F0F3FA]/40 hover:text-[#F0F3FA]/70 hover:bg-white/[0.06] transition-colors cursor-pointer">
-                      <Paperclip size={16} />
-                      <input type="file" className="hidden" onChange={e => setMessageFile(e.target.files?.[0] || null)} />
-                    </label>
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!messageInput.trim() || sending}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--accent-primary)] text-white disabled:opacity-30 hover:brightness-110 transition-all"
-                    >
-                      {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                    </button>
+                )}
+                {detailTicket.status === "ENCERRADO" && (
+                  <div className="text-center text-[13px] text-[#F0F3FA]/30 py-2">
+                    Solicitação encerrada. Reabra para enviar mensagens.
                   </div>
-                </div>
+                )}
               </div>
             </>
           ) : (
