@@ -81,7 +81,6 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
   const isManager = canAccess(user, "manage_tickets")
   const pollRef = useRef<ReturnType<typeof setInterval>>()
   const listPollRef = useRef<ReturnType<typeof setInterval>>()
-  const messageCountRef = useRef(0)
 
   useEffect(() => {
     setLoading(true)
@@ -119,7 +118,6 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
     setDetailLoading(true)
     apiTickets.getById(selectedId).then((data) => {
       setDetailTicket(data)
-      messageCountRef.current = data?.messages?.length || 0
     }).catch(() => {
       setDetailTicket(null)
     }).finally(() => setDetailLoading(false))
@@ -128,14 +126,14 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
       apiTickets.getById(selectedId).then((data) => {
         if (!data) return
         setDetailTicket(prev => {
-          const newCount = data.messages?.length || 0
-          const oldCount = prev?.messages?.length || 0
-          if (newCount <= oldCount) return prev
+          if (!prev) return data
+          const prevIds = new Set(prev.messages?.map(m => m.id) || [])
+          const hasNew = data.messages?.some(m => !prevIds.has(m.id))
+          if (!hasNew) return prev
           return data
         })
-        messageCountRef.current = data.messages?.length || 0
       }).catch(() => {})
-    }, 3000)
+    }, 1500)
 
     return () => {
       clearInterval(pollRef.current)
@@ -186,21 +184,42 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
 
   async function handleSendMessage() {
     if (!messageInput.trim() || !selectedId || sending) return
+    const text = messageInput.trim()
+    const file = messageFile || undefined
+    setMessageInput("")
+    setMessageFile(null)
     setSending(true)
+
+    const tempId = `temp-${Date.now()}`
+    const tempMsg = {
+      id: tempId,
+      ticketId: selectedId,
+      userId: user?.id || '',
+      message: text,
+      createdAt: new Date().toISOString(),
+      user: { id: user?.id || '', name: user?.name || 'Você', avatar: user?.avatar || null, role: user?.role || 'EMPLOYEE' },
+    }
+    setDetailTicket(prev => prev ? {
+      ...prev,
+      messages: [...prev.messages, tempMsg],
+    } : prev)
+
     try {
-      const result = await apiTickets.addMessage(selectedId, messageInput.trim(), messageFile || undefined)
-      setMessageInput("")
-      setMessageFile(null)
+      const result = await apiTickets.addMessage(selectedId, text, file)
       const msg = result.message
       setDetailTicket(prev => prev ? {
         ...prev,
-        messages: [...prev.messages, msg],
+        messages: prev.messages.map(m => m.id === tempId ? msg : m),
         status: result.status || prev.status,
         assignee: result.assignee || prev.assignee,
         assignedTo: result.assignee?.id || prev.assignedTo,
       } : prev)
       setTickets(prev => prev.map(t => t.id === selectedId ? { ...t, _count: { ...t._count!, messages: (t._count?.messages || 0) + 1 }, assignee: result.assignee || t.assignee, status: result.status || t.status } : t))
     } catch (err: any) {
+      setDetailTicket(prev => prev ? {
+        ...prev,
+        messages: prev.messages.filter(m => m.id !== tempId),
+      } : prev)
       setError(err.message)
     } finally {
       setSending(false)
