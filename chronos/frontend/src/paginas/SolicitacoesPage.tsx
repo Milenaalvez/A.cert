@@ -270,7 +270,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                 <ChevronDown size={12} />
               </button>
               {showFilterMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[var(--sidebar-bg)] shadow-xl overflow-hidden z-10">
+                <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[var(--sidebar-bg)] shadow-xl overflow-hidden z-40">
                   <button onClick={() => { setFilterStatus("ALL"); setShowFilterMenu(false) }} className={`flex items-center justify-between w-full px-4 py-2.5 text-[13px] transition-colors ${filterStatus === "ALL" ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "text-[#F0F3FA]/70 hover:bg-white/[0.04]"}`}>
                     Todos <span className="text-[11px] text-[#F0F3FA]/40">{filteredStatuses.ALL}</span>
                   </button>
@@ -307,12 +307,12 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-mono font-semibold text-[#F0F3FA]/50 tracking-wide">{ticket.protocol}</span>
-                      <StatusBadge status={ticket.status} />
-                    </div>
-                    <span className="text-[13px] font-medium text-[#F0F3FA] leading-snug line-clamp-1">{ticket.title}</span>
-                    <div className="flex items-center gap-2 text-[11px] text-[#F0F3FA]/40">
-                      <span>{ticket.user.name}</span>
+                    <span className="text-[11px] font-mono font-semibold text-[#F0F3FA]/50 tracking-wide break-all">{ticket.protocol}</span>
+                    <StatusBadge status={ticket.status} />
+                  </div>
+                  <span className="text-[13px] font-medium text-[#F0F3FA] leading-snug line-clamp-1 break-words">{ticket.title}</span>
+                  <div className="flex items-center gap-2 text-[11px] text-[#F0F3FA]/40">
+                    <span className="truncate max-w-[160px]">{ticket.user?.name || "---"}</span>
                       <span>·</span>
                       <span>{formatRelative(ticket.createdAt)}</span>
                       {ticket._count && ticket._count.messages > 0 && (
@@ -344,14 +344,14 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
             <>
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
-                <div className="flex items-center gap-3">
-                  <span className="text-[18px]">{getCategoryIcon(detailTicket.category)}</span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono font-semibold text-[#F0F3FA]/50 tracking-wide">{detailTicket.protocol}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[18px] shrink-0">{getCategoryIcon(detailTicket.category)}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[11px] font-mono font-semibold text-[#F0F3FA]/50 tracking-wide break-all">{detailTicket.protocol}</span>
                       <StatusBadge status={detailTicket.status} />
                     </div>
-                    <h2 className="text-[15px] font-semibold text-[#F0F3FA] mt-0.5">{detailTicket.title}</h2>
+                    <h2 className="text-[15px] font-semibold text-[#F0F3FA] mt-0.5 break-words">{detailTicket.title}</h2>
                   </div>
                 </div>
               </div>
@@ -360,30 +360,30 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                 {/* Info section */}
                 <div className="px-6 py-4 border-b border-[rgba(255,255,255,0.04)]">
                   <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-[13px]">
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[#F0F3FA]/40 text-[11px]">Categoria</span>
-                      <p className="text-[#F0F3FA] mt-0.5">{TICKET_CATEGORY_LABELS[detailTicket.category]}</p>
+                      <p className="text-[#F0F3FA] mt-0.5 break-words">{TICKET_CATEGORY_LABELS[detailTicket.category] || detailTicket.category || "---"}</p>
                     </div>
                     {detailTicket.subcategory && (
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[#F0F3FA]/40 text-[11px]">Subtipo</span>
-                        <p className="text-[#F0F3FA] mt-0.5">{detailTicket.subcategory}</p>
+                        <p className="text-[#F0F3FA] mt-0.5 break-words">{detailTicket.subcategory}</p>
                       </div>
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[#F0F3FA]/40 text-[11px]">Solicitante</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold bg-[#395886] text-white shrink-0">
-                          {detailTicket.user.avatar ? (
+                          {detailTicket.user?.avatar ? (
                             <img src={detailTicket.user.avatar} alt="" className="w-full h-full object-cover rounded-md" />
-                          ) : getInitials(detailTicket.user.name)}
+                          ) : detailTicket.user ? getInitials(detailTicket.user.name) : "?"}
                         </div>
-                        <span className="text-[#F0F3FA]">{detailTicket.user.name}</span>
+                        <span className="text-[#F0F3FA] truncate">{detailTicket.user?.name || "---"}</span>
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[#F0F3FA]/40 text-[11px]">Responsável</span>
-                      <p className="text-[#F0F3FA] mt-0.5">
+                      <p className="text-[#F0F3FA] mt-0.5 break-words">
                         {detailTicket.assignee ? detailTicket.assignee.name : "Não atribuído"}
                       </p>
                     </div>
@@ -392,11 +392,11 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                   {/* Description */}
                   <div className="mt-4">
                     <span className="text-[#F0F3FA]/40 text-[11px]">Descrição</span>
-                    <p className="text-[#F0F3FA]/80 text-[13px] mt-1 leading-relaxed whitespace-pre-wrap">{detailTicket.description}</p>
+                    <p className="text-[#F0F3FA]/80 text-[13px] mt-1 leading-relaxed whitespace-pre-wrap break-words">{detailTicket.description}</p>
                   </div>
 
                   {/* Attachments */}
-                  {detailTicket.attachments.length > 0 && (
+                  {detailTicket.attachments && detailTicket.attachments.length > 0 && (
                     <div className="mt-4">
                       <span className="text-[#F0F3FA]/40 text-[11px]">Anexos</span>
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -405,7 +405,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[12px] text-[#F0F3FA]/70 hover:text-[#F0F3FA] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
                           >
                             <Paperclip size={12} />
-                            <span className="truncate max-w-[200px]">{att.fileName}</span>
+                            <span className="truncate max-w-[200px] break-all">{att.fileName}</span>
                             <span className="text-[#F0F3FA]/30">({formatFileSize(att.fileSize)})</span>
                           </a>
                         ))}
@@ -417,9 +417,9 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                 {/* Messages timeline */}
                 <div className="px-6 py-4">
                   <h3 className="text-[11px] font-semibold text-[#F0F3FA]/40 uppercase tracking-wider mb-4">
-                    Histórico ({detailTicket.messages.length} mensagens)
+                    Histórico ({(detailTicket.messages || []).length} mensagens)
                   </h3>
-                  {detailTicket.messages.length === 0 ? (
+                  {!detailTicket.messages || detailTicket.messages.length === 0 ? (
                     <p className="text-[13px] text-[#F0F3FA]/30 text-center py-8">Nenhuma mensagem ainda</p>
                   ) : (
                     <div className="flex flex-col gap-4">
@@ -431,16 +431,16 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                             ) : getInitials(msg.user.name)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[13px] font-medium text-[#F0F3FA]">{msg.user.name}</span>
-                              {msg.user.role && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.04)] text-[#F0F3FA]/50">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[13px] font-medium text-[#F0F3FA] truncate">{msg.user?.name || "---"}</span>
+                              {msg.user?.role && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.04)] text-[#F0F3FA]/50 shrink-0">
                                   {msg.user.role === "ADMIN" ? "Admin" : msg.user.role === "DEVELOPER" ? "Dev" : msg.user.role === "RH" ? "RH" : "Colab."}
                                 </span>
                               )}
-                              <span className="text-[11px] text-[#F0F3FA]/30 ml-auto">{formatDate(msg.createdAt)}</span>
+                              <span className="text-[11px] text-[#F0F3FA]/30 ml-auto shrink-0">{formatDate(msg.createdAt)}</span>
                             </div>
-                            <p className="text-[13px] text-[#F0F3FA]/80 mt-1 leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                            <p className="text-[13px] text-[#F0F3FA]/80 mt-1 leading-relaxed whitespace-pre-wrap break-words">{msg.message}</p>
                           </div>
                         </div>
                       ))}
