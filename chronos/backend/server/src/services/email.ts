@@ -239,6 +239,101 @@ export async function sendTicketUpdateEmail(to: string, requesterName: string, p
   `)
 }
 
+export async function sendTicketCreatedEmail(to: string, requesterName: string, protocol: string, title: string, ticketId: string, category: string) {
+  const ticketLink = `${env.appUrl}/solicitacoes/${ticketId}`
+  await send(to, `[${protocol}] Nova solicitação - Chronos`, `
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:20px;">
+      <div style="max-width:700px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+        ${bannerTop()}
+        <div style="padding:32px;">
+          <h2 style="color:#071A3D;">Nova solicitação recebida</h2>
+          <p>Olá,</p>
+          <p>Uma nova solicitação foi aberta por <strong>${requesterName}</strong>.</p>
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:20px 0;">
+            <p style="margin:4px 0;font-size:13px;color:#64748B;">Protocolo</p>
+            <p style="margin:4px 0;font-size:18px;font-weight:bold;color:#071A3D;letter-spacing:2px;">${protocol}</p>
+            <p style="margin:12px 0 4px;font-size:13px;color:#64748B;">Título</p>
+            <p style="margin:4px 0;font-weight:600;color:#071A3D;">${title}</p>
+            <p style="margin:12px 0 4px;font-size:13px;color:#64748B;">Categoria</p>
+            <p style="margin:4px 0;color:#64748B;">${category}</p>
+          </div>
+          <p style="margin:24px 0 8px;color:#64748B;">
+            <a href="${ticketLink}"
+               style="color:#3B82F6;font-weight:600;text-decoration:underline;">
+              Ver solicitação →
+            </a>
+          </p>
+          ${bannerBottom()}
+        </div>
+      </div>
+    </div>
+  `)
+}
+
+export async function sendTicketNewMessageEmail(to: string, name: string, protocol: string, title: string, message: string, ticketId: string, authorName: string) {
+  const ticketLink = `${env.appUrl}/solicitacoes/${ticketId}`
+  await send(to, `[${protocol}] Nova mensagem - Chronos`, `
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:20px;">
+      <div style="max-width:700px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+        ${bannerTop()}
+        <div style="padding:32px;">
+          <h2 style="color:#071A3D;">Nova mensagem na solicitação</h2>
+          <p>Olá <strong>${name}</strong>,</p>
+          <p><strong>${authorName}</strong> enviou uma mensagem na sua solicitação.</p>
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:20px 0;">
+            <p style="margin:4px 0;font-size:13px;color:#64748B;">Protocolo</p>
+            <p style="margin:4px 0;font-size:18px;font-weight:bold;color:#071A3D;letter-spacing:2px;">${protocol}</p>
+            <p style="margin:12px 0 4px;font-size:13px;color:#64748B;">Título</p>
+            <p style="margin:4px 0;font-weight:600;color:#071A3D;">${title}</p>
+          </div>
+          <div style="background:#F0FDF4;border-left:4px solid #10B981;border-radius:6px;padding:16px;margin:20px 0;">
+            <p style="margin:0 0 4px;font-size:12px;color:#64748B;font-weight:600;">Mensagem</p>
+            <p style="margin:0;color:#1E293B;font-size:14px;">${message}</p>
+          </div>
+          <p style="margin:24px 0 8px;color:#64748B;">
+            <a href="${ticketLink}"
+               style="color:#3B82F6;font-weight:600;text-decoration:underline;">
+              Responder →
+            </a>
+          </p>
+          ${bannerBottom()}
+        </div>
+      </div>
+    </div>
+  `)
+}
+
+export async function sendTicketAssignedEmail(to: string, requesterName: string, protocol: string, title: string, assigneeName: string, ticketId: string) {
+  const ticketLink = `${env.appUrl}/solicitacoes/${ticketId}`
+  await send(to, `[${protocol}] Solicitação acolhida - Chronos`, `
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:20px;">
+      <div style="max-width:700px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+        ${bannerTop()}
+        <div style="padding:32px;">
+          <h2 style="color:#071A3D;">Sua solicitação foi acolhida</h2>
+          <p>Olá <strong>${requesterName}</strong>,</p>
+          <p><strong>${assigneeName}</strong> está analisando sua solicitação.</p>
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:20px 0;">
+            <p style="margin:4px 0;font-size:13px;color:#64748B;">Protocolo</p>
+            <p style="margin:4px 0;font-size:18px;font-weight:bold;color:#071A3D;letter-spacing:2px;">${protocol}</p>
+            <p style="margin:12px 0 4px;font-size:13px;color:#64748B;">Título</p>
+            <p style="margin:4px 0;font-weight:600;color:#071A3D;">${title}</p>
+            <p style="margin:12px 0 4px;font-size:13px;color:#64748B;">Responsável</p>
+            <p style="margin:4px 0;color:#10B981;font-weight:600;">${assigneeName}</p>
+          </div>
+          <p style="margin:24px 0 8px;color:#64748B;">
+            <a href="${ticketLink}"
+               style="color:#3B82F6;font-weight:600;text-decoration:underline;">
+              Acompanhar solicitação →
+            </a>
+          </p>
+          ${bannerBottom()}
+        </div>
+      </div>
+    </div>
+  `)
+}
+
 export async function sendSecurityNotification(to: string, name: string) {
   await send(to, 'Senha alterada - Chronos', `
     <div style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;padding:20px;">
