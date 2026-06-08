@@ -225,7 +225,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
 
       <div className="flex-1 flex gap-4 min-h-0">
         {/* LEFT PANEL */}
-        <div className="w-[360px] shrink-0 flex flex-col rounded-2xl border border-[rgba(255,255,255,0.06)] bg-surface overflow-hidden">
+        <div className="w-[360px] shrink-0 flex flex-col rounded-2xl border border-[var(--border-default)] bg-surface overflow-hidden">
           {/* Tabs */}
           <div className="flex items-center gap-1 px-3 pt-3 pb-0">
             <button
@@ -233,7 +233,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
               className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold transition-colors ${
                 viewMode === "resolver"
                   ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
-                  : "text-[#F0F3FA]/50 hover:text-[#F0F3FA] hover:bg-white/[0.04]"
+                  : "text-muted hover:text-primary hover:bg-[var(--bg-elevated)]"
               }`}
             >
               Para resolver
@@ -243,7 +243,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
               className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold transition-colors ${
                 viewMode === "all"
                   ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
-                  : "text-[#F0F3FA]/50 hover:text-[#F0F3FA] hover:bg-white/[0.04]"
+                  : "text-muted hover:text-primary hover:bg-[var(--bg-elevated)]"
               }`}
             >
               Todas
@@ -251,32 +251,32 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
           </div>
 
           {/* Search + Filter */}
-          <div className="flex items-center gap-2 p-3 border-b border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-2 p-3 border-b border-[var(--border-default)]">
             <div className="flex-1 relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F0F3FA]/40" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar por protocolo, título..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[13px] text-[#F0F3FA] placeholder-[#F0F3FA]/30 outline-none focus:border-[var(--accent-primary)]/40 transition-colors"
+                className="w-full h-9 pl-9 pr-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[13px] text-primary placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)]/40 transition-colors"
               />
             </div>
             <div className="relative" ref={filterRef}>
               <button
                 onClick={() => setShowFilterMenu(p => !p)}
-                className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[12px] text-[#F0F3FA]/70 hover:text-[#F0F3FA] transition-colors"
+                className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[12px] text-secondary hover:text-primary transition-colors"
               >
                 {filterStatus === "ALL" ? "Todos" : TICKET_STATUS_LABELS[filterStatus]}
                 <ChevronDown size={12} />
               </button>
               {showFilterMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[var(--sidebar-bg)] shadow-xl overflow-hidden z-40">
-                  <button onClick={() => { setFilterStatus("ALL"); setShowFilterMenu(false) }} className={`flex items-center justify-between w-full px-4 py-2.5 text-[13px] transition-colors ${filterStatus === "ALL" ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "text-[#F0F3FA]/70 hover:bg-white/[0.04]"}`}>
-                    Todos <span className="text-[11px] text-[#F0F3FA]/40">{filteredStatuses.ALL}</span>
+                <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-[var(--border-default)] bg-[var(--sidebar-bg)] shadow-xl overflow-hidden z-40">
+                  <button onClick={() => { setFilterStatus("ALL"); setShowFilterMenu(false) }} className={`flex items-center justify-between w-full px-4 py-2.5 text-[13px] transition-colors ${filterStatus === "ALL" ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "text-secondary hover:bg-[var(--bg-elevated)]"}`}>
+                    Todos <span className="text-[11px] text-muted">{filteredStatuses.ALL}</span>
                   </button>
                   {STATUS_ORDER.map(s => (
-                    <button key={s} onClick={() => { setFilterStatus(s); setShowFilterMenu(false) }} className={`flex items-center justify-between w-full px-4 py-2.5 text-[13px] transition-colors ${filterStatus === s ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "text-[#F0F3FA]/70 hover:bg-white/[0.04]"}`}>
-                      {TICKET_STATUS_LABELS[s]} <span className="text-[11px] text-[#F0F3FA]/40">{filteredStatuses[s]}</span>
+                    <button key={s} onClick={() => { setFilterStatus(s); setShowFilterMenu(false) }} className={`flex items-center justify-between w-full px-4 py-2.5 text-[13px] transition-colors ${filterStatus === s ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "text-secondary hover:bg-[var(--bg-elevated)]"}`}>
+                      {TICKET_STATUS_LABELS[s]} <span className="text-[11px] text-muted">{filteredStatuses[s]}</span>
                     </button>
                   ))}
                 </div>
@@ -288,10 +288,10 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-32">
-                <Loader2 size={20} className="text-[#F0F3FA]/40 animate-spin" />
+                <Loader2 size={20} className="text-muted animate-spin" />
               </div>
             ) : filteredTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-[13px] text-[#F0F3FA]/40">
+              <div className="flex flex-col items-center justify-center h-40 text-[13px] text-muted">
                 {search || filterStatus !== "ALL" ? "Nenhuma solicitação encontrada" : "Nenhuma solicitação ainda"}
               </div>
             ) : (
@@ -303,15 +303,15 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                     className={`flex flex-col gap-1 w-full p-3 rounded-xl text-left transition-colors ${
                       selectedId === ticket.id
                         ? "bg-[var(--accent-primary)]/8 border border-[var(--accent-primary)]/20"
-                        : "hover:bg-white/[0.04] border border-transparent"
+                        : "hover:bg-[var(--bg-elevated)] border border-transparent"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono font-semibold text-[#F0F3FA]/50 tracking-wide break-all">{ticket.protocol}</span>
+                    <span className="text-[11px] font-mono font-semibold text-muted tracking-wide break-all">{ticket.protocol}</span>
                     <StatusBadge status={ticket.status} />
                   </div>
-                  <span className="text-[13px] font-medium text-[#F0F3FA] leading-snug line-clamp-1 break-words">{ticket.title}</span>
-                  <div className="flex items-center gap-2 text-[11px] text-[#F0F3FA]/40">
+                  <span className="text-[13px] font-medium text-primary leading-snug line-clamp-1 break-words">{ticket.title}</span>
+                  <div className="flex items-center gap-2 text-[11px] text-muted">
                     <span className="truncate max-w-[160px]">{ticket.user?.name || "---"}</span>
                       <span>·</span>
                       <span>{formatRelative(ticket.createdAt)}</span>
@@ -330,60 +330,60 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="flex-1 flex flex-col rounded-2xl border border-[rgba(255,255,255,0.06)] bg-surface overflow-hidden">
+        <div className="flex-1 flex flex-col rounded-2xl border border-[var(--border-default)] bg-surface overflow-hidden">
           {!selectedId ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-[#F0F3FA]/30 gap-3">
+            <div className="flex-1 flex flex-col items-center justify-center text-muted gap-3">
               <LifeBuoy size={40} strokeWidth={1} />
               <span className="text-[14px]">Selecione uma solicitação</span>
             </div>
           ) : detailLoading ? (
             <div className="flex-1 flex items-center justify-center">
-              <Loader2 size={20} className="text-[#F0F3FA]/40 animate-spin" />
+              <Loader2 size={20} className="text-muted animate-spin" />
             </div>
           ) : detailTicket ? (
             <>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-default)]">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-[18px] shrink-0">{getCategoryIcon(detailTicket.category)}</span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[11px] font-mono font-semibold text-[#F0F3FA]/50 tracking-wide break-all">{detailTicket.protocol}</span>
+                      <span className="text-[11px] font-mono font-semibold text-muted tracking-wide break-all">{detailTicket.protocol}</span>
                       <StatusBadge status={detailTicket.status} />
                     </div>
-                    <h2 className="text-[15px] font-semibold text-[#F0F3FA] mt-0.5 break-words">{detailTicket.title}</h2>
+                    <h2 className="text-[15px] font-semibold text-primary mt-0.5 break-words">{detailTicket.title}</h2>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto">
                 {/* Info section */}
-                <div className="px-6 py-4 border-b border-[rgba(255,255,255,0.04)]">
+                <div className="px-6 py-4 border-b border-[var(--border-default)]">
                   <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-[13px]">
                     <div className="min-w-0">
-                      <span className="text-[#F0F3FA]/40 text-[11px]">Categoria</span>
-                      <p className="text-[#F0F3FA] mt-0.5 break-words">{TICKET_CATEGORY_LABELS[detailTicket.category] || detailTicket.category || "---"}</p>
+                      <span className="text-muted text-[11px]">Categoria</span>
+                      <p className="text-primary mt-0.5 break-words">{TICKET_CATEGORY_LABELS[detailTicket.category] || detailTicket.category || "---"}</p>
                     </div>
                     {detailTicket.subcategory && (
                       <div className="min-w-0">
-                        <span className="text-[#F0F3FA]/40 text-[11px]">Subtipo</span>
-                        <p className="text-[#F0F3FA] mt-0.5 break-words">{detailTicket.subcategory}</p>
+                        <span className="text-muted text-[11px]">Subtipo</span>
+                        <p className="text-primary mt-0.5 break-words">{detailTicket.subcategory}</p>
                       </div>
                     )}
                     <div className="min-w-0">
-                      <span className="text-[#F0F3FA]/40 text-[11px]">Solicitante</span>
+                      <span className="text-muted text-[11px]">Solicitante</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold bg-[#395886] text-white shrink-0">
                           {detailTicket.user?.avatar ? (
                             <img src={detailTicket.user.avatar} alt="" className="w-full h-full object-cover rounded-md" />
                           ) : detailTicket.user ? getInitials(detailTicket.user.name) : "?"}
                         </div>
-                        <span className="text-[#F0F3FA] truncate">{detailTicket.user?.name || "---"}</span>
+                        <span className="text-primary truncate">{detailTicket.user?.name || "---"}</span>
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[#F0F3FA]/40 text-[11px]">Responsável</span>
-                      <p className="text-[#F0F3FA] mt-0.5 break-words">
+                      <span className="text-muted text-[11px]">Responsável</span>
+                      <p className="text-primary mt-0.5 break-words">
                         {detailTicket.assignee ? detailTicket.assignee.name : "Não atribuído"}
                       </p>
                     </div>
@@ -391,22 +391,22 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
 
                   {/* Description */}
                   <div className="mt-4">
-                    <span className="text-[#F0F3FA]/40 text-[11px]">Descrição</span>
-                    <p className="text-[#F0F3FA]/80 text-[13px] mt-1 leading-relaxed whitespace-pre-wrap break-words">{detailTicket.description}</p>
+                    <span className="text-muted text-[11px]">Descrição</span>
+                    <p className="text-primary/80 text-[13px] mt-1 leading-relaxed whitespace-pre-wrap break-words">{detailTicket.description}</p>
                   </div>
 
                   {/* Attachments */}
                   {detailTicket.attachments && detailTicket.attachments.length > 0 && (
                     <div className="mt-4">
-                      <span className="text-[#F0F3FA]/40 text-[11px]">Anexos</span>
+                      <span className="text-muted text-[11px]">Anexos</span>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {detailTicket.attachments.map(att => (
                           <a key={att.id} href={att.fileUrl} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[12px] text-[#F0F3FA]/70 hover:text-[#F0F3FA] hover:bg-[rgba(255,255,255,0.06)] transition-colors"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[12px] text-secondary hover:text-primary hover:bg-[var(--bg-hover)] transition-colors"
                           >
                             <Paperclip size={12} />
                             <span className="truncate max-w-[200px] break-all">{att.fileName}</span>
-                            <span className="text-[#F0F3FA]/30">({formatFileSize(att.fileSize)})</span>
+                            <span className="text-muted">({formatFileSize(att.fileSize)})</span>
                           </a>
                         ))}
                       </div>
@@ -416,11 +416,11 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
 
                 {/* Messages timeline */}
                 <div className="px-6 py-4">
-                  <h3 className="text-[11px] font-semibold text-[#F0F3FA]/40 uppercase tracking-wider mb-4">
+                  <h3 className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-4">
                     Histórico ({(detailTicket.messages || []).length} mensagens)
                   </h3>
                   {!detailTicket.messages || detailTicket.messages.length === 0 ? (
-                    <p className="text-[13px] text-[#F0F3FA]/30 text-center py-8">Nenhuma mensagem ainda</p>
+                    <p className="text-[13px] text-muted text-center py-8">Nenhuma mensagem ainda</p>
                   ) : (
                     <div className="flex flex-col gap-4">
                       {detailTicket.messages.map(msg => (
@@ -432,15 +432,15 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[13px] font-medium text-[#F0F3FA] truncate">{msg.user?.name || "---"}</span>
+                              <span className="text-[13px] font-medium text-primary truncate">{msg.user?.name || "---"}</span>
                               {msg.user?.role && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.04)] text-[#F0F3FA]/50 shrink-0">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-muted shrink-0">
                                   {msg.user.role === "ADMIN" ? "Admin" : msg.user.role === "DEVELOPER" ? "Dev" : msg.user.role === "RH" ? "RH" : "Colab."}
                                 </span>
                               )}
-                              <span className="text-[11px] text-[#F0F3FA]/30 ml-auto shrink-0">{formatDate(msg.createdAt)}</span>
+                              <span className="text-[11px] text-muted ml-auto shrink-0">{formatDate(msg.createdAt)}</span>
                             </div>
-                            <p className="text-[13px] text-[#F0F3FA]/80 mt-1 leading-relaxed whitespace-pre-wrap break-words">{msg.message}</p>
+                            <p className="text-[13px] text-primary/80 mt-1 leading-relaxed whitespace-pre-wrap break-words">{msg.message}</p>
                           </div>
                         </div>
                       ))}
@@ -451,7 +451,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
               </div>
 
               {/* Reply + actions */}
-              <div className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4">
+              <div className="border-t border-[var(--border-default)] px-6 py-4">
                 {isManager && (
                   <div className="flex items-center gap-2 mb-3">
                     {detailTicket.assignedTo !== user?.id && detailTicket.status !== "ENCERRADO" && (
@@ -505,20 +505,20 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                         }}
                         placeholder="Digite sua mensagem..."
                         rows={2}
-                        className="w-full px-3 py-2.5 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[13px] text-[#F0F3FA] placeholder-[#F0F3FA]/30 outline-none focus:border-[var(--accent-primary)]/40 transition-colors resize-none"
+                        className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[13px] text-primary placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)]/40 transition-colors resize-none"
                       />
                       {messageFile && (
                         <div className="flex items-center gap-2 mt-2 px-1">
                           <Paperclip size={12} className="text-[var(--accent-primary)]" />
-                          <span className="text-[11px] text-[#F0F3FA]/60 truncate flex-1">{messageFile.name}</span>
-                          <button onClick={() => setMessageFile(null)} className="text-[#F0F3FA]/30 hover:text-red-400 transition-colors">
+                          <span className="text-[11px] text-muted truncate flex-1">{messageFile.name}</span>
+                          <button onClick={() => setMessageFile(null)} className="text-muted hover:text-red-400 transition-colors">
                             <X size={12} />
                           </button>
                         </div>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <label className="w-9 h-9 rounded-lg flex items-center justify-center text-[#F0F3FA]/40 hover:text-[#F0F3FA]/70 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <label className="w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-secondary hover:bg-[var(--bg-hover)] transition-colors cursor-pointer">
                         <Paperclip size={16} />
                         <input type="file" className="hidden" onChange={e => setMessageFile(e.target.files?.[0] || null)} />
                       </label>
@@ -533,14 +533,14 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                   </div>
                 )}
                 {detailTicket.status === "ENCERRADO" && (
-                  <div className="text-center text-[13px] text-[#F0F3FA]/30 py-2">
+                  <div className="text-center text-[13px] text-muted py-2">
                     Solicitação encerrada. Reabra para enviar mensagens.
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-[#F0F3FA]/30 text-[14px]">
+            <div className="flex-1 flex items-center justify-center text-muted text-[14px]">
               Solicitação não encontrada
             </div>
           )}
@@ -605,14 +605,14 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60" />
-      <div className="relative w-[520px] max-h-[90vh] overflow-y-auto rounded-2xl border border-[rgba(255,255,255,0.06)] bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="relative w-[520px] max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border-default)] bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-default)]">
           <div>
-            <h2 className="text-[15px] font-semibold text-[#F0F3FA]">Nova Solicitação</h2>
-            <p className="text-[12px] text-[#F0F3FA]/40 mt-0.5">Passo {step + 1} de 3</p>
+            <h2 className="text-[15px] font-semibold text-primary">Nova Solicitação</h2>
+            <p className="text-[12px] text-muted mt-0.5">Passo {step + 1} de 3</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-[#F0F3FA]/40 hover:text-[#F0F3FA] hover:bg-white/[0.06] transition-colors">
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:text-primary hover:bg-[var(--bg-hover)] transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -620,7 +620,7 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
         {/* Step indicator */}
         <div className="flex items-center gap-2 px-6 pt-4 pb-2">
           {[0, 1, 2].map(i => (
-            <div key={i} className={`flex-1 h-1 rounded-full transition-colors ${i <= step ? "bg-[var(--accent-primary)]" : "bg-[rgba(255,255,255,0.06)]"}`} />
+            <div key={i} className={`flex-1 h-1 rounded-full transition-colors ${i <= step ? "bg-[var(--accent-primary)]" : "bg-[var(--bg-elevated)]"}`} />
           ))}
         </div>
 
@@ -634,7 +634,7 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
         <div className="px-6 py-4">
           {step === 0 && (
             <div>
-              <h3 className="text-[13px] font-medium text-[#F0F3FA]/70 mb-3">Selecione a categoria</h3>
+              <h3 className="text-[13px] font-medium text-secondary mb-3">Selecione a categoria</h3>
               <div className="grid grid-cols-2 gap-3">
                 {categories.map(cat => (
                   <button
@@ -643,7 +643,7 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
                       category === cat.key
                         ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/8 text-[var(--accent-primary)]"
-                        : "border-[rgba(255,255,255,0.06)] hover:bg-white/[0.04] text-[#F0F3FA]"
+                        : "border-[var(--border-default)] hover:bg-[var(--bg-elevated)] text-primary"
                     }`}
                   >
                     <span className="text-2xl">{cat.icon}</span>
@@ -656,7 +656,7 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
 
           {step === 1 && category && (
             <div>
-              <h3 className="text-[13px] font-medium text-[#F0F3FA]/70 mb-3">Selecione o subtipo</h3>
+              <h3 className="text-[13px] font-medium text-secondary mb-3">Selecione o subtipo</h3>
               <div className="flex flex-col gap-1">
                 {TICKET_SUBCATEGORIES[category].map(sub => (
                   <button
@@ -665,7 +665,7 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
                     className={`px-4 py-3 rounded-xl text-left text-[13px] transition-colors ${
                       subcategory === sub
                         ? "bg-[var(--accent-primary)]/8 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20"
-                        : "text-[#F0F3FA]/70 hover:bg-white/[0.04] border border-transparent"
+                        : "text-secondary hover:bg-[var(--bg-elevated)] border border-transparent"
                     }`}
                   >
                     {sub}
@@ -678,34 +678,34 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
           {step === 2 && (
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-[11px] font-medium text-[#F0F3FA]/50 mb-1.5 block">Título *</label>
+                <label className="text-[11px] font-medium text-muted mb-1.5 block">Título *</label>
                 <input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="Resumo da solicitação"
-                  className="w-full h-10 px-3 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[13px] text-[#F0F3FA] placeholder-[#F0F3FA]/30 outline-none focus:border-[var(--accent-primary)]/40 transition-colors"
+                  className="w-full h-10 px-3 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[13px] text-primary placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)]/40 transition-colors"
                 />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-[#F0F3FA]/50 mb-1.5 block">Descrição *</label>
+                <label className="text-[11px] font-medium text-muted mb-1.5 block">Descrição *</label>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Descreva detalhadamente sua solicitação..."
                   rows={5}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.06)] text-[13px] text-[#F0F3FA] placeholder-[#F0F3FA]/30 outline-none focus:border-[var(--accent-primary)]/40 transition-colors resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[13px] text-primary placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent-primary)]/40 transition-colors resize-none"
                 />
               </div>
               <div>
-                <label className="text-[11px] font-medium text-[#F0F3FA]/50 mb-1.5 block">Anexo (opcional)</label>
-                <label className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[rgba(255,255,255,0.04)] border border-dashed border-[rgba(255,255,255,0.1)] cursor-pointer hover:bg-[rgba(255,255,255,0.06)] transition-colors">
-                  <Paperclip size={16} className="text-[#F0F3FA]/40" />
-                  <span className="text-[13px] text-[#F0F3FA]/50">
+                <label className="text-[11px] font-medium text-muted mb-1.5 block">Anexo (opcional)</label>
+                <label className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-elevated)] border border-dashed border-[var(--border-default)] cursor-pointer hover:bg-[var(--bg-hover)] transition-colors">
+                  <Paperclip size={16} className="text-muted" />
+                  <span className="text-[13px] text-muted">
                     {file ? file.name : "Clique para anexar arquivo (PDF, imagem, etc)"}
                   </span>
                   <input type="file" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
                   {file && (
-                    <button onClick={e => { e.preventDefault(); setFile(null) }} className="ml-auto text-[#F0F3FA]/30 hover:text-red-400">
+                    <button onClick={e => { e.preventDefault(); setFile(null) }} className="ml-auto text-muted hover:text-red-400">
                       <X size={14} />
                     </button>
                   )}
@@ -716,10 +716,10 @@ function NovaSolicitacaoModal({ onClose, onCreated }: { onClose: () => void; onC
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[rgba(255,255,255,0.06)]">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--border-default)]">
           <button
             onClick={() => step > 0 ? setStep(p => p - 1) : onClose()}
-            className="h-10 px-4 rounded-xl text-[13px] text-[#F0F3FA]/60 hover:text-[#F0F3FA] hover:bg-white/[0.06] transition-colors"
+            className="h-10 px-4 rounded-xl text-[13px] text-muted hover:text-primary hover:bg-[var(--bg-hover)] transition-colors"
           >
             {step === 0 ? "Cancelar" : "Voltar"}
           </button>
