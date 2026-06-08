@@ -37,6 +37,7 @@ async function send(to: string, subject: string, html: string) {
 function bannerTop() {
   const imgUrl = 'https://xwitkwbymmucultysyox.supabase.co/storage/v1/object/public/branding/banner%20chronos.png'
   return `<img src="${imgUrl}" alt="Chronos" style="width:100%;display:block;max-width:700px;">`
+}
 
 function bannerBottom() {
   const imgUrl = 'https://xwitkwbymmucultysyox.supabase.co/storage/v1/object/public/branding/banner%20final%20do%20email.png'
