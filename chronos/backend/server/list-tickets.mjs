@@ -1,0 +1,11 @@
+import 'dotenv/config';
+import { PrismaClient } from './src/generated/prisma/client.js';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+const tickets = await prisma.ticket.findMany({ include: { user: { select: { name: true, email: true } } } });
+console.log('Total tickets:', tickets.length);
+tickets.forEach(t => console.log('  ID:', t.id, '| Title:', t.title, '| User:', t.user?.name, t.user?.email, '| AssignedTo:', t.assignedTo, '| Status:', t.status));
+await prisma.$disconnect();

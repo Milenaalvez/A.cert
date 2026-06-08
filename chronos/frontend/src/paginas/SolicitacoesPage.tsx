@@ -168,7 +168,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
         assignee: result.assignee || prev.assignee,
         assignedTo: result.assignee?.id || prev.assignedTo,
       } : prev)
-      setTickets(prev => prev.map(t => t.id === selectedId ? { ...t, _count: { ...t._count!, messages: (t._count?.messages || 0) + 1 } } : t))
+      setTickets(prev => prev.map(t => t.id === selectedId ? { ...t, _count: { ...t._count!, messages: (t._count?.messages || 0) + 1 }, assignee: result.assignee || t.assignee, status: result.status || t.status } : t))
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -454,7 +454,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
               <div className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4">
                 {isManager && (
                   <div className="flex items-center gap-2 mb-3">
-                    {detailTicket.assignedTo !== user?.id && detailTicket.status !== "ENCERRADO" && detailTicket.status !== "RESOLVIDO" && (
+                    {detailTicket.assignedTo !== user?.id && detailTicket.status !== "ENCERRADO" && (
                       <button
                         onClick={handleAssign}
                         disabled={assigning}
