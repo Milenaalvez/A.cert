@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# Milena Portfolio — Portfólio Profissional
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Portfólio pessoal com tema cyberpunk/HUD futurista, desenvolvido para apresentar projetos, habilidades e experiência profissional.
 
-Currently, two official plugins are available:
+**Live:** [https://milenaalvez.github.io/milena-portfolio](https://milenaalvez.github.io/milena-portfolio)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Design
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Tema visual inspirado em HUD (Heads-Up Display) futurista com:
+- Efeitos holográficos e scanlines
+- Animações de partículas e circuitos
+- Moldura de personagem com identificação estilo agente
+- Modal de tecnologias com layout de painel de controle
+- Paleta de cores: roxo, pink, dourado sobre fundo escuro
 
-## Expanding the ESLint configuration
+## Seções
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Seção | Descrição |
+|-------|-----------|
+| Hero | Apresentação com coordenadas, status e links |
+| Sobre | Biografia e fotografia com elementos HUD |
+| Experiência | Linha do tempo profissional (4 empresas) |
+| Projetos | Cards com 3 projetos em destaque |
+| Ferramentas | Grid interativo com 9 tecnologias |
+| Contato | Formulário de contato e links sociais |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Projetos em Destaque
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Netflix Cover** — Interface inspirada na Netflix (HTML, CSS, JS)
+- **Banco de Horas** — Sistema de registro de horas trabalhadas (HTML, CSS, JS)
+- **Portfólio** — Este portfólio (React, TypeScript, Tailwind)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Tech Stack
+
+| Tecnologia | Versão |
+|------------|--------|
+| React | 19 |
+| Vite | 8 |
+| TypeScript | 6 |
+| Tailwind CSS | 4 |
+| gh-pages | 6 |
+
+## Scripts
+
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Iniciar servidor de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run preview` | Preview do build |
+| `npm run deploy` | Deploy para GitHub Pages |
+
+## Deploy
+
+O deploy é feito via GitHub Pages utilizando `gh-pages`:
+
+```bash
+npm run deploy
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+O build gera os arquivos estáticos em `dist/` e faz o push para a branch `gh-pages`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Desenvolvido por Milena de Oliveira Alves.
