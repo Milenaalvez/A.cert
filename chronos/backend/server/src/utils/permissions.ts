@@ -33,6 +33,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'view_logs',
     'export_reports',
     'access_profiles',
+    'manage_tickets',
   ],
   DEVELOPER: [...ALL_PERMISSIONS],
   EMPLOYEE: ['access_team', 'access_profiles'],
