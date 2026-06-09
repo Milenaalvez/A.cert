@@ -18,7 +18,7 @@ export interface AuthRequest extends Request {
 }
 
 export function generateToken(payload: AuthPayload): string {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn })
+  return jwt.sign(payload as object, env.jwtSecret, { expiresIn: env.jwtExpiresIn } as jwt.SignOptions)
 }
 
 export async function generateRefreshToken(userId: string, rememberMe = false): Promise<string> {

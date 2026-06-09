@@ -34,10 +34,12 @@ import { startScheduler } from './utils/scheduler.js'
 
 const app = express()
 
-const allowedOrigins = env.corsOrigin.split(',').map(s => s.trim())
+const allowedOrigins = env.corsOrigin.split(',').map(s => s.trim()).filter(Boolean)
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
+    if (!origin || allowedOrigins.some(o => {
+      try { return new URL(origin).origin === new URL(o).origin } catch { return origin === o }
+    })) {
       callback(null, true)
     } else {
       callback(new Error('Not allowed by CORS'))

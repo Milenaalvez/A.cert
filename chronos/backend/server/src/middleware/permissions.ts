@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from 'express'
 import type { AuthRequest } from './auth.js'
+import { prisma } from '../database/prisma.js'
 import { getEffectivePermissions, type Permission } from '../utils/permissions.js'
 
 export function requirePermission(...required: Permission[]) {
@@ -8,7 +9,6 @@ export function requirePermission(...required: Permission[]) {
       res.status(401).json({ error: 'Não autenticado' })
       return
     }
-    const { prisma } = await import('../database/prisma.js')
     try {
       const user = await prisma.user.findUnique({
         where: { id: req.user.userId },
