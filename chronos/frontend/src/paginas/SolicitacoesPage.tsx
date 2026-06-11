@@ -79,8 +79,8 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const isManager = canAccess(user, "manage_tickets")
-  const pollRef = useRef<ReturnType<typeof setInterval>>()
-  const listPollRef = useRef<ReturnType<typeof setInterval>>()
+  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+  const listPollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   useEffect(() => {
     setLoading(true)
@@ -128,7 +128,7 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
         setDetailTicket(prev => {
           if (!prev) return data
           const prevIds = new Set(prev.messages?.map(m => m.id) || [])
-          const hasNew = data.messages?.some(m => !prevIds.has(m.id))
+          const hasNew = data.messages?.some((m: { id: string }) => !prevIds.has(m.id))
           if (!hasNew) return prev
           return data
         })
