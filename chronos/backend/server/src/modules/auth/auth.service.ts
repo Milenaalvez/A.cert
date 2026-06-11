@@ -5,6 +5,7 @@ import { supabaseAdmin } from '../../database/supabase.js'
 import { generateToken, generateRefreshToken, consumeRefreshToken } from '../../middleware/auth.js'
 import { validateCPF, stripCPF } from '../../utils/cpf.js'
 import { validatePassword } from '../../utils/password.js'
+import { getEffectivePermissions } from '../../utils/permissions.js'
 import {
   sendWelcomeEmail,
   sendVerificationEmail,
@@ -538,7 +539,6 @@ export async function impersonateUser(actor: { userId: string; role: string; com
     throw Object.assign(new Error('Usuário alvo não encontrado ou inativo'), { statusCode: 404 })
   }
 
-  const { getEffectivePermissions } = await import('../../utils/permissions.js')
   const actorUser = await prisma.user.findUnique({
     where: { id: actor.userId },
     select: { role: true, permissions: true },
@@ -552,8 +552,6 @@ export async function impersonateUser(actor: { userId: string; role: string; com
     throw Object.assign(new Error('Sem permissão para trocar de conta'), { statusCode: 403 })
   }
 
-  const token = generateToken({ userId: target.id, role: target.role, companyId: target.companyId, branchId: target.branchId ?? null, name: target.name })
-
   logActivity(actor.userId, 'IMPERSONATE', `${actor.name} acessou o perfil de ${target.name}`, 'User', target.id, target.id, {
     actorName: actor.name, targetName: target.name,
   })
@@ -562,7 +560,6 @@ export async function impersonateUser(actor: { userId: string; role: string; com
 }
 
 export async function getAccessibleAccounts(actor: { userId: string; role: string; companyId: string; name: string }) {
-  const { getEffectivePermissions } = await import('../../utils/permissions.js')
   const actorUser = await prisma.user.findUnique({
     where: { id: actor.userId },
     select: { role: true, permissions: true },

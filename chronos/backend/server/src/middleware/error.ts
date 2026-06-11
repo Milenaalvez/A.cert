@@ -4,12 +4,14 @@ import jwt from 'jsonwebtoken'
 import multer from 'multer'
 
 export class AppError extends Error {
+  statusCode: number
   constructor(
-    public statusCode: number,
+    statusCode: number,
     message: string,
   ) {
     super(message)
     this.name = 'AppError'
+    this.statusCode = statusCode
   }
 }
 

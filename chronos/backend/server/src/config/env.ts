@@ -10,6 +10,9 @@ export const env = {
   supabaseAnonKey: process.env['SUPABASE_ANON_KEY'] || '',
   supabaseServiceRoleKey: process.env['SUPABASE_SERVICE_ROLE_KEY'] || '',
 
+  emailProvider: (process.env['EMAIL_PROVIDER'] || 'smtp') as 'smtp' | 'sendgrid',
+  sendgridApiKey: process.env['SENDGRID_API_KEY'] || '',
+
   smtpHost: process.env['SMTP_HOST'] || '',
   smtpPort: Number(process.env['SMTP_PORT']) || 587,
   smtpUser: process.env['SMTP_USER'] || '',

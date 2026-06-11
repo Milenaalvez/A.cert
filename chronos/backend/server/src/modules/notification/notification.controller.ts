@@ -11,7 +11,7 @@ export async function list(req: AuthRequest, res: Response, next: NextFunction) 
 
 export async function markRead(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await service.markAsRead(req.params['id'], req.user!.userId)
+    await service.markAsRead(String(req.params['id']), req.user!.userId)
     res.json({ ok: true })
   } catch (err) { next(err) }
 }
@@ -32,7 +32,7 @@ export async function getUnreadCount(req: AuthRequest, res: Response, next: Next
 
 export async function remove(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await service.deleteNotification(req.params['id'], req.user!.userId)
+    await service.deleteNotification(String(req.params['id']), req.user!.userId)
     res.json({ ok: true })
   } catch (err) { next(err) }
 }

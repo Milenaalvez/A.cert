@@ -42,7 +42,7 @@ export async function createNotification(userId: string, data: {
       message: data.message,
       type: data.type || 'INFO',
       link: data.link,
-      metadata: data.metadata || undefined,
+      metadata: data.metadata as any || undefined,
     },
   })
 }

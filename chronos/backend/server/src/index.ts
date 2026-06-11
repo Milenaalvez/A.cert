@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import nodemailer from 'nodemailer'
-import dns from 'dns'
+import sgMail from '@sendgrid/mail'
 import { prisma } from './database/prisma.js'
 import { env } from './config/env.js'
 
@@ -10,10 +10,15 @@ console.log('[Startup] CWD:', process.cwd())
 console.log('[Startup] PORT:', env.port)
 console.log('[Startup] SUPABASE_URL:', env.supabaseUrl ? 'configurada' : 'ausente')
 console.log('[Startup] SUPABASE_SERVICE_ROLE_KEY:', env.supabaseServiceRoleKey ? 'configurada' : 'AUSENTE - emails não funcionarão')
-console.log('[Startup] SMTP_HOST:', env.smtpHost || 'AUSENTE')
-console.log('[Startup] SMTP_USER:', env.smtpUser || 'AUSENTE')
-console.log('[Startup] SMTP_PASS:', env.smtpPass ? '****' : 'AUSENTE')
-console.log('[Startup] SMTP_FROM:', env.smtpFrom || 'AUSENTE')
+console.log('[Startup] EMAIL_PROVIDER:', env.emailProvider)
+if (env.emailProvider === 'sendgrid') {
+  console.log('[Startup] SENDGRID_API_KEY:', env.sendgridApiKey ? 'configurada' : 'AUSENTE')
+} else {
+  console.log('[Startup] SMTP_HOST:', env.smtpHost || 'AUSENTE')
+  console.log('[Startup] SMTP_USER:', env.smtpUser || 'AUSENTE')
+  console.log('[Startup] SMTP_PASS:', env.smtpPass ? '****' : 'AUSENTE')
+  console.log('[Startup] SMTP_FROM:', env.smtpFrom || 'AUSENTE')
+}
 import { errorHandler } from './middleware/error.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { timeRecordRouter } from './modules/timeRecord/timeRecord.routes.js'
@@ -53,51 +58,61 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'chronos-api', version: '1.0.0' })
 })
 
-app.get('/api/diagnostics/smtp', async (_req, res) => {
-  const hasSmtp = !!(env.smtpHost && env.smtpUser && env.smtpPass)
+app.get('/api/diagnostics/email', async (_req, res) => {
   const result: any = {
-    configured: hasSmtp,
-    host: env.smtpHost || null,
-    user: env.smtpUser || null,
+    provider: env.emailProvider,
     from: env.smtpFrom || null,
-    ports: {},
+    sendgrid: { configured: false },
+    smtp: { configured: false },
   }
 
-  if (!hasSmtp) {
-    result.error = 'SMTP não configurado'
-    return res.json(result)
-  }
-
-  // Resolve IPv4
-  let ip = env.smtpHost
-  try {
-    const addrs = await dns.promises.resolve4(env.smtpHost)
-    if (addrs.length > 0) ip = addrs[0]
-    result.resolvedIp = ip
-  } catch {
-    result.ipv4Error = 'Falha ao resolver IPv4'
-  }
-
-  for (const port of [587, 465]) {
-    const test: any = { port, secure: port === 465 }
-    const transport = nodemailer.createTransport({
-      host: ip,
-      port,
-      secure: port === 465,
-      auth: { user: env.smtpUser, pass: env.smtpPass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    })
+  if (env.sendgridApiKey) {
+    result.sendgrid.configured = true
+    sgMail.setApiKey(env.sendgridApiKey)
     try {
-      await transport.verify()
-      test.ok = true
+      await sgMail.send({
+        to: 'test@chronos.app',
+        from: env.smtpFrom || 'noreply@chronos.app',
+        subject: 'SendGrid Diagnostic',
+        text: 'This is a diagnostic test — if received, ignore.',
+        mailSettings: { sandboxMode: { enable: true } },
+      })
+      result.sendgrid.ok = true
     } catch (err: any) {
-      test.ok = false
-      test.error = err.message?.split('\n')[0] || err.message
+      result.sendgrid.ok = false
+      result.sendgrid.error = err.message?.split('\n')[0] || err.message
+      if (err.response?.body?.errors) {
+        result.sendgrid.details = err.response.body.errors
+      }
     }
-    transport.close()
-    result.ports[port] = test
+  }
+
+  if (env.smtpHost && env.smtpUser && env.smtpPass) {
+    result.smtp.configured = true
+    result.smtp.host = env.smtpHost
+    result.smtp.user = env.smtpUser
+    for (const port of [587, 465]) {
+      const test: any = { port, secure: port === 465 }
+      const transport = nodemailer.createTransport({
+        host: env.smtpHost,
+        port,
+        secure: port === 465,
+        auth: { user: env.smtpUser, pass: env.smtpPass },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+      })
+      try {
+        await transport.verify()
+        test.ok = true
+      } catch (err: any) {
+        test.ok = false
+        test.error = err.message?.split('\n')[0] || err.message
+      }
+      transport.close()
+      result.smtp.ports = result.smtp.ports || {}
+      result.smtp.ports[port] = test
+    }
   }
 
   res.json(result)

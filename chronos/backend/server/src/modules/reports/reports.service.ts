@@ -65,7 +65,7 @@ export async function getConsolidated(
   const weekdayCount = Array.from({ length: totalDaysInMonth }, (_, i) => {
     const d = new Date(filters.year, filters.month - 1, i + 1)
     return d.getDay() !== 0 && d.getDay() !== 6 ? 1 : 0
-  }).reduce((a, b) => a + b, 0)
+  }).reduce<number>((a, b) => a + b, 0)
 
   const rows = users.map(user => {
     const userRecords = recordsByUser.get(user.id) || []

@@ -95,7 +95,7 @@ export async function createPointRecord(userId: string, data: {
       locationAddress: data.locationAddress ?? null,
       locationCity: data.locationCity ?? null,
       locationState: data.locationState ?? null,
-      deviceInfo: data.deviceInfo ?? null,
+      deviceInfo: data.deviceInfo as any ?? null,
       photoData: data.photoData ?? null,
       hasPhoto: data.hasPhoto ?? false,
       passwordVerified: true,
