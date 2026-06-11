@@ -7,6 +7,9 @@ import { validateCPF, stripCPF } from '../../utils/cpf.js'
 import { validatePassword } from '../../utils/password.js'
 import { getEffectivePermissions } from '../../utils/permissions.js'
 import {
+  sendWelcomeEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
   sendSecurityNotification,
 } from '../../services/email.js'
 import { env } from '../../config/env.js'
@@ -120,6 +123,15 @@ export async function registerUser(data: {
     companyId: company.id,
   })
 
+  sendWelcomeEmail(
+    emailLower,
+    nameTrimmed,
+    registrationNumber,
+    data.position || role,
+    company.name,
+    `${env.appUrl}/?action=verify-email&token=${verificationCode}`
+  ).catch((err: any) => console.error('[Auth] Erro ao enviar welcome email:', err?.message))
+
   createNotification(user.id, {
     title: 'Bem-vindo ao Chronos',
     message: 'Sua conta foi criada com sucesso. Seus registros de jornada começarão a ser contabilizados a partir da sua data de admissão.',
@@ -130,8 +142,8 @@ export async function registerUser(data: {
     await supabaseAdmin.auth.admin.createUser({
       email: emailLower,
       password: data.password,
-      email_confirm: false,
-      user_metadata: { name: nameTrimmed, registrationNumber },
+      email_confirm: true,
+      user_metadata: { name: nameTrimmed },
     })
   } catch (err: any) {
     console.warn('[Auth] Erro ao criar usuário no Supabase Auth (não crítico):', err?.message)
@@ -166,15 +178,11 @@ export async function sendVerificationCode(email: string) {
     data: { verificationCode, verificationExpiresAt },
   })
 
-  try {
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers()
-    const supabaseUser = users?.users?.find(u => u.email === user.email.toLowerCase())
-    if (supabaseUser && !supabaseUser.email_confirmed_at) {
-      await supabaseAdmin.auth.admin.updateUserById(supabaseUser.id, { email_confirm: false })
-    }
-  } catch (err: any) {
-    console.warn('[Auth] Erro ao solicitar reenvio do Supabase:', err?.message)
-  }
+  sendVerificationEmail(
+    user.email,
+    user.name,
+    `${env.appUrl}/?action=verify-email&token=${verificationCode}`
+  ).catch((err: any) => console.error('[Auth] Erro ao enviar verification email:', err?.message))
 
   logActivity(user.id, 'VERIFICATION_RESENT', `Novo link de verificação enviado para ${user.email}`, 'User', user.id, user.id)
 
@@ -326,13 +334,11 @@ export async function forgotPassword(email: string) {
     },
   })
 
-  try {
-    await supabaseAdmin.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${env.appUrl}/?action=reset-password&token=${resetToken}`,
-    })
-  } catch (err: any) {
-    console.warn('[Auth] Erro ao enviar reset via Supabase:', err?.message)
-  }
+  sendPasswordResetEmail(
+    user.email,
+    user.name,
+    `${env.appUrl}/?action=reset-password&token=${resetToken}`
+  ).catch((err: any) => console.error('[Auth] Erro ao enviar reset password email:', err?.message))
 
   logActivity(user.id, 'PASSWORD_RESET_REQUESTED', `Recuperação de senha solicitada para ${user.email}`, 'User', user.id, user.id)
 

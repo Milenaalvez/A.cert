@@ -1,67 +1,15 @@
-import nodemailer from 'nodemailer'
-import sgMail from '@sendgrid/mail'
+import { supabaseAdmin } from '../database/supabase.js'
 import { env } from '../config/env.js'
-
-let transporter: nodemailer.Transporter | null = null
-let sgInitialized = false
-
-function initSendgrid() {
-  if (sgInitialized) return true
-  if (!env.sendgridApiKey) {
-    console.warn('[Email] SENDGRID_API_KEY não configurada')
-    return false
-  }
-  sgMail.setApiKey(env.sendgridApiKey)
-  sgInitialized = true
-  return true
-}
-
-function getTransporter(): nodemailer.Transporter | null {
-  if (transporter) return transporter
-  if (!env.smtpHost || !env.smtpUser || !env.smtpPass) {
-    console.warn('[Email] SMTP não configurado — e-mails não serão enviados')
-    return null
-  }
-  transporter = nodemailer.createTransport({
-    host: env.smtpHost,
-    port: env.smtpPort,
-    secure: env.smtpPort === 465,
-    auth: { user: env.smtpUser, pass: env.smtpPass },
-    requireTLS: true,
-  })
-  return transporter
-}
-
-async function sendViaSmtp(to: string, subject: string, html: string) {
-  const t = getTransporter()
-  if (!t) return
-  const info = await t.sendMail({
-    from: env.smtpFrom || 'noreply@chronos.app',
-    to,
-    subject,
-    html,
-  })
-  console.log(`[Email] SMTP enviado para ${to}: ${info.messageId}`)
-}
-
-async function sendViaSendgrid(to: string, subject: string, html: string) {
-  if (!initSendgrid()) return
-  const msg = {
-    to,
-    from: env.smtpFrom || 'noreply@chronos.app',
-    subject,
-    html,
-  }
-  await sgMail.send(msg)
-  console.log(`[Email] SendGrid enviado para ${to}: ${subject}`)
-}
 
 async function send(to: string, subject: string, html: string) {
   try {
-    if (env.emailProvider === 'sendgrid') {
-      await sendViaSendgrid(to, subject, html)
+    const { data, error } = await supabaseAdmin.functions.invoke('send-email', {
+      body: { to, subject, html },
+    })
+    if (error) {
+      console.error(`[Email] ERRO ao enviar para ${to}:`, error.message)
     } else {
-      await sendViaSmtp(to, subject, html)
+      console.log(`[Email] Enviado para ${to}: ${data?.messageId || 'ok'}`)
     }
   } catch (err: any) {
     console.error(`[Email] ERRO ao enviar para ${to}:`, err.message)
