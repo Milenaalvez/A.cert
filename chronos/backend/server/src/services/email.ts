@@ -25,6 +25,40 @@ async function send(to: string, subject: string, html: string) {
       sgMail.setApiKey(env.sendgridApiKey)
       await sgMail.send({ from: env.smtpFrom, to, subject, html })
       console.log(`[Email] Enviado para ${to} via SendGrid`)
+    } else if (env.emailProvider === 'mailerlite') {
+      const payload = { from: env.smtpFrom, to, subject, html }
+      const res = await fetch('https://api.mailerlite.com/api/v2/transactional/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-MailerLite-ApiKey': env.mailerliteApiKey,
+        },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`MailerLite ${res.status}: ${text}`)
+      }
+      console.log(`[Email] Enviado para ${to} via MailerLite`)
+    } else if (env.emailProvider === 'brevo') {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': env.brevoApiKey,
+        },
+        body: JSON.stringify({
+          sender: { name: 'Chronos', email: 'chronos.sistem@gmail.com' },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`Brevo ${res.status}: ${text}`)
+      }
+      console.log(`[Email] Enviado para ${to} via Brevo`)
     } else {
       const info = await getTransporter().sendMail({ from: env.smtpFrom, to, subject, html })
       console.log(`[Email] Enviado para ${to}: ${info.messageId}`)
