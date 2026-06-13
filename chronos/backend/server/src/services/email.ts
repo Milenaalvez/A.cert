@@ -1,15 +1,33 @@
-import { supabaseAdmin } from '../database/supabase.js'
+import nodemailer from 'nodemailer'
+import sgMail from '@sendgrid/mail'
 import { env } from '../config/env.js'
+
+let transporter: nodemailer.Transporter | null = null
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: env.smtpHost,
+      port: env.smtpPort,
+      secure: env.smtpPort === 465,
+      auth: { user: env.smtpUser, pass: env.smtpPass },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
+    })
+  }
+  return transporter
+}
 
 async function send(to: string, subject: string, html: string) {
   try {
-    const { data, error } = await supabaseAdmin.functions.invoke('send-email', {
-      body: { to, subject, html },
-    })
-    if (error) {
-      console.error(`[Email] ERRO ao enviar para ${to}:`, error.message)
+    if (env.emailProvider === 'sendgrid') {
+      sgMail.setApiKey(env.sendgridApiKey)
+      await sgMail.send({ from: env.smtpFrom, to, subject, html })
+      console.log(`[Email] Enviado para ${to} via SendGrid`)
     } else {
-      console.log(`[Email] Enviado para ${to}: ${data?.messageId || 'ok'}`)
+      const info = await getTransporter().sendMail({ from: env.smtpFrom, to, subject, html })
+      console.log(`[Email] Enviado para ${to}: ${info.messageId}`)
     }
   } catch (err: any) {
     console.error(`[Email] ERRO ao enviar para ${to}:`, err.message)
