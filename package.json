@@ -1,0 +1,40 @@
+{
+  "name": "a-cert",
+  "version": "1.0.0",
+  "description": "Central de Certidões Imobiliárias - Consulta real em órgãos oficiais",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:frontend": "cd frontend && npx next dev --port 3000",
+    "dev:all": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev\" \"npm run dev:frontend\"",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.10.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.0",
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^24.4.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.14.1",
+    "@types/nodemailer": "^8.0.1",
+    "@types/uuid": "^10.0.0",
+    "concurrently": "^10.0.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

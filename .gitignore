@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.log
+.dossie-cache/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+data/
+tmp/
+debug-*.png
