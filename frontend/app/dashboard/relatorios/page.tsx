@@ -82,14 +82,14 @@ export default function RelatoriosPage() {
     // SVG charts
     const lineData = d.monthlyEmission;
     const maxLine = Math.max(...lineData.map(l => l.total), 1);
-    const lineSvg = lineData.length > 0 ? `<svg width="100%" viewBox="0 0 700 220"><rect width="700" height="220" fill="#FAFAFA" rx="4"/><line x1="60" y1="180" x2="680" y2="180" stroke="#D1D5DB" stroke-width="1"/>${[0,0.25,0.5,0.75,1].map(r => `<line x1="60" y1="${20 + 160*(1-r)}" x2="680" y2="${20 + 160*(1-r)}" stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4,4"/>`).join("")}${lineData.map((pt,i)=>{const x=60+i/Math.max(lineData.length-1,1)*620;const y=20+160*(1-pt.total/maxLine);return`<circle cx="${Math.round(x)}" cy="${Math.round(y)}" r="5" fill="#FF7A00" stroke="#fff" stroke-width="2"/>`}).join("")}${lineData.map((pt,i,arr)=>{if(i===arr.length-1)return"";const x1=60+i/Math.max(arr.length-1,1)*620;const y1=20+160*(1-pt.total/maxLine);const x2=60+(i+1)/Math.max(arr.length-1,1)*620;const y2=20+160*(1-arr[i+1].total/maxLine);return`<line x1="${Math.round(x1)}" y1="${Math.round(y1)}" x2="${Math.round(x2)}" y2="${Math.round(y2)}" stroke="#FF7A00" stroke-width="2.5"/>`}).join("")}${lineData.map((pt,i)=>`<text x="${Math.round(60+i/Math.max(lineData.length-1,1)*620)}" y="202" text-anchor="middle" font-size="10" fill="#6B7280">${pt.label}</text>`).join("")}</svg>` : '';
+    const lineSvg = lineData.length > 0 ? `<svg width="100%" viewBox="0 0 700 220" style="max-width:600px"><rect width="700" height="220" fill="#FAFAFA" rx="4"/><line x1="60" y1="180" x2="680" y2="180" stroke="#D1D5DB" stroke-width="1"/>${[0,0.25,0.5,0.75,1].map(r => \`<line x1="60" y1="${20 + 160*(1-r)}" x2="680" y2="${20 + 160*(1-r)}" stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4,4"/>\`).join("")}${lineData.map((pt,i)=>{const x=60+i/Math.max(lineData.length-1,1)*620;const y=20+160*(1-pt.total/maxLine);return\`<circle cx="${Math.round(x)}" cy="${Math.round(y)}" r="5" fill="#FF7A00" stroke="#fff" stroke-width="2"/>\`}).join("")}${lineData.map((pt,i,arr)=>{if(i===arr.length-1)return"";const x1=60+i/Math.max(arr.length-1,1)*620;const y1=20+160*(1-pt.total/maxLine);const x2=60+(i+1)/Math.max(arr.length-1,1)*620;const y2=20+160*(1-arr[i+1].total/maxLine);return\`<line x1="${Math.round(x1)}" y1="${Math.round(y1)}" x2="${Math.round(x2)}" y2="${Math.round(y2)}" stroke="#FF7A00" stroke-width="2.5"/>\`}).join("")}${lineData.map((pt,i)=>\`<text x="${Math.round(60+i/Math.max(lineData.length-1,1)*620)}" y="202" text-anchor="middle" font-size="10" fill="#6B7280">${pt.label}</text>\`).join("")}</svg>` : '';
 
     const barData = [...d.certByOrgan].sort((a,b)=>b.total-a.total).slice(0,7);
     const maxBar = Math.max(...barData.map(b=>b.total),1);
-    const barSvg = barData.length > 0 ? `<svg width="100%" viewBox="0 0 600 ${barData.length*32+8}"><rect width="600" height="${barData.length*32+8}" fill="#FAFAFA" rx="4"/>${barData.map((b,i)=>{const y=i*32+4;const w=Math.max((b.total/maxBar)*380,4);return`<text x="120" y="${y+18}" text-anchor="end" font-size="11" fill="#4B5563">${b.name.length>16?b.name.slice(0,16)+'…':b.name}</text><rect x="126" y="${y+6}" width="${Math.round(w)}" height="22" rx="4" fill="#FF7A00" opacity="0.85"/><text x="${Math.round(126+w+8)}" y="${y+20}" font-size="11" fill="#111827" font-weight="600">${b.total}</text>`}).join("")}</svg>` : '';
+    const barSvg = barData.length > 0 ? `<svg width="100%" viewBox="0 0 400 ${barData.length*22+8}" style="max-width:400px"><rect width="400" height="${barData.length*22+8}" fill="#FAFAFA" rx="4"/>${barData.map((b,i)=>{const y=i*22+2;const w=Math.max((b.total/maxBar)*250,3);return\`<text x="90" y="${y+13}" text-anchor="end" font-size="9" fill="#6B7280">${b.name.length>13?b.name.slice(0,13)+'…':b.name}</text><rect x="94" y="${y+3}" width="${Math.round(w)}" height="16" rx="3" fill="#FF7A00" opacity="0.85"/><text x="${Math.round(94+w+5)}" y="${y+14}" font-size="9" fill="#374151" font-weight="600">${b.total}</text>\`}).join("")}</svg>` : '';
 
     // Section helpers
-    const sec = (num: string, title: string) => `<div style="margin:24px 0 12px;padding-bottom:4px;border-bottom:1px solid #D1D5DB"><span style="font-weight:700;color:#FF7A00;font-size:13px">${num}</span> <span style="font-weight:700;color:#374151;font-size:13px">${title}</span></div>`;
+    const sec = (num: string, title: string) => `<div style="margin:28px 0 14px;padding-bottom:6px;border-bottom:1px solid #D1D5DB"><span style="font-weight:700;color:#FF7A00;font-size:13px">${num}</span> <span style="font-weight:700;color:#374151;font-size:13px">${title}</span></div>`;
     const tbl = (headers: string[], rows: string[][]) => `<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 
     // KPI cards
@@ -140,8 +140,8 @@ export default function RelatoriosPage() {
     }
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo} — ${empresa}</title><style>
-      @page{size:A4 landscape;margin:2cm 2cm 2.5cm 2cm;@top-center{content:element(header)};@bottom-center{content:element(footer)}}
-      body{font-family:'Segoe UI',Arial,sans-serif;color:#1F2937;font-size:11px;line-height:1.6;margin:0;padding:0}
+      @page{size:A4 landscape;margin:2.5cm 2.5cm 3cm 2.5cm;@top-center{content:element(header)};@bottom-center{content:element(footer)}}
+      body{font-family:'Segoe UI',Arial,sans-serif;color:#1F2937;font-size:11.5px;line-height:1.7;margin:0;padding:0 8px}
       .cover{page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90vh;text-align:center}
       .cover img{width:80px;margin-bottom:24px}
       .cover h1{font-size:32px;font-weight:800;margin:0;color:#111827;letter-spacing:-0.5px}
@@ -155,8 +155,8 @@ export default function RelatoriosPage() {
       .header .hr{text-align:right}
       .footer{position:running(footer);display:flex;align-items:center;justify-content:space-between;border-top:1px solid #D1D5DB;padding-top:4px;font-size:8px;color:#9CA3AF}
       table{width:100%;border-collapse:collapse;font-size:10px;margin:8px 0 16px}
-      th{background:#F3F4F6;padding:6px 8px;border:1px solid #D1D5DB;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#374151;text-align:left}
-      td{padding:6px 8px;border:1px solid #E5E7EB;vertical-align:top}
+      th{background:#F3F4F6;padding:8px 12px;border:1px solid #D1D5DB;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#374151;text-align:left}
+      td{padding:8px 12px;border:1px solid #E5E7EB;vertical-align:top}
       tr:nth-child(even) td{background:#FAFAFA}
       .fonte{font-size:9px;color:#9CA3AF;text-align:right;margin-top:2px}
       .kpi{text-align:center;padding:16px 12px;background:#FFF7ED;border-radius:8px;border:1px solid #FFEDD5}
