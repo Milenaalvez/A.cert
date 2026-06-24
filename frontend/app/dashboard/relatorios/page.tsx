@@ -116,7 +116,8 @@ export default function RelatoriosPage() {
               { k: "personalizado", l: "Personalizado" },
             ].map(f => (
               <button key={f.k} onClick={() => setPeriod(f.k)}
-                className={`px-6 py-2.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer border text-center min-w-[90px] ${period === f.k ? "border-[#FF7A00] text-[#FF7A00] bg-accent/8" : "border-default text-secondary hover:border-hover"}`}
+                className={`h-[38px] px-5 rounded text-[13px] font-semibold transition-colors cursor-pointer text-center min-w-[90px] ${period === f.k ? "border-none text-white" : "border border-default bg-transparent text-secondary hover:border-hover"}`}
+                style={period === f.k ? { background: "#FF7A00" } : undefined}
               >{f.l}</button>
             ))}
           </div>
@@ -181,8 +182,10 @@ export default function RelatoriosPage() {
 
         {/* Duas colunas: Clientes + Insights */}
         <div className="flex gap-6">
-          <div className="flex-1 bg-surface rounded-2xl p-6">
-            <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><Users size={16} color="#FF7A00" /> Aquisição de Clientes</h3>
+          <div className="flex-1" style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+              <Users size={14} strokeWidth={1.5} color="#FF7A00" /> Aquisição de Clientes
+            </div>
             <table className="w-full border-collapse">
               <thead><tr className="border-b border-default">{["Período", "Novos clientes", "Crescimento"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
               <tbody>
@@ -202,8 +205,10 @@ export default function RelatoriosPage() {
               </tbody>
             </table>
           </div>
-          <div className="w-[35%] bg-surface rounded-2xl p-6">
-            <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><Target size={16} color="#FF7A00" /> Análise Operacional</h3>
+          <div className="w-[35%]" style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+              <Target size={14} strokeWidth={1.5} color="#FF7A00" /> Análise Operacional
+            </div>
             <div className="flex flex-col gap-3">
               {insights.map((ins, i) => (
                 <div key={i} className="flex gap-3 items-start">
@@ -216,8 +221,8 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Desempenho dos Dossiês */}
-        <div className="bg-surface rounded-2xl p-6">
-          <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><BarChart3 size={16} color="#FF7A00" /> Desempenho dos Dossiês</h3>
+        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><BarChart3 size={14} strokeWidth={1.5} color="#FF7A00" /> Desempenho dos Dossiês</div>
           <table className="w-full border-collapse">
             <thead><tr className="border-b border-default">{["Status", "Quantidade", "Percentual", "Tempo médio", "Tendência"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
@@ -240,8 +245,8 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Certidões */}
-        <div className="bg-surface rounded-2xl p-6">
-          <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><FileText size={16} color="#FF7A00" /> Performance das Certidões</h3>
+        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><FileText size={14} strokeWidth={1.5} color="#FF7A00" /> Performance das Certidões</div>
           <table className="w-full border-collapse">
             <thead><tr className="border-b border-default">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className="text-left px-3 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
@@ -260,8 +265,8 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Movimentação Imobiliária */}
-        <div className="bg-surface rounded-2xl p-6">
-          <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><Building2 size={16} color="#FF7A00" /> Movimentação Imobiliária</h3>
+        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Building2 size={14} strokeWidth={1.5} color="#FF7A00" /> Movimentação Imobiliária</div>
           <table className="w-full border-collapse">
             <thead><tr className="border-b border-default">{["Tipo de imóvel", "Quantidade", "Dossiês gerados", "Certidões emitidas", "Taxa de conclusão"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
@@ -279,8 +284,8 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Produtividade */}
-        <div className="bg-surface rounded-2xl p-6">
-          <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><Users size={16} color="#FF7A00" /> Produtividade dos Corretores</h3>
+        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Users size={14} strokeWidth={1.5} color="#FF7A00" /> Produtividade dos Corretores</div>
           <table className="w-full border-collapse">
             <thead><tr className="border-b border-default">{["Usuário", "Dossiês", "Certidões", "Conclusões", "Taxa"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
