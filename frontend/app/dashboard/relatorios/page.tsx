@@ -217,8 +217,8 @@ export default function RelatoriosPage() {
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
               <Users size={14} strokeWidth={1.5} color="#FF7A00" /> Aquisição de Clientes
             </div>
-            <table className="w-full border-collapse">
-              <thead><tr className="border-b border-default">{["Período", "Novos clientes", "Crescimento"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <table className="w-full">
+              <thead><tr>{["Período", "Novos clientes", "Crescimento"].map(h => <th key={h} className="text-left px-4 py-2 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
               <tbody>
                 {[
                   { p: "Hoje", v: d.clientGrowth.today, prev: d.clientGrowth.yesterday },
@@ -227,10 +227,10 @@ export default function RelatoriosPage() {
                   { p: "Este ano", v: d.clientGrowth.year, prev: 0 },
                   { p: "Ano anterior", v: 0, prev: 0, ph: true },
                 ].map((r, i) => (
-                  <tr key={i} className={i < 4 ? "border-b border-default" : ""}>
-                    <td className="px-4 py-3 text-[13px] font-medium text-primary">{r.p}</td>
-                    <td className="px-4 py-3 text-[13px] font-semibold text-primary">{r.ph ? "—" : r.v}</td>
-                    <td className="px-4 py-3">{!r.ph && r.v > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]"><TrendingUp size={12} />{diffPct(r.v, r.prev)}</span> : !r.ph ? <span className="text-[12px] text-muted">—</span> : null}</td>
+                  <tr key={i}>
+                    <td className="px-4 py-2.5 text-[13px] font-medium text-primary">{r.p}</td>
+                    <td className="px-4 py-2.5 text-[13px] font-semibold text-primary">{r.ph ? "—" : r.v}</td>
+                    <td className="px-4 py-2.5">{!r.ph && r.v > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]"><TrendingUp size={12} />{diffPct(r.v, r.prev)}</span> : !r.ph ? <span className="text-[12px] text-muted">—</span> : null}</td>
                   </tr>
                 ))}
               </tbody>

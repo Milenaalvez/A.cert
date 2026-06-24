@@ -233,7 +233,6 @@ export default function PessoasPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [showNovaPessoa, setShowNovaPessoa] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -283,9 +282,6 @@ export default function PessoasPage() {
     const handler = (e: MouseEvent) => {
       if (menuOpenId && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpenId(null);
-      }
-      if (exportOpen && exportRef.current && !exportRef.current.contains(e.target as Node)) {
-        setExportOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -421,46 +417,51 @@ export default function PessoasPage() {
             ))}
           </div>
 
-          {/* Export dropdown */}
+          {/* Export button */}
           {searched.length > 0 && (
-            <div ref={exportRef} style={{ position: "relative" }}>
-              <button onClick={() => !exportLoading && setExportOpen(!exportOpen)}
-                style={{
-                  height: "36px", padding: "0 16px", borderRadius: "8px",
-                  border: "1px solid var(--border-default)", background: exportOpen ? "var(--bg-subtle)" : "transparent",
-                  fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)",
-                  cursor: exportLoading ? "wait" : "pointer", display: "flex", alignItems: "center", gap: "6px",
-                  transition: "all 0.15s ease", opacity: exportLoading ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => { if (!exportOpen) e.currentTarget.style.background = "var(--bg-subtle)"; e.currentTarget.style.borderColor = "var(--border-hover)"; }}
-                onMouseLeave={(e) => { if (!exportOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border-default)"; } }}>
-                <Download size={14} strokeWidth={1.5} /> {exportLoading ? "Carregando..." : "Exportar"}
-              </button>
-              {exportOpen && (
-                <div style={{
-                  position: "absolute", top: "100%", right: "0", zIndex: 40, marginTop: "4px",
-                  background: "var(--bg-surface)", borderRadius: "10px",
-                  border: "1px solid var(--border-default)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
-                  minWidth: "220px", overflow: "hidden",
-                }}>
-                  <div style={{ padding: "6px 16px 2px", fontSize: "10px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".8px" }}>
-                    Resumido (tabela)
-                  </div>
-                  <button onClick={() => handleExport(false, "excel")} style={menuItemStyle}><FileSpreadsheet size={14} strokeWidth={1.5} /> Excel</button>
-                  <button onClick={() => handleExport(false, "pdf")} style={menuItemStyle}><FileText size={14} strokeWidth={1.5} /> PDF</button>
-                  <button onClick={() => handleExport(false, "ambos")} style={menuItemStyle}><Download size={14} strokeWidth={1.5} /> Ambos</button>
-                  <div style={{ height: "1px", background: "var(--border-light)", margin: "6px 0" }} />
-                  <div style={{ padding: "6px 16px 2px", fontSize: "10px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".8px" }}>
-                    Completo (perfil)
-                  </div>
-                  <button onClick={() => handleExport(true, "excel")} style={menuItemStyle}><FileSpreadsheet size={14} strokeWidth={1.5} /> Excel</button>
-                  <button onClick={() => handleExport(true, "pdf")} style={menuItemStyle}><FileText size={14} strokeWidth={1.5} /> PDF</button>
-                  <button onClick={() => handleExport(true, "ambos")} style={menuItemStyle}><Download size={14} strokeWidth={1.5} /> Ambos</button>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => !exportLoading && setExportOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 h-[38px] px-5 min-w-[120px] rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer"
+              style={{ background: "#FF7A00", opacity: exportLoading ? 0.7 : 1 }}
+            ><Download size={14} /> {exportLoading ? "Carregando..." : "Exportar"}</button>
           )}
         </div>
+
+        {/* Modal Exportar */}
+        {exportOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }} onClick={() => setExportOpen(false)} />
+            <div className="relative w-full animate-in fade-in zoom-in-95 duration-200" style={{ maxWidth: 400, borderRadius: 10, background: "var(--bg-surface)", boxShadow: "0 25px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: "36px 32px 20px 32px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 16 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,122,0,0.12)" }}>
+                  <Download size={24} strokeWidth={2.5} color="#FF7A00" />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>Exportar Pessoas</h3>
+                  <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: 300 }}>{searched.length} pessoas selecionadas</p>
+                </div>
+                <div style={{ width: "100%", marginTop: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".8px", textAlign: "left", marginBottom: 6 }}>Resumido (tabela)</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setExportOpen(false); handleExport(false, "excel"); }} style={exportOptStyle} onMouseEnter={exportHover} onMouseLeave={exportLeave}><FileSpreadsheet size={14} strokeWidth={1.5} /> Excel</button>
+                    <button onClick={() => { setExportOpen(false); handleExport(false, "pdf"); }} style={exportOptStyle} onMouseEnter={exportHover} onMouseLeave={exportLeave}><FileText size={14} strokeWidth={1.5} /> PDF</button>
+                    <button onClick={() => { setExportOpen(false); handleExport(false, "ambos"); }} style={exportOptStyle} onMouseEnter={exportHover} onMouseLeave={exportLeave}><Download size={14} strokeWidth={1.5} /> Ambos</button>
+                  </div>
+                  <div style={{ height: 1, background: "var(--border-light)", margin: "14px 0" }} />
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".8px", textAlign: "left", marginBottom: 6 }}>Completo (perfil)</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setExportOpen(false); handleExport(true, "excel"); }} style={exportOptStyle} onMouseEnter={exportHover} onMouseLeave={exportLeave}><FileSpreadsheet size={14} strokeWidth={1.5} /> Excel</button>
+                    <button onClick={() => { setExportOpen(false); handleExport(true, "pdf"); }} style={exportOptStyle} onMouseEnter={exportHover} onMouseLeave={exportLeave}><FileText size={14} strokeWidth={1.5} /> PDF</button>
+                    <button onClick={() => { setExportOpen(false); handleExport(true, "ambos"); }} style={exportOptStyle} onMouseEnter={exportHover} onMouseLeave={exportLeave}><Download size={14} strokeWidth={1.5} /> Ambos</button>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, padding: "0 32px 32px 32px", justifyContent: "center" }}>
+                <button onClick={() => setExportOpen(false)} style={{ height: 42, padding: "0 24px", borderRadius: 8, border: "1px solid var(--border-light)", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>Fechar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
@@ -667,3 +668,12 @@ const menuItemStyle: React.CSSProperties = {
   fontSize: "13px", color: "var(--text-primary)", textAlign: "left",
   fontFamily: "inherit", transition: "background 0.1s",
 };
+
+const exportOptStyle: React.CSSProperties = {
+  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+  padding: "12px 0", borderRadius: 8, border: "1px solid var(--border-light)",
+  background: "transparent", cursor: "pointer", fontSize: 13, fontWeight: 500,
+  color: "var(--text-primary)", fontFamily: "inherit", transition: "all 0.15s ease",
+};
+function exportHover(e: React.MouseEvent<HTMLButtonElement>) { e.currentTarget.style.borderColor = "#FF7A00"; e.currentTarget.style.background = "rgba(255,122,0,0.04)"; }
+function exportLeave(e: React.MouseEvent<HTMLButtonElement>) { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "transparent"; }
