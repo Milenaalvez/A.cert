@@ -1,4 +1,4 @@
-# A.CERT — Central de Certidões Imobiliárias (DONNOS Docs)
+# A.CERT — Central de Certidões Imobiliárias
 
 Plataforma completa de automação de certidões imobiliárias com gestão interna de equipe, desenvolvida em TypeScript.
 
