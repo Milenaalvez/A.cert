@@ -3,11 +3,12 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  LifeBuoy, Search, ChevronDown, ChevronUp, ExternalLink,
-  AlertTriangle, CheckCircle2, XCircle, Clock, Send,
-  FileText, Download, Shield, HelpCircle, MessageSquare,
+  LifeBuoy, Search, ChevronDown, ChevronUp,
+  CheckCircle2, XCircle, AlertTriangle, Clock, Send,
+  FileText, Download, HelpCircle, Shield, MessageSquare,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PageHeader } from "@/components/PageHeader";
 
 /* ── Types ─────────────────────────────────────────── */
 interface FAQItem {
@@ -69,7 +70,10 @@ export default function SuportePage() {
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    fetch(`${apiBase}/api/dashboard`)
+    const token = localStorage.getItem("acert_token");
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    fetch(`${apiBase}/api/dashboard`, { headers })
       .then(r => r.json())
       .then(d => {
         if (d?.organs) setOrganStatus(d.organs.map((o: any) => ({
@@ -134,75 +138,71 @@ export default function SuportePage() {
 
   return (
     <DashboardLayout>
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px 64px" }}>
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(255,122,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <LifeBuoy size={22} color="#FF7A00" strokeWidth={2} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: 0, lineHeight: 1.2 }}>Suporte</h1>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "2px 0 0" }}>Central de ajuda, documentação e contato com a equipe responsável pelo sistema.</p>
-            </div>
+          <div style={{ marginTop: 24 }}>
+            <PageHeader
+              title="Suporte"
+              subtitle="Central de ajuda, documentação e contato com a equipe responsável pelo sistema."
+            />
           </div>
         </div>
 
-        {/* Search */}
-        <div style={{ marginBottom: 32, position: "relative" }}>
-          <Search size={18} color="var(--text-tertiary)" style={{ position: "absolute", left: 14, top: 13 }} />
+        {/* FAQ Search */}
+        <div className="relative mb-8">
+          <Search size={18} className="absolute left-[14px] top-[13px] text-muted" />
           <input
             placeholder="Como podemos ajudar? Ex: Como emitir uma certidão?"
             value={search}
             onChange={e => { setSearch(e.target.value); setExpandedFAQ(null); }}
-            style={{ width: "100%", height: 46, borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 14px 0 42px", fontSize: 14, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }}
+            className="w-full h-[46px] rounded-[10px] border border-default bg-surface pl-[42px] pr-[14px] text-[14px] text-primary outline-none placeholder:text-muted"
+            onFocus={e => e.currentTarget.style.borderColor = "#FF7A00"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--border-default)"}
           />
         </div>
 
         {/* FAQ Categories */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => { setActiveCategory(cat); setExpandedFAQ(null); }}
-              style={{
-                padding: "6px 16px", borderRadius: 20, border: activeCategory === cat ? "1px solid #FF7A00" : "1px solid var(--border-default)",
-                background: activeCategory === cat ? "rgba(255,122,0,0.08)" : "var(--bg-app)",
-                color: activeCategory === cat ? "#FF7A00" : "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {CATEGORIES.map(cat => {
+            const active = activeCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => { setActiveCategory(cat); setExpandedFAQ(null); }}
+                className={`px-4 py-1.5 rounded-[20px] border text-[13px] font-medium cursor-pointer transition-colors ${
+                  active ? "border-[#FF7A00] bg-accent/8 text-[#FF7A00]" : "border-default bg-surface text-secondary hover:border-hover"
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
 
         {/* FAQ List */}
-        <div style={{ marginBottom: 40 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 14 }}>Perguntas Frequentes</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="mb-10">
+          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Perguntas Frequentes</h3>
+          <div className="flex flex-col gap-2">
             {filteredFAQ.length === 0 && (
-              <p style={{ color: "var(--text-tertiary)", fontSize: 14, textAlign: "center", padding: 24 }}>Nenhum resultado encontrado para "{search}".</p>
+              <p className="text-muted text-[14px] text-center py-6">Nenhum resultado encontrado para &quot;{search}&quot;.</p>
             )}
             {filteredFAQ.map((faq, i) => (
               <div
                 key={i}
-                style={{
-                  border: "1px solid var(--border-default)", borderRadius: 10, background: "var(--bg-app)",
-                  overflow: "hidden", transition: "all 0.2s",
-                  cursor: "pointer",
-                }}
+                className="rounded-[10px] bg-surface overflow-hidden cursor-pointer"
                 onClick={() => setExpandedFAQ(expandedFAQ === i ? null : i)}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px" }}>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 12, color: "#FF7A00", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{faq.category}</span>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", margin: "4px 0 0" }}>{faq.q}</p>
+                <div className="flex items-center justify-between px-[18px] py-3.5">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[12px] text-[#FF7A00] font-semibold uppercase tracking-[0.5px]">{faq.category}</span>
+                    <p className="text-[14px] font-medium text-primary mt-1">{faq.q}</p>
                   </div>
-                  {expandedFAQ === i ? <ChevronUp size={18} color="var(--text-tertiary)" /> : <ChevronDown size={18} color="var(--text-tertiary)" />}
+                  {expandedFAQ === i ? <ChevronUp size={18} className="text-muted shrink-0 ml-3" /> : <ChevronDown size={18} className="text-muted shrink-0 ml-3" />}
                 </div>
                 {expandedFAQ === i && (
-                  <div style={{ padding: "0 18px 16px" }}>
-                    <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, margin: 0, borderTop: "1px solid var(--border-default)", paddingTop: 12 }}>{faq.a}</p>
+                  <div className="px-[18px] pb-4">
+                    <p className="text-[14px] text-secondary leading-relaxed border-t border-default pt-3">{faq.a}</p>
                   </div>
                 )}
               </div>
@@ -211,9 +211,9 @@ export default function SuportePage() {
         </div>
 
         {/* System Status */}
-        <div style={{ marginBottom: 40 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 14 }}>Status do Sistema</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+        <div className="mb-10">
+          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Status do Sistema</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
             {(organStatus.length > 0 ? organStatus : [
               { name: "TJDFT", status: "online" },
               { name: "TRF1", status: "online" },
@@ -221,11 +221,11 @@ export default function SuportePage() {
               { name: "SEFAZ-DF", status: "unstable" },
               { name: "Receita Federal", status: "online" },
             ]).map((org, i) => (
-              <div key={i} style={{ border: "1px solid var(--border-default)", borderRadius: 10, background: "var(--bg-app)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div key={i} className="rounded-[10px] bg-surface p-4 flex items-center gap-2.5">
                 {statusIcon(org.status)}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{org.name}</div>
-                  <div style={{ fontSize: 12, color: statusColor(org.status), fontWeight: 500 }}>{statusLabel(org.status)}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-semibold text-primary">{org.name}</div>
+                  <div className="text-[12px] font-medium" style={{ color: statusColor(org.status) }}>{statusLabel(org.status)}</div>
                 </div>
               </div>
             ))}
@@ -233,20 +233,20 @@ export default function SuportePage() {
         </div>
 
         {/* Documentation */}
-        <div style={{ marginBottom: 40 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 14 }}>Documentação</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+        <div className="mb-10">
+          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Documentação</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
             {DOCUMENTATION.map((doc, i) => {
               const Icon = doc.icon;
               return (
-                <div key={i} style={{ border: "1px solid var(--border-default)", borderRadius: 10, background: "var(--bg-app)", padding: "16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 8, background: "rgba(255,122,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div key={i} className="rounded-[10px] bg-surface p-4 flex gap-3 items-start">
+                  <div className="w-[38px] h-[38px] rounded-lg bg-accent/8 flex items-center justify-center shrink-0">
                     <Icon size={18} color="#FF7A00" strokeWidth={1.5} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>{doc.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 8 }}>{doc.desc}</div>
-                    <button style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: "none", color: "#FF7A00", fontSize: 12, fontWeight: 500, cursor: "pointer", padding: 0 }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-primary mb-0.5">{doc.title}</div>
+                    <div className="text-[12px] text-muted mb-2">{doc.desc}</div>
+                    <button className="inline-flex items-center gap-1 bg-transparent border-none text-[#FF7A00] text-[12px] font-medium cursor-pointer p-0">
                       <Download size={12} /> Baixar PDF
                     </button>
                   </div>
@@ -258,39 +258,39 @@ export default function SuportePage() {
 
         {/* Contact Form */}
         <div>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 14 }}>Fale Conosco</h3>
+          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Fale Conosco</h3>
           {formSent ? (
-            <div style={{ border: "1px solid #10B981", borderRadius: 10, background: "rgba(16,185,129,0.06)", padding: 24, textAlign: "center" }}>
-              <CheckCircle2 size={40} color="#10B981" style={{ marginBottom: 12 }} />
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px" }}>Solicitação enviada!</h3>
-              <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "0 0 12px" }}>Protocolo: <strong style={{ color: "#FF7A00", fontFamily: "monospace" }}>{formProtocol}</strong></p>
+            <div className="border border-[#10B981] rounded-[10px] bg-[rgba(16,185,129,0.06)] p-6 text-center">
+              <CheckCircle2 size={40} color="#10B981" className="mb-3 mx-auto" />
+              <h3 className="text-[16px] font-bold text-primary mb-1">Solicitação enviada!</h3>
+              <p className="text-[14px] text-secondary mb-3">Protocolo: <strong className="text-[#FF7A00] font-mono">{formProtocol}</strong></p>
               <button
                 onClick={() => { setFormSent(false); setFormName(""); setFormEmail(""); setFormSubject(""); setFormMessage(""); setFormProtocol(""); }}
-                style={{ padding: "8px 20px", borderRadius: 8, border: "1px solid #FF7A00", background: "transparent", color: "#FF7A00", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                className="px-5 py-2 rounded-lg border border-[#FF7A00] bg-transparent text-[#FF7A00] text-[13px] font-semibold cursor-pointer hover:bg-accent/8 transition-colors"
               >
                 Nova solicitação
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ border: "1px solid var(--border-default)", borderRadius: 12, background: "var(--bg-app)", padding: "24px", display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <form onSubmit={handleSubmit} className="rounded-[12px] bg-surface p-6 flex flex-col gap-3.5">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Nome</label>
-                  <input required value={formName} onChange={e => setFormName(e.target.value)} placeholder="Seu nome completo" style={{ width: "100%", height: 40, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 12px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }} />
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">Nome</label>
+                  <input required value={formName} onChange={e => setFormName(e.target.value)} placeholder="Seu nome completo" className="w-full h-10 rounded-lg border border-default bg-surface px-3 text-[13px] text-primary outline-none placeholder:text-muted" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Email</label>
-                  <input required type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="seu@email.com" style={{ width: "100%", height: 40, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 12px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }} />
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">Email</label>
+                  <input required type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="seu@email.com" className="w-full h-10 rounded-lg border border-default bg-surface px-3 text-[13px] text-primary outline-none placeholder:text-muted" />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Assunto</label>
-                  <input required value={formSubject} onChange={e => setFormSubject(e.target.value)} placeholder="Descreva o assunto" style={{ width: "100%", height: 40, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 12px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }} />
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">Assunto</label>
+                  <input required value={formSubject} onChange={e => setFormSubject(e.target.value)} placeholder="Descreva o assunto" className="w-full h-10 rounded-lg border border-default bg-surface px-3 text-[13px] text-primary outline-none placeholder:text-muted" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Categoria</label>
-                  <select value={formCategory} onChange={e => setFormCategory(e.target.value)} style={{ width: "100%", height: 40, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 10px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }}>
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">Categoria</label>
+                  <select value={formCategory} onChange={e => setFormCategory(e.target.value)} className="w-full h-10 rounded-lg border border-default bg-surface px-2.5 text-[13px] text-primary outline-none cursor-pointer">
                     <option>Problema técnico</option>
                     <option>Sugestão</option>
                     <option>Financeiro</option>
@@ -300,14 +300,16 @@ export default function SuportePage() {
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Mensagem</label>
-                <textarea required value={formMessage} onChange={e => setFormMessage(e.target.value)} rows={4} placeholder="Descreva sua dúvida ou problema em detalhes..." style={{ width: "100%", borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "10px 12px", fontSize: 13, color: "var(--text-primary)", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+                <label className="text-[12px] font-semibold text-secondary block mb-1">Mensagem</label>
+                <textarea required value={formMessage} onChange={e => setFormMessage(e.target.value)} rows={4} placeholder="Descreva sua dúvida ou problema em detalhes..." className="w-full rounded-lg border border-default bg-surface px-3 py-2.5 text-[13px] text-primary outline-none resize-y font-[inherit] placeholder:text-muted" />
               </div>
-              {formError && <p style={{ fontSize: 12, color: "#EF4444", margin: 0 }}>{formError}</p>}
+              {formError && <p className="text-[12px] text-[#EF4444] m-0">{formError}</p>}
               <button
                 type="submit"
                 disabled={formSending}
-                style={{ alignSelf: "flex-end", display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 24px", borderRadius: 8, border: "none", background: formSending ? "rgba(255,122,0,0.5)" : "#FF7A00", color: "#fff", fontSize: 13, fontWeight: 600, cursor: formSending ? "not-allowed" : "pointer" }}
+                className={`self-end inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border-none text-white text-[13px] font-semibold transition-colors ${
+                  formSending ? "bg-[rgba(255,122,0,0.5)] cursor-not-allowed" : "bg-[#FF7A00] cursor-pointer hover:bg-[#E06900]"
+                }`}
               >
                 {formSending ? "Enviando..." : <><Send size={14} /> Enviar</>}
               </button>

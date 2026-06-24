@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, UserPlus } from "lucide-react";
+import { X, UserPlus, Loader2 } from "lucide-react";
 import * as teamApi from "@/services/teamApi";
 
 interface Props {
@@ -47,7 +47,19 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
     setError("");
     setSending(true);
     try {
-      await teamApi.create({ name, email, registrationNumber: cpf, phone, role, departmentId: departmentId || null, positionId: positionId || null, weeklyHours, contractType, hireDate: new Date().toISOString().split("T")[0], isActive });
+      await teamApi.create({
+        name,
+        email,
+        registrationNumber: cpf,
+        phone,
+        role,
+        departmentId: departmentId || null,
+        positionId: positionId || null,
+        weeklyHours,
+        contractType,
+        hireDate: new Date().toISOString().split("T")[0],
+        isActive,
+      });
       onCreated();
       onClose();
     } catch (err: any) {
@@ -59,102 +71,334 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
 
   if (!open) return null;
 
-  const inputStyle: React.CSSProperties = { width: "100%", height: 40, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 12px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" };
+  const labelStyle =
+    "block text-[11px] font-semibold text-muted uppercase tracking-[0.4px] mb-1.5";
+  const inputBase =
+    "w-full h-10 rounded-[8px] text-[13px] text-primary outline-none transition-colors font-[inherit] box-border";
+  const inputStyle =
+    inputBase + " border border-default bg-app px-3 focus:border-[#FF7A00]";
+  const selectStyle =
+    inputBase +
+    " border border-default bg-app px-3 appearance-none focus:border-[#FF7A00]";
+  const selectBg =
+    `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`;
+  const grid2 = "grid grid-cols-2 gap-3.5";
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
-      <div style={{ position: "relative", width: 560, maxHeight: "90vh", overflow: "auto", background: "var(--bg-app)", borderRadius: 16, border: "1px solid var(--border-default)", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", padding: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid var(--border-default)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,122,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}><UserPlus size={18} color="#FF7A00" /></div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Novo Usuário</h2>
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div
+          className="w-full bg-surface flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          style={{
+            maxWidth: "620px",
+            borderRadius: "16px",
+            border: "1px solid var(--border-default)",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.18)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div
+            className="flex items-center justify-between shrink-0"
+            style={{ padding: "24px 28px 20px", borderBottom: "1px solid var(--border-light)" }}
+          >
+            <div className="flex items-center gap-4">
+              <div
+                className="w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0"
+                style={{ background: "var(--badge-orange-bg)" }}
+              >
+                <UserPlus size={20} strokeWidth={1.5} color="#FF7A00" />
+              </div>
+              <div>
+                <h2
+                  className="text-[17px] font-bold tracking-tight"
+                  style={{ color: "var(--text-primary)", lineHeight: 1.2 }}
+                >
+                  Novo Usuário
+                </h2>
+                <p className="text-[12px]" style={{ color: "var(--text-muted)", marginTop: "2px" }}>
+                  Cadastre um novo colaborador no sistema
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-muted transition-colors"
+              style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--bg-subtle)";
+                e.currentTarget.style.color = "var(--text-primary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--text-muted)";
+              }}
+            >
+              <X size={18} strokeWidth={1.5} />
+            </button>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><X size={18} /></button>
+
+          {/* Body */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto" style={{ padding: "24px 28px" }}>
+            <div className="flex flex-col gap-4">
+              {/* Nome + Email */}
+              <div className={grid2}>
+                <div>
+                  <label className={labelStyle} style={{ color: "var(--text-primary)", fontWeight: 700 }}>
+                    Nome completo *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nome do colaborador"
+                    className={inputStyle}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  />
+                </div>
+                <div>
+                  <label className={labelStyle} style={{ color: "var(--text-primary)", fontWeight: 700 }}>
+                    Email *
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    className={inputStyle}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  />
+                </div>
+              </div>
+
+              {/* CPF + Telefone */}
+              <div className={grid2}>
+                <div>
+                  <label className={labelStyle}>CPF</label>
+                  <input
+                    type="text"
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    className={inputStyle}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  />
+                </div>
+                <div>
+                  <label className={labelStyle}>Telefone</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(61) 99999-0000"
+                    className={inputStyle}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  />
+                </div>
+              </div>
+
+              {/* Cargo + Departamento */}
+              <div className={grid2}>
+                <div>
+                  <label className={labelStyle}>Cargo</label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className={selectStyle}
+                    style={{
+                      cursor: "pointer",
+                      backgroundImage: selectBg,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "36px",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  >
+                    <option value="EMPLOYEE">Colaborador</option>
+                    <option value="RH">RH</option>
+                    <option value="ADMIN">Administrador</option>
+                    <option value="DEVELOPER">Desenvolvedor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelStyle}>Departamento</label>
+                  <select
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(e.target.value)}
+                    className={selectStyle}
+                    style={{
+                      cursor: "pointer",
+                      backgroundImage: selectBg,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "36px",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  >
+                    <option value="">Selecionar...</option>
+                    {departments.map((d: any) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Cargo/Posição + Carga horária */}
+              <div className={grid2}>
+                <div>
+                  <label className={labelStyle}>Cargo/Posição</label>
+                  <select
+                    value={positionId}
+                    onChange={(e) => setPositionId(e.target.value)}
+                    className={selectStyle}
+                    style={{
+                      cursor: "pointer",
+                      backgroundImage: selectBg,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "36px",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  >
+                    <option value="">Selecionar...</option>
+                    {positions.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelStyle}>Carga horária semanal</label>
+                  <select
+                    value={weeklyHours}
+                    onChange={(e) => setWeeklyHours(Number(e.target.value))}
+                    className={selectStyle}
+                    style={{
+                      cursor: "pointer",
+                      backgroundImage: selectBg,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "36px",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  >
+                    <option value={40}>40h semanais</option>
+                    <option value={44}>44h semanais</option>
+                    <option value={30}>30h semanais</option>
+                    <option value={20}>20h semanais</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tipo de contrato + Status */}
+              <div className={grid2}>
+                <div>
+                  <label className={labelStyle}>Tipo de contrato</label>
+                  <select
+                    value={contractType}
+                    onChange={(e) => setContractType(e.target.value)}
+                    className={selectStyle}
+                    style={{
+                      cursor: "pointer",
+                      backgroundImage: selectBg,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "36px",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  >
+                    <option value="CLT">CLT</option>
+                    <option value="PJ">PJ</option>
+                    <option value="ESTAGIO">Estágio</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelStyle}>Status inicial</label>
+                  <select
+                    value={isActive ? "active" : "inactive"}
+                    onChange={(e) => setIsActive(e.target.value === "active")}
+                    className={selectStyle}
+                    style={{
+                      cursor: "pointer",
+                      backgroundImage: selectBg,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "36px",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
+                  >
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  className="text-[13px] p-3 rounded-[8px]"
+                  style={{ background: "var(--badge-red-bg)", color: "var(--error)" }}
+                >
+                  {error}
+                </div>
+              )}
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div
+            className="flex items-center justify-between shrink-0"
+            style={{ padding: "16px 28px 20px", borderTop: "1px solid var(--border-light)" }}
+          >
+            <span className="text-[11px] text-muted">
+              <span style={{ color: "#DC2626" }}>*</span> Campos obrigatórios
+            </span>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-[38px] px-5 rounded-[8px] text-[13px] font-medium text-secondary border border-default transition-colors"
+                style={{ background: "transparent", cursor: "pointer" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={sending}
+                className="h-[38px] px-7 rounded-[8px] text-[13px] font-semibold text-white flex items-center gap-1.5 transition-colors"
+                style={{
+                  border: "none",
+                  cursor: sending ? "not-allowed" : "pointer",
+                  background: sending ? "var(--text-muted)" : "#FF7A00",
+                  opacity: sending ? 0.8 : 1,
+                }}
+                onMouseEnter={(e) => { if (!sending) e.currentTarget.style.background = "#E06900"; }}
+                onMouseLeave={(e) => { if (!sending) e.currentTarget.style.background = "#FF7A00"; }}
+              >
+                {sending && <Loader2 size={15} strokeWidth={2} className="animate-spin" />}
+                {sending ? "Criando..." : "Criar Usuário"}
+              </button>
+            </div>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Nome completo *</label>
-              <input required value={name} onChange={e => setName(e.target.value)} placeholder="Nome do colaborador" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Email *</label>
-              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" style={inputStyle} />
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={labelStyle}>CPF</label>
-              <input value={cpf} onChange={e => setCpf(e.target.value)} placeholder="000.000.000-00" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Telefone</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(61) 99999-0000" style={inputStyle} />
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Cargo</label>
-              <select value={role} onChange={e => setRole(e.target.value)} style={inputStyle}>
-                <option value="EMPLOYEE">Colaborador</option>
-                <option value="RH">RH</option>
-                <option value="ADMIN">Administrador</option>
-                <option value="DEVELOPER">Desenvolvedor</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Departamento</label>
-              <select value={departmentId} onChange={e => setDepartmentId(e.target.value)} style={inputStyle}>
-                <option value="">Selecionar...</option>
-                {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Cargo/Posição</label>
-              <select value={positionId} onChange={e => setPositionId(e.target.value)} style={inputStyle}>
-                <option value="">Selecionar...</option>
-                {positions.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Carga horária semanal</label>
-              <select value={weeklyHours} onChange={e => setWeeklyHours(Number(e.target.value))} style={inputStyle}>
-                <option value={40}>40h semanais</option>
-                <option value={44}>44h semanais</option>
-                <option value={30}>30h semanais</option>
-                <option value={20}>20h semanais</option>
-              </select>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Tipo de contrato</label>
-              <select value={contractType} onChange={e => setContractType(e.target.value)} style={inputStyle}>
-                <option value="CLT">CLT</option>
-                <option value="PJ">PJ</option>
-                <option value="ESTAGIO">Estágio</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Status inicial</label>
-              <select value={isActive ? "active" : "inactive"} onChange={e => setIsActive(e.target.value === "active")} style={inputStyle}>
-                <option value="active">Ativo</option>
-                <option value="inactive">Inativo</option>
-              </select>
-            </div>
-          </div>
-          {error && <p style={{ fontSize: 12, color: "#EF4444", margin: 0 }}>{error}</p>}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
-            <button type="button" onClick={onClose} style={{ padding: "10px 20px", borderRadius: 8, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
-            <button type="submit" disabled={sending} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: sending ? "rgba(255,122,0,0.5)" : "#FF7A00", color: "#fff", fontSize: 13, fontWeight: 600, cursor: sending ? "not-allowed" : "pointer" }}>{sending ? "Criando..." : "Criar Usuário"}</button>
-          </div>
-        </form>
       </div>
-    </div>
+    </>
   );
 }
-
-const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 };
