@@ -300,7 +300,7 @@ export default function RelatoriosPage() {
               <Users size={14} strokeWidth={1.5} color="#FF7A00" /> Aquisição de Clientes
             </div>
             <table className="w-full">
-              <thead><tr>{["Período", "Novos clientes", "Crescimento"].map(h => <th key={h} className="text-left px-4 py-2 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+              <thead><tr>{["Período", "Novos clientes", "Crescimento"].map(h => <th key={h} className={`text-[10px] font-semibold text-muted uppercase pb-2 ${h === "Período" ? "text-left" : "text-center"}`}>{h}</th>)}</tr></thead>
               <tbody>
                 {[
                   { p: "Hoje", v: d.clientGrowth.today, prev: d.clientGrowth.yesterday },
@@ -309,10 +309,10 @@ export default function RelatoriosPage() {
                   { p: "Este ano", v: d.clientGrowth.year, prev: 0 },
                   { p: "Ano anterior", v: 0, prev: 0, ph: true },
                 ].map((r, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-2.5 text-[13px] font-medium text-primary">{r.p}</td>
-                    <td className="px-4 py-2.5 text-[13px] font-semibold text-primary">{r.ph ? "—" : r.v}</td>
-                    <td className="px-4 py-2.5">{!r.ph && r.v > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]"><TrendingUp size={12} />{diffPct(r.v, r.prev)}</span> : !r.ph ? <span className="text-[12px] text-muted">—</span> : null}</td>
+                  <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
+                    <td className="py-2.5 pl-2 text-[13px] font-medium text-primary">{r.p}</td>
+                    <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{r.ph ? "—" : r.v}</td>
+                    <td className="py-2.5 text-center">{!r.ph && r.v > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]"><TrendingUp size={12} />{diffPct(r.v, r.prev)}</span> : !r.ph ? <span className="text-[12px] text-muted">—</span> : null}</td>
                   </tr>
                 ))}
               </tbody>
@@ -336,16 +336,23 @@ export default function RelatoriosPage() {
         {/* Desempenho dos Dossiês */}
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><BarChart3 size={14} strokeWidth={1.5} color="#FF7A00" /> Desempenho dos Dossiês</div>
-          <table className="w-full border-collapse">
-            <thead><tr className="">{["Status", "Quantidade", "Percentual", "Tempo médio", "Tendência"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+          <table className="w-full">
+            <thead><tr>{["Status", "Quantidade", "Percentual", "Tempo médio", "Tendência"].map(h => <th key={h} className={`text-[10px] font-semibold text-muted uppercase pb-2 ${h === "Status" ? "text-left" : "text-center"}`}>{h}</th>)}</tr></thead>
             <tbody>
               {d.dossierDetails.map((s, i) => (
-                <tr key={i} className="">
-                  <td className="px-4 py-3.5 flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: STATUS_COLORS[s.label] || "#6B7280" }} /><span className="text-[13px] font-medium text-primary">{s.label}</span></td>
-                  <td className="px-4 py-3.5 text-[13px] font-semibold text-primary">{s.total}</td>
-                  <td className="px-4 py-3.5 text-[13px] text-secondary">{s.pct}%</td>
-                  <td className="px-4 py-3.5 text-[13px] text-secondary">{s.avgHours > 0 ? `${s.avgHours}h` : "—"}</td>
-                  <td className="px-4 py-3.5">
+                <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
+                  <td className="py-2.5 pl-2 flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: STATUS_COLORS[s.label] || "#6B7280" }} /><span className="text-[13px] font-medium text-primary">{s.label}</span></td>
+                  <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{s.total}</td>
+                  <td className="py-2.5 text-center">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span className="text-[12px] font-semibold text-secondary">{s.pct}%</span>
+                      <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border-light)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 2, background: "#FF7A00", width: `${Math.min(s.pct, 100)}%` }} />
+                      </div>
+                    </span>
+                  </td>
+                  <td className="py-2.5 text-[12px] text-muted text-center">{s.avgHours > 0 ? `${s.avgHours}h` : "—"}</td>
+                  <td className="py-2.5 text-center">
                     <span className={`inline-flex items-center gap-1 text-[12px] font-semibold ${s.trend === "up" ? "text-[#DC2626]" : s.trend === "down" ? "text-[#059669]" : "text-muted"}`}>
                       {s.trend === "up" ? <TrendingUp size={12} /> : s.trend === "down" ? <TrendingDown size={12} /> : <span>—</span>}
                       {s.trend === "up" ? "Alta" : s.trend === "down" ? "Baixa" : "Estável"}
@@ -387,16 +394,23 @@ export default function RelatoriosPage() {
         {/* Movimentação Imobiliária */}
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Building2 size={14} strokeWidth={1.5} color="#FF7A00" /> Movimentação Imobiliária</div>
-          <table className="w-full border-collapse">
-            <thead><tr className="">{["Tipo de imóvel", "Quantidade", "Dossiês gerados", "Certidões emitidas", "Taxa de conclusão"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+          <table className="w-full">
+            <thead><tr>{["Tipo de imóvel", "Quantidade", "Dossiês gerados", "Certidões emitidas", "Taxa de conclusão"].map(h => <th key={h} className={`text-[10px] font-semibold text-muted uppercase pb-2 ${h === "Tipo de imóvel" ? "text-left" : "text-center"}`}>{h}</th>)}</tr></thead>
             <tbody>
               {d.propertiesByType.map((p, i) => (
-                <tr key={i} className="">
-                  <td className="px-4 py-3.5 text-[13px] font-medium text-primary">{p.type}</td>
-                  <td className="px-4 py-3.5 text-[13px] font-semibold text-primary">{p.total}</td>
-                  <td className="px-4 py-3.5 text-[13px] text-secondary">{p.dossiers_generated || "—"}</td>
-                  <td className="px-4 py-3.5 text-[13px] text-secondary">{p.certs_emitted || "—"}</td>
-                  <td className="px-4 py-3.5"><span className={`text-[12px] font-semibold ${p.completion_rate >= 70 ? "text-[#059669]" : p.completion_rate >= 30 ? "text-[#D97706]" : "text-[#DC2626]"}`}>{p.completion_rate}%</span></td>
+                <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
+                  <td className="py-2.5 pl-2 text-[13px] font-medium text-primary">{p.type}</td>
+                  <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{p.total}</td>
+                  <td className="py-2.5 text-[13px] text-secondary text-center">{p.dossiers_generated || "—"}</td>
+                  <td className="py-2.5 text-[13px] text-secondary text-center">{p.certs_emitted || "—"}</td>
+                  <td className="py-2.5 text-center">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span className="text-[12px] font-semibold" style={{ color: p.completion_rate >= 70 ? "#059669" : p.completion_rate >= 30 ? "#D97706" : "#DC2626" }}>{p.completion_rate}%</span>
+                      <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border-light)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 2, background: p.completion_rate >= 70 ? "#059669" : p.completion_rate >= 30 ? "#D97706" : "#DC2626", width: `${Math.min(p.completion_rate, 100)}%` }} />
+                      </div>
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -406,18 +420,25 @@ export default function RelatoriosPage() {
         {/* Produtividade */}
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Users size={14} strokeWidth={1.5} color="#FF7A00" /> Produtividade dos Corretores</div>
-          <table className="w-full border-collapse">
-            <thead><tr className="">{["Usuário", "Dossiês", "Certidões", "Conclusões", "Taxa"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+          <table className="w-full">
+            <thead><tr>{["Usuário", "Dossiês", "Certidões", "Conclusões", "Taxa de sucesso"].map(h => <th key={h} className={`text-[10px] font-semibold text-muted uppercase pb-2 ${h === "Usuário" ? "text-left" : "text-center"}`}>{h}</th>)}</tr></thead>
             <tbody>
               {d.productivityRanking.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-[13px] text-muted">Nenhum dado de produtividade disponível.</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-[13px] text-muted">Nenhum dado de produtividade disponível.</td></tr>
               ) : d.productivityRanking.map((p, i) => (
-                <tr key={p.id} className="">
-                  <td className="px-4 py-3.5 flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-[11px] font-bold text-primary">{getInitials(p.name)}</div><span className="text-[13px] font-medium text-primary">{p.name}</span></td>
-                  <td className="px-4 py-3.5 text-[13px] font-semibold text-primary">{p.total_dossiers}</td>
-                  <td className="px-4 py-3.5 text-[13px] text-secondary">{p.total_certs}</td>
-                  <td className="px-4 py-3.5 text-[13px] text-secondary">{p.success_certs}</td>
-                  <td className="px-4 py-3.5"><span className={`text-[12px] font-semibold ${p.success_rate >= 80 ? "text-[#059669]" : p.success_rate >= 50 ? "text-[#D97706]" : "text-[#DC2626]"}`}>{p.success_rate}%</span></td>
+                <tr key={p.id} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
+                  <td className="py-2.5 pl-2 flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-[11px] font-bold text-primary">{getInitials(p.name)}</div><span className="text-[13px] font-medium text-primary">{p.name}</span></td>
+                  <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{p.total_dossiers}</td>
+                  <td className="py-2.5 text-[13px] text-secondary text-center">{p.total_certs}</td>
+                  <td className="py-2.5 text-[13px] text-secondary text-center">{p.success_certs}</td>
+                  <td className="py-2.5 text-center">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span className="text-[12px] font-semibold" style={{ color: p.success_rate >= 80 ? "#059669" : p.success_rate >= 50 ? "#D97706" : "#DC2626" }}>{p.success_rate}%</span>
+                      <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border-light)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 2, background: p.success_rate >= 80 ? "#059669" : p.success_rate >= 50 ? "#D97706" : "#DC2626", width: `${Math.min(p.success_rate, 100)}%` }} />
+                      </div>
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
