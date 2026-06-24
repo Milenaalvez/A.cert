@@ -10,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar,
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PageHeader } from "@/components/PageHeader";
 
 /* ── Types ─────────────────────────────────────────── */
 interface DossierDetail { label: string; total: number; pct: number; avgHours: number; trend: string; }
@@ -88,11 +89,19 @@ export default function RelatoriosPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col px-8 pt-6 pb-24 w-full" style={{ gap: 24 }}>
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Relatórios</h1>
-            <p className="text-[14px] text-secondary mt-1.5">Análises operacionais, produtividade e desempenho da plataforma.</p>
+        <PageHeader
+          title="Relatórios"
+          subtitle="Análises operacionais, produtividade e desempenho da plataforma."
+        />
+
+        {/* Controles */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            {[{ k: "monthly", l: "Mês" }, { k: "daily", l: "Dia" }].map(f => (
+              <button key={f.k} onClick={() => setPeriod(f.k as any)}
+                className={`px-4 py-1.5 rounded-[20px] text-[13px] font-medium transition-colors cursor-pointer border ${period === f.k ? "border-[#FF7A00] text-[#FF7A00] bg-accent/8" : "border-default text-secondary hover:border-hover"}`}
+              >{f.l}</button>
+            ))}
           </div>
           <div className="flex items-center gap-3">
             <select className="h-[38px] px-3 rounded-lg border border-default bg-surface text-[13px] text-primary outline-none cursor-pointer">
@@ -108,15 +117,6 @@ export default function RelatoriosPage() {
               <Download size={14} /> Completo
             </button>
           </div>
-        </div>
-
-        {/* Período */}
-        <div className="flex gap-2">
-          {[{ k: "monthly", l: "Mês" }, { k: "daily", l: "Dia" }].map(f => (
-            <button key={f.k} onClick={() => setPeriod(f.k as any)}
-              className={`px-4 py-1.5 rounded-[20px] text-[13px] font-medium transition-colors cursor-pointer border ${period === f.k ? "border-[#FF7A00] text-[#FF7A00] bg-accent/8" : "border-default text-secondary hover:border-hover"}`}
-            >{f.l}</button>
-          ))}
         </div>
 
         {/* Gráfico principal */}
