@@ -116,7 +116,7 @@ export default function RelatoriosPage() {
               { k: "personalizado", l: "Personalizado" },
             ].map(f => (
               <button key={f.k} onClick={() => setPeriod(f.k)}
-                className={`h-[38px] px-5 rounded text-[13px] font-semibold transition-colors cursor-pointer text-center min-w-[90px] ${period === f.k ? "border-none text-white" : "border border-default bg-transparent text-secondary hover:border-hover"}`}
+                className={`h-[38px] px-5 rounded text-[13px] font-semibold transition-colors cursor-pointer text-center min-w-[100px] ${period === f.k ? "border-none text-white" : "border border-default bg-transparent text-secondary hover:border-hover"}`}
                 style={period === f.k ? { background: "#FF7A00" } : undefined}
               >{f.l}</button>
             ))}
