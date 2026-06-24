@@ -25,8 +25,8 @@ export const projects: Project[] = [
     imagem: `${base}certidoes.png`,
     descricao: "Plataforma web que automatiza a busca de certidões imobiliárias em portais públicos brasileiros (Receita Federal, TRF1 e TJDFT). Utiliza Puppeteer com stealth para navegação automatizada, resolucão de CAPTCHAs com interação do usuário e consolidação de PDFs em um dossiê único.",
     tags: ["TypeScript", "Node.js", "Puppeteer", "Express", "PDF-lib"],
-    linkProjeto: "https://github.com/Milenaalvez/.vscode/tree/main/donnos",
-    linkGitHub: "https://github.com/Milenaalvez/.vscode/tree/main/donnos",
+    linkProjeto: "https://github.com/Milenaalvez/.vscode/tree/main/A.CERT",
+    linkGitHub: "https://github.com/Milenaalvez/.vscode/tree/main/A.CERT",
   },
   {
     titulo: "Netflix Cover",

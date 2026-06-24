@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAVIE - Selecione um Perfil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90' fill='%23A855F7' font-family='Poppins, sans-serif' font-weight='300'%3EM%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+
+<!-- Loader -->
+<div id="loader">
+    <div class="spinner"></div>
+</div>
+
+<!-- Botão tema -->
+<button id="toggleTema">Modo escuro</button>
+
+<!-- Som -->
+<audio id="clickSound" src="click.mp3"></audio>
+
+<header>
+    <h1>MAVIE</h1>
+</header>
+
+<main>
+    <section class="perfis">
+        <h2>Quem está assistindo?</h2>
+        <p class="slogan">Memórias que são eternas.</p>
+
+        <div class="container">
+
+              <button class="perfil">
+                <figure>
+                    <img src="img/usuario1.png">
+                    <figcaption>Milena</figcaption>
+                </figure>
+            </button>
+
+            <button class="perfil">
+                <figure>
+                    <img src="img/usuario2.png">
+                    <figcaption>Gabriel</figcaption>
+                </figure>
+            </button>
+
+            <button class="perfil">
+                <figure>
+                    <img src="img/usuario3.png">
+                    <figcaption>Larissa</figcaption>
+                </figure>
+            </button>
+
+            <button class="perfil">
+                <figure>
+                    <img src="img/usuario4.png">
+                    <figcaption>Ana</figcaption>
+                </figure>
+            </button>
+
+        </div>
+    </section>
+</main>
+
+<footer class="rodape">
+    <p>Memórias que são eternas.</p>
+</footer>
+
+<script src="script.js" defer></script>
+
+<div id="boasVindas">
+    <h2 id="mensagem"></h2>
+</div>
+
+</body>
+</html>
