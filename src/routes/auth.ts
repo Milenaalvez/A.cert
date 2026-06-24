@@ -4,20 +4,33 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import db from '../database.js';
 import { gerarToken, authMiddleware } from '../middleware/auth.js';
 import { enviarEmailConfirmacao, enviarEmailRedefinirSenha } from '../services/email.service.js';
+import { validarSenhaForte, validarEmail } from '../utils/validation.js';
+import { checkCaptchaVerified } from './captcha.js';
 
 const router = Router();
 
 router.post('/register', (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, captchaToken } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
       return;
     }
 
-    if (password.length < 6) {
-      res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+    if (!checkCaptchaVerified(captchaToken)) {
+      res.status(400).json({ error: 'Resolva o CAPTCHA antes de cadastrar' });
+      return;
+    }
+
+    if (!validarEmail(email)) {
+      res.status(400).json({ error: 'Email inválido' });
+      return;
+    }
+
+    const senha = validarSenhaForte(password);
+    if (!senha.valida) {
+      res.status(400).json({ error: `Senha deve conter: ${senha.erros.join(', ')}` });
       return;
     }
 
@@ -204,8 +217,9 @@ router.post('/redefinir-senha', (req, res) => {
       return;
     }
 
-    if (password.length < 6) {
-      res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+    const senha = validarSenhaForte(password);
+    if (!senha.valida) {
+      res.status(400).json({ error: `Senha deve conter: ${senha.erros.join(', ')}` });
       return;
     }
 

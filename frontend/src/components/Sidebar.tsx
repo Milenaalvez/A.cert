@@ -11,8 +11,16 @@ import {
   Plus,
   LifeBuoy,
   ChevronDown,
+  PanelRightClose,
+  PanelRightOpen,
   LogOut,
+  Sun,
+  Moon,
+  Archive,
+  Trash2,
+  Star,
 } from "lucide-react"
+import { useTheme } from "@/contexts/ThemeContext"
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -20,6 +28,7 @@ interface SidebarProps {
   activePage: string
   onNavigate: (page: string) => void
   onLogout: () => void
+  onNovoDossie?: () => void
   user?: { name: string; position?: string | null; role?: string; avatar?: string | null } | null
   sidebarOpen: boolean
   onToggleSidebar: () => void
@@ -31,7 +40,6 @@ interface MenuItem {
   label: string
   icon: any
   page: string
-  addButton?: boolean
 }
 
 interface MenuGroup {
@@ -68,13 +76,22 @@ function getInitials(name: string) {
 
 /* ── Component ─────────────────────────────────────── */
 
-export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, onToggleSidebar, collapsed, onCollapseChange }: SidebarProps) {
+export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, sidebarOpen, onToggleSidebar, collapsed, onCollapseChange }: SidebarProps) {
+  const { theme, toggleTheme } = useTheme()
   const [profileOpen, setProfileOpen] = useState(false)
-  const [sectionState, setSectionState] = useState<Record<string, boolean>>(loadSectionState)
+  const [sidebarHover, setSidebarHover] = useState(false)
+  const [dossieSubmenu, setDossieSubmenu] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [sectionState, setSectionState] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    saveSectionState(sectionState)
-  }, [sectionState])
+    setMounted(true)
+    setSectionState(loadSectionState())
+  }, [])
+
+  useEffect(() => {
+    if (mounted) saveSectionState(sectionState)
+  }, [sectionState, mounted])
 
   function closeAll() {
     setProfileOpen(false)
@@ -96,7 +113,6 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
       label: "GERENCIAMENTO",
       items: [
         { label: "Dashboard", icon: LayoutDashboard, page: "dashboard" },
-        { label: "Dossiês", icon: FolderOpen, page: "dossies", addButton: true },
       ],
     },
     {
@@ -109,6 +125,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
     {
       label: "DOCUMENTAÇÃO",
       items: [
+        { label: "Dossiês", icon: FolderOpen, page: "dossies" },
         { label: "Certidões", icon: ScrollText, page: "certidoes" },
         { label: "Relatórios", icon: BarChart3, page: "relatorios" },
       ],
@@ -122,18 +139,19 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
     },
   ], [])
 
-  function NavItem({ item, collapsed: navCollapsed }: { item: MenuItem; collapsed: boolean }) {
+  function NavItem({ item, navCollapsed }: { item: MenuItem; navCollapsed: boolean }) {
     const Icon = item.icon
     const isActive = activePage === item.page
-    const content = (
+    return (
       <button
         onClick={() => onNavigate(item.page)}
         title={navCollapsed ? item.label : undefined}
-        className={`group relative flex items-center gap-4 w-full h-11 rounded-xl text-[14px] font-medium transition-all duration-200 ${
-          navCollapsed ? "justify-center px-0" : "px-4"
+        style={navCollapsed ? undefined : { paddingLeft: "18px", paddingRight: "18px" }}
+        className={`group relative flex items-center gap-3 w-full h-11 rounded-xl text-[14px] font-medium transition-all duration-200 ${
+          navCollapsed ? "justify-center px-0" : ""
         } ${
           isActive
-            ? "bg-[rgba(255,122,0,0.12)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+            ? "text-white"
             : "text-[#F0F3FA]/70 hover:text-[#FFFFFF] hover:bg-white/[0.06]"
         }`}
       >
@@ -147,25 +165,10 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
           }`}
         />
         {!navCollapsed && (
-          <>
-            <span className="truncate flex-1 text-left">{item.label}</span>
-            {item.addButton && (
-              <span
-                className="shrink-0 w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/[0.1]"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onNavigate("dossies/novo")
-                }}
-                title="Novo Dossiê"
-              >
-                <Plus size={14} strokeWidth={2.5} className="text-[#FF7A00]" />
-              </span>
-            )}
-          </>
+          <span className="truncate">{item.label}</span>
         )}
       </button>
     )
-    return content
   }
 
   return (
@@ -173,11 +176,16 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={onToggleSidebar} />
       )}
-      <aside className={`fixed top-0 left-0 h-screen flex flex-col select-none z-30 transition-all duration-250 ease-out lg:translate-x-0 ${
+      <aside
+        suppressHydrationWarning
+        onMouseEnter={() => setSidebarHover(true)}
+        onMouseLeave={() => setSidebarHover(false)}
+        className={`fixed top-0 left-0 h-screen flex flex-col select-none z-30 transition-all duration-250 ease-out lg:translate-x-0 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } ${collapsed ? "w-[68px]" : "w-60"}`}
+      } ${collapsed ? "w-[68px]" : ""}`}
         style={{
-          background: "linear-gradient(180deg, #07101F 0%, #020817 100%)",
+          width: collapsed ? "68px" : "250px",
+          backgroundImage: "linear-gradient(180deg, #07101F 0%, #020817 100%)",
         }}
       >
         <button
@@ -189,18 +197,32 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
           </svg>
         </button>
 
-        {/* Logo */}
-        <div className={`flex items-center gap-3.5 px-8 pt-14 pb-14 ${collapsed ? "justify-center px-0" : ""}`}>
-          <img
-            src="/images/logo.png"
-            alt="A.CERT"
-            className="shrink-0 object-contain"
-            style={{ width: collapsed ? 36 : 44, height: collapsed ? 36 : 44 }}
-          />
-          {!collapsed && (
-            <span className="text-white text-[20px] font-bold tracking-tight leading-tight" style={{ letterSpacing: "-0.03em" }}>
-              A.CERT
-            </span>
+        {/* ══════ HEADER: Logo ══════ */}
+        <div className={`shrink-0 ${collapsed ? "flex justify-center" : "px-6"}`} style={{ paddingTop: "25px", paddingBottom: "25px" }}>
+          {collapsed ? (
+            <img
+              src="/images/logo.png"
+              alt="A.CERT"
+              className="shrink-0 object-contain"
+              style={{ width: 52, height: 52 }}
+            />
+          ) : (
+            <div className="flex items-center" style={{ gap: "8px" }}>
+              <img
+                src="/images/logo.png"
+                alt="A.CERT"
+                className="shrink-0 object-contain"
+                style={{ width: 52, height: 52 }}
+              />
+              <div className="flex flex-col">
+                <span className="text-white text-[22px] font-bold tracking-tight leading-none">
+                  A.CERT
+                </span>
+                <span className="text-white/50 text-[10px] font-semibold uppercase tracking-[0.15em] mt-1.5 leading-none">
+                  Central de Certidões
+                </span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -223,74 +245,178 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
             scrollbar-color: rgba(255,255,255,0.08) transparent;
           }
         `}</style>
-        <nav className="flex-1 flex flex-col px-3 pt-6 overflow-y-auto sidebar-scroll">
+
+        {/* ══════ CONTEÚDO CENTRAL SCROLLÁVEL ══════ */}
+        <nav className="flex-1 flex flex-col overflow-y-auto sidebar-scroll">
+          {/* Novo Dossiê */}
+          <div className="shrink-0" style={{ marginBottom: "19px", paddingLeft: collapsed ? "0" : "18px", paddingRight: collapsed ? "0" : "18px" }}>
+            <button
+              onClick={() => onNovoDossie ? onNovoDossie() : onNavigate("dossies")}
+              className="flex items-center justify-center w-full h-9 bg-gradient-to-r from-[#FF7A00] to-[#FF9A3D] text-white font-semibold hover:brightness-110 transition-all duration-200"
+              style={{ borderRadius: collapsed ? "0" : "4px", fontSize: collapsed ? "18px" : "13px", gap: collapsed ? "0" : "8px" }}
+            >
+              <Plus size={collapsed ? 20 : 16} strokeWidth={2.5} />
+              {!collapsed && <span>Novo Dossiê</span>}
+            </button>
+          </div>
+
           {menuGroups.map((group, gi) => {
             const hasLabel = !!group.label
             const sectionOpen = group.label ? isSectionOpen(group.label) : true
 
             return (
-              <div key={gi} className={gi < menuGroups.length - 1 ? "mb-6" : ""}>
+              <div key={gi} className="flex flex-col border-t border-white/[0.08]" style={{ paddingTop: "19px", paddingBottom: "4px" }}>
                 {hasLabel && (
-                  <button
-                    onClick={() => group.label && toggleSection(group.label)}
-                    title={collapsed ? group.label : undefined}
-                    className={`flex items-center w-full mb-1.5 transition-all duration-200 ${
-                      collapsed
-                        ? "justify-center h-9"
-                        : "gap-2 px-4 h-9"
-                    }`}
-                  >
+                  <>
                     {collapsed ? (
-                      <div className="w-6 h-px bg-white/[0.08]" />
+                      <div className="flex justify-center items-center h-6 mb-2">
+                        <div className="w-6 h-px bg-white/[0.08]" />
+                      </div>
                     ) : (
-                      <>
-                        <ChevronDown
-                          size={11}
-                          strokeWidth={2.5}
-                          className={`shrink-0 text-[#F0F3FA]/60 transition-transform duration-200 ${
-                            sectionOpen ? "" : "-rotate-90"
-                          }`}
-                        />
-                        <span className="text-[9px] font-semibold text-[#F0F3FA]/70 uppercase tracking-[0.18em]">{group.label}</span>
-                        <div className="flex-1 h-px bg-white/[0.10]" />
-                      </>
+                      <div className="w-full mb-3" style={{ paddingLeft: "18px", paddingRight: "18px" }}>
+                        <span className="text-[10px] font-semibold text-white/45 uppercase tracking-[0.18em]">{group.label}</span>
+                      </div>
                     )}
-                  </button>
+                  </>
                 )}
-                {(!hasLabel || sectionOpen) && (
-                  <div className={`flex flex-col gap-1.5 ${collapsed ? "items-center" : ""}`}>
-                    {group.items.map((item) => (
-                      <NavItem key={item.page} item={item} collapsed={collapsed} />
-                    ))}
+                {(!hasLabel || sectionOpen || collapsed) && (
+                  <div className={`flex flex-col gap-0.5 ${collapsed ? "items-center" : ""}`}>
+                    {group.items.map((item) =>
+                      item.page === "dossies" ? (
+                        <div key={item.page} className="flex flex-col">
+                          <button
+                            onClick={() => onNavigate(item.page)}
+                            title={collapsed ? item.label : undefined}
+                            style={collapsed ? undefined : { paddingLeft: "18px", paddingRight: "18px" }}
+                            className={`group relative flex items-center gap-3 w-full h-11 rounded-xl text-[14px] font-medium transition-all duration-200 ${
+                              collapsed ? "justify-center px-0" : ""
+                            } ${
+                              activePage === item.page
+                                ? "text-white"
+                                : "text-[#F0F3FA]/70 hover:text-[#FFFFFF] hover:bg-white/[0.06]"
+                            } ${collapsed ? "" : "pr-0"}`}
+                          >
+                            <FolderOpen
+                              size={20}
+                              strokeWidth={activePage === item.page ? 2.5 : 2}
+                              className={`shrink-0 transition-all duration-200 ${
+                                activePage === item.page
+                                  ? "text-[#FF7A00]"
+                                  : "text-[#F0F3FA]/50 group-hover:text-[#F0F3FA]/80"
+                              }`}
+                            />
+                            {!collapsed && (
+                              <div className="flex items-center gap-0 flex-1 min-w-0">
+                                <span className="truncate">{item.label}</span>
+                                <span
+                                  onClick={(e) => { e.stopPropagation(); setDossieSubmenu(!dossieSubmenu); }}
+                                  className="flex items-center justify-center text-[#F0F3FA]/40 hover:text-white transition-colors shrink-0 cursor-pointer select-none"
+                                  style={{ width: "14px", height: "14px", marginLeft: "2px" }}
+                                >
+                                  <span className={`text-[10px] leading-none transition-transform duration-200 ${dossieSubmenu ? "rotate-90" : ""}`}>›</span>
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                          {!collapsed && dossieSubmenu && (
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => onNavigate("dossies")}
+                                className="group flex items-center gap-3 w-full h-10 text-[13px] text-[#F0F3FA]/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                                style={{ paddingLeft: "50px", paddingRight: "18px" }}
+                              >
+                                <Archive size={16} strokeWidth={1.5} className="shrink-0 text-[#F0F3FA]/40 group-hover:text-[#F0F3FA]/70" />
+                                <span>Arquivados</span>
+                              </button>
+                              <button
+                                onClick={() => onNavigate("dossies")}
+                                className="group flex items-center gap-3 w-full h-10 text-[13px] text-[#F0F3FA]/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                                style={{ paddingLeft: "50px", paddingRight: "18px" }}
+                              >
+                                <Star size={16} strokeWidth={1.5} className="shrink-0 text-[#FFB800]/60 group-hover:text-[#FFB800]" />
+                                <span>Prioridades</span>
+                              </button>
+                              <button
+                                onClick={() => onNavigate("dossies")}
+                                className="group flex items-center gap-3 w-full h-10 text-[13px] text-[#F0F3FA]/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                                style={{ paddingLeft: "50px", paddingRight: "18px" }}
+                              >
+                                <Trash2 size={16} strokeWidth={1.5} className="shrink-0 text-[#F0F3FA]/40 group-hover:text-[#F0F3FA]/70" />
+                                <span>Lixeira</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <NavItem key={item.page} item={item} navCollapsed={collapsed} />
+                      )
+                    )}
                   </div>
                 )}
               </div>
             )
           })}
+
+          <div className="shrink-0 h-3" />
         </nav>
 
-        <div className={`flex flex-col gap-1 pt-3 pb-5 border-t border-white/[0.06] mt-auto ${collapsed ? "items-center px-2" : "px-3"}`}>
+        {/* ══════ THEME TOGGLE ══════ */}
+        <div className={`shrink-0 ${collapsed ? "flex flex-col items-center pt-4 pb-2" : "px-6 pt-4 pb-2"}`}>
+          <button
+            onClick={toggleTheme}
+            title={collapsed ? (theme === "light" ? "Modo claro" : "Modo escuro") : undefined}
+            className={`flex items-center gap-4 w-full h-11 rounded-xl text-[14px] font-medium text-[#F0F3FA] hover:text-[#FFFFFF] hover:bg-white/[0.06] transition-all duration-200 group ${
+              collapsed ? "justify-center px-0" : "px-4"
+            }`}
+          >
+            <div className="relative w-10 h-5 rounded-full bg-white/[0.08] border border-white/[0.06] transition-all duration-300 group-hover:border-white/20 shrink-0">
+              <div
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-[#FFFFFF] shadow-sm transition-all duration-300 flex items-center justify-center ${
+                  !mounted || theme === "light" ? "left-0.5" : "left-[22px]"
+                }`}
+              >
+                {mounted ? (
+                  theme === "light" ? (
+                    <Sun size={8} className="text-[#FF7A00]" />
+                  ) : (
+                    <Moon size={8} className="text-[#FF7A00]" />
+                  )
+                ) : (
+                  <Sun size={8} className="text-[#FF7A00]" />
+                )}
+              </div>
+            </div>
+            {!collapsed && <span>{!mounted || theme === "light" ? "Modo claro" : "Modo escuro"}</span>}
+          </button>
+        </div>
+
+        {/* ══════ FOOTER: Perfil (estrutura igual ao Chronos) ══════ */}
+        <div className={`shrink-0 border-t border-white/[0.08] ${collapsed ? "flex flex-col items-center pt-2 pb-5" : "px-6 pt-2 pb-5"}`}>
           <div className="relative w-full">
             <button
-              onClick={() => setProfileOpen((prev) => !prev)}
+              onClick={() => { setProfileOpen((prev) => !prev) }}
               title={collapsed ? user?.name || 'Usuário' : undefined}
-              className={`flex items-center gap-4 w-full h-11 rounded-xl text-[14px] font-medium text-[#F0F3FA] hover:text-[#FFFFFF] hover:bg-white/[0.06] transition-all duration-200 ${
-                collapsed ? "justify-center px-0" : "px-4"
+              className={`flex items-center gap-3 w-full h-14 rounded-xl text-[14px] font-medium text-[#F0F3FA] hover:text-[#FFFFFF] hover:bg-white/[0.06] transition-all duration-200 ${
+                collapsed ? "justify-center px-0" : "px-0"
               }`}
             >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-semibold overflow-hidden" style={{ background: "#FF7A00" }}>
-                <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-[13px] font-bold overflow-hidden" style={{ background: "#FF7A00" }}>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
+                )}
               </div>
               {!collapsed && (
                 <>
                   <div className="flex-1 flex flex-col items-start text-left min-w-0">
-                    <span className="text-[14px] font-medium text-[#FFFFFF] truncate w-full">{user?.name || 'Usuário'}</span>
-                    <span className="text-[10px] text-[#F0F3FA]/60 truncate w-full">{user?.position || user?.role || 'Colaborador'}</span>
+                    <span className="text-[17px] font-semibold text-white truncate w-full">{user?.name || 'Usuário'}</span>
+                    <span className="text-[12px] text-white/60 truncate w-full">{user?.position || user?.role || 'Colaborador'}</span>
                   </div>
                   <ChevronDown
-                    size={14}
+                    size={16}
                     strokeWidth={2}
-                    className={`text-[#F0F3FA]/40 shrink-0 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
+                    className={`text-white/40 shrink-0 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
                   />
                 </>
               )}
@@ -299,22 +425,54 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
             {profileOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => closeAll()} />
-                <div className={`absolute ${collapsed ? "left-full ml-2 bottom-0 w-56" : "bottom-full left-0 right-0 mb-1.5"} rounded-xl shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200 max-h-[60vh] overflow-y-auto`}
+                <div className={`absolute ${collapsed ? "left-full ml-2 bottom-0 w-56" : "bottom-full left-0 right-0 mb-1.5"} rounded-xl shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200`}
                   style={{
                     background: "#0B1220",
                     border: "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  <div className="px-4 py-3 border-b border-white/[0.05]">
-                    <p className="text-[14px] font-medium text-[#FFFFFF]">{user?.name || 'Usuário'}</p>
-                    <p className="text-[10px] text-[#F0F3FA]/60 mt-[1px]">{user?.position || user?.role || 'Colaborador'}</p>
+                  <div className="pt-5 pb-2 px-4 text-[9px] font-semibold uppercase tracking-widest text-[#F0F3FA]/50">
+                    Trocar conta
                   </div>
                   <button
-                    onClick={() => {
-                      closeAll()
-                      onLogout()
-                    }}
-                    className="flex items-center gap-4 w-full h-11 px-4 text-[14px] font-medium text-[#F0F3FA] hover:bg-[#D94A4A] hover:text-[#FFFFFF] transition-all duration-200"
+                    onClick={() => { closeAll(); onLogout() }}
+                    className="flex items-center gap-3 w-full h-12 px-4 text-[13px] text-[#F0F3FA] hover:bg-[#FF7A00]/20 hover:text-white transition-all duration-200"
+                  >
+                    <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold overflow-hidden" style={{ background: "#FF7A00" }}>
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left min-w-0 leading-tight">
+                      <div className="truncate text-[13px] font-medium">{user?.name || 'Usuário'}</div>
+                      <div className="text-[10px] text-[#F0F3FA]/60 truncate">{user?.position || user?.role || 'Colaborador'}</div>
+                    </div>
+                  </button>
+                  <div className="h-px bg-white/[0.06] mx-4 my-3" />
+                  <div className="pb-2 px-4 text-[9px] font-semibold uppercase tracking-widest text-[#F0F3FA]/50">
+                    Visualizar como
+                  </div>
+                  {["Corretora", "Administradora"].map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => { closeAll(); onLogout() }}
+                      className="flex items-center gap-3 w-full h-12 px-4 text-[13px] text-[#F0F3FA] hover:bg-[#FF7A00]/20 hover:text-white transition-all duration-200"
+                    >
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold overflow-hidden" style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <span>{role.slice(0, 2).toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1 text-left min-w-0 leading-tight">
+                        <div className="truncate text-[13px] font-medium">{role}</div>
+                        <div className="text-[10px] text-[#F0F3FA]/60 truncate">Visualizar como</div>
+                      </div>
+                    </button>
+                  ))}
+                  <div className="h-px bg-white/[0.06] mx-4 my-3" />
+                  <button
+                    onClick={() => { closeAll(); onLogout() }}
+                    className="flex items-center gap-3 w-full h-12 px-4 text-[13px] font-medium text-[#F0F3FA] hover:bg-[#D94A4A] hover:text-white transition-all duration-200"
                   >
                     <LogOut size={18} strokeWidth={2} className="shrink-0" />
                     <span>Sair da conta</span>
@@ -325,6 +483,42 @@ export function Sidebar({ activePage, onNavigate, onLogout, user, sidebarOpen, o
           </div>
         </div>
       </aside>
+
+      {/* Collapse toggle fantasma (fora da sidebar) */}
+      <div
+        onMouseEnter={() => setSidebarHover(true)}
+        onMouseLeave={() => setSidebarHover(false)}
+        className="hidden lg:block fixed top-0 h-screen z-40"
+        style={{
+          left: collapsed ? "56px" : "238px",
+          width: "24px",
+          transition: "left 250ms ease-out",
+          pointerEvents: "auto",
+        }}
+      >
+        <button
+          onClick={() => onCollapseChange(!collapsed)}
+          title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
+          className="absolute top-1/2 -translate-y-1/2 left-0 w-7 h-16 flex items-center justify-center"
+          style={{
+            opacity: sidebarHover ? 1 : 0,
+            transition: "opacity 300ms",
+            backgroundImage: "linear-gradient(180deg, #07101F 0%, #020817 100%)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            borderLeft: "none",
+            borderRadius: "0 6px 6px 0",
+            color: "rgba(255,255,255,0.3)",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "white" }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.3)" }}
+        >
+          {collapsed ? (
+            <PanelRightOpen size={12} strokeWidth={2} />
+          ) : (
+            <PanelRightClose size={12} strokeWidth={2} />
+          )}
+        </button>
+      </div>
     </>
   )
 }

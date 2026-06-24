@@ -79,7 +79,7 @@ export class ReceitaFederalConnector implements IConnector {
       if (cpfSel) {
         const el = await page.$(cpfSel);
         if (el) {
-          await el.click({ clickCount: 3 });
+          await el.click();
           await new Promise(r => setTimeout(r, 100));
           await page.keyboard.type(cpfDigits, { delay: 10 });
           LOG(`CPF preenchido via: ${cpfSel}`);
@@ -110,7 +110,7 @@ export class ReceitaFederalConnector implements IConnector {
       if (dataSel) {
         const el = await page.$(dataSel);
         if (el) {
-          await el.click({ clickCount: 3 });
+          await el.click();
           await new Promise(r => setTimeout(r, 100));
           await page.keyboard.type(dataFormatada, { delay: 6 });
           LOG(`Data preenchida: ${dataFormatada}`);

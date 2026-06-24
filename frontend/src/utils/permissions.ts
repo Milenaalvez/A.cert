@@ -1,0 +1,16 @@
+export const ALL_PERMISSIONS = [
+  { key: "access_team", label: "Acessar equipe", group: "Equipe" },
+  { key: "manage_members", label: "Gerenciar membros", group: "Equipe" },
+  { key: "approve_justifications", label: "Aprovar justificativas", group: "Justificativas" },
+  { key: "edit_time_records", label: "Editar horas", group: "Registros" },
+  { key: "approve_time_records", label: "Aprovar jornadas", group: "Registros" },
+  { key: "reset_passwords", label: "Redefinir senhas", group: "Administração" },
+  { key: "view_logs", label: "Visualizar logs", group: "Administração" },
+  { key: "export_reports", label: "Exportar relatórios", group: "Relatórios" },
+  { key: "access_profiles", label: "Acessar perfis", group: "Perfis" },
+  { key: "switch_accounts", label: "Trocar entre contas", group: "Perfis" },
+  { key: "edit_registries", label: "Editar registros", group: "Registros" },
+  { key: "manage_permissions", label: "Gerenciar permissões", group: "Administração" },
+  { key: "manage_company", label: "Gerenciar empresa", group: "Administração" },
+  { key: "manage_tickets", label: "Gerenciar solicitações", group: "Administração" },
+] as const

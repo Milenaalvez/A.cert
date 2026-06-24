@@ -11,11 +11,11 @@ interface AuthResponse {
   user: User;
 }
 
-export async function register(name: string, email: string, password: string): Promise<{ success: boolean; message: string }> {
+export async function register(name: string, email: string, password: string, captchaToken?: string): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${BASE}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, password, captchaToken }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Erro ao criar conta');

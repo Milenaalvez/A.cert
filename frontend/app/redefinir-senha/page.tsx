@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Lock, Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Lock, Loader2, Eye, EyeOff, CheckCircle, Check, X } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { verificarTokenRedefinir, redefinirSenha } from "@/lib/api";
 
@@ -19,6 +19,15 @@ function RedefinirSenhaForm() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const pwChecks = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  };
+
+  const isValid = pwChecks.length && pwChecks.upper && pwChecks.lower && pwChecks.symbol && confirm === password;
 
   const inputBase =
     "flex-1 h-full bg-transparent text-white text-[16px] outline-none placeholder:text-white/50 caret-accent";
@@ -46,7 +55,7 @@ function RedefinirSenhaForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (password.length < 6) errs.password = "Mínimo 6 caracteres";
+    if (!pwChecks.length || !pwChecks.upper || !pwChecks.lower || !pwChecks.symbol) errs.password = "Mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 símbolo";
     if (password !== confirm) errs.confirm = "Senhas não coincidem";
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -109,7 +118,7 @@ function RedefinirSenhaForm() {
             Nova senha
           </h1>
           <p className="text-white/75 text-[15px] mt-2">
-            Mínimo de 6 caracteres
+            Mínimo 8 caracteres, maiúscula, minúscula e símbolo
           </p>
         </div>
 
@@ -131,6 +140,21 @@ function RedefinirSenhaForm() {
               </button>
             </div>
             {errors.password && <span className="text-xs text-[#EF4444]">{errors.password}</span>}
+            {password.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                {[
+                  { ok: pwChecks.length, label: "8+ caracteres" },
+                  { ok: pwChecks.upper, label: "Maiúscula" },
+                  { ok: pwChecks.lower, label: "Minúscula" },
+                  { ok: pwChecks.symbol, label: "Símbolo" },
+                ].map((item) => (
+                  <span key={item.label} className={`flex items-center gap-1 text-[12px] transition-colors ${item.ok ? "text-green-400" : "text-white/40"}`}>
+                    {item.ok ? <Check size={12} strokeWidth={2.5} /> : <X size={12} strokeWidth={2} />}
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -156,7 +180,7 @@ function RedefinirSenhaForm() {
 
           <button
             type="submit"
-            disabled={!password || !confirm || loading}
+            disabled={!isValid || loading}
             className="flex items-center justify-center gap-2 w-full h-[60px] rounded-[16px] bg-accent text-sm font-semibold text-white hover:bg-accent-hover transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] shadow-[0_8px_30px_rgba(249,115,22,0.35)]"
           >
             {loading ? (

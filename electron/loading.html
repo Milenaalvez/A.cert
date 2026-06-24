@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; background: #0D1425; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .logo { 
+      width: 72px; height: 72px; background: #FF7A00; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 40px rgba(255,122,0,0.25);
+      animation: pulse 1.5s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    .logo svg { color: #FFF; }
+    h1 { color: #FFF; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .status { color: #8899B0; font-size: 14px; margin-bottom: 20px; }
+    .bar { 
+      width: 200px; height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px;
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .bar-fill { 
+      height: 100%; background: #FF7A00; border-radius: 2px;
+      box-shadow: 0 0 8px rgba(255,122,0,0.4);
+      transition: width 0.3s ease;
+    }
+    .step { color: #8899B0; font-size: 11px; }
+    .error { color: #DC2626; font-size: 12px; margin-top: 16px; display: none; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(255,122,0,0.25); }
+      50% { transform: scale(1.03); box-shadow: 0 0 60px rgba(255,122,0,0.35); }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+  </div>
+  <h1>A.CERT</h1>
+  <p class="status" id="status">Iniciando servidores...</p>
+  <div class="bar"><div class="bar-fill" id="bar" style="width:20%"></div></div>
+  <p class="step" id="step">Backend Express...</p>
+  <p class="error" id="error">Não foi possível iniciar. Verifique a instalação.</p>
+  <script>
+    const status = document.getElementById('status');
+    const bar = document.getElementById('bar');
+    const step = document.getElementById('step');
+    const error = document.getElementById('error');
+    
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    function tryConnect() {
+      attempts++;
+      bar.style.width = Math.min(10 + attempts * 5, 95) + '%';
+      
+      if (attempts <= 10) {
+        step.textContent = 'Backend Express...';
+      } else {
+        step.textContent = 'Frontend Next.js...';
+        status.textContent = 'Quase pronto...';
+      }
+      
+      fetch('http://localhost:3000/dashboard', { method: 'HEAD' })
+        .then(r => {
+          if (r.ok) {
+            status.textContent = 'Pronto!';
+            step.textContent = 'Carregando...';
+            bar.style.width = '100%';
+            window.location.href = 'http://localhost:3000/dashboard';
+          } else if (attempts < maxAttempts) {
+            setTimeout(tryConnect, 1500);
+          } else {
+            showError();
+          }
+        })
+        .catch(() => {
+          if (attempts < maxAttempts) {
+            setTimeout(tryConnect, 1500);
+          } else {
+            showError();
+          }
+        });
+    }
+    
+    function showError() {
+      status.textContent = 'Erro ao iniciar';
+      step.textContent = 'Tente executar como administrador ou reinstalar.';
+      error.style.display = 'block';
+    }
+    
+    setTimeout(tryConnect, 1000);
+  </script>
+</body>
+</html>

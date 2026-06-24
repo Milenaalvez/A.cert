@@ -54,7 +54,7 @@ async function preencherInputPorLabel(
     return ok;
   }
 
-  await el.click({ clickCount: 3 });
+  await el.click();
   await wait(100);
   await page.keyboard.type(valor, { delay: 8 });
   LOG(`Input "${labelTexto}" preenchido via keyboard`);

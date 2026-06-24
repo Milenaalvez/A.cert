@@ -1,4 +1,5 @@
 export interface DadosProprietario {
+  personId?: string;
   nome: string;
   cpf: string;
   dataNascimento: string;

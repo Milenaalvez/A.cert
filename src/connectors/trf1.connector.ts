@@ -12,7 +12,7 @@ import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[TRF1] ${msg}`);
 
-const FORM_URL = 'https://certidao-unificada.cjf.jus.br/#/solicitacao-certidao';
+const FORM_URL = 'https://sistemas.trf1.jus.br/certidao/#/solicitacao';
 
 async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
   const info = await page.evaluate(() => {
@@ -365,8 +365,14 @@ export class TRF1Connector implements IConnector {
       orgaos: ['SJDF', 'TRF1'],
       filtroTipo: (t: string) => t.includes('cível'),
       filtrosOrgao: [
-        (t: string) => t.includes('sjdf') || t.includes('distrito federal'),
-        (t: string) => t.includes('tribunal') && (t.includes('região') || t.includes('regional')),
+        (t: string) => {
+          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          return norm.includes('secao judiciaria') && (norm.includes('df') || norm.includes('distrito federal'));
+        },
+        (t: string) => {
+          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          return norm.includes('tribunal regional federal') && norm.includes('1');
+        },
       ],
     },
     {
@@ -374,8 +380,14 @@ export class TRF1Connector implements IConnector {
       orgaos: ['SJDF', 'TRF1'],
       filtroTipo: (t: string) => t.includes('criminal'),
       filtrosOrgao: [
-        (t: string) => t.includes('sjdf') || t.includes('distrito federal'),
-        (t: string) => t.includes('tribunal') && (t.includes('região') || t.includes('regional')),
+        (t: string) => {
+          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          return norm.includes('secao judiciaria') && (norm.includes('df') || norm.includes('distrito federal'));
+        },
+        (t: string) => {
+          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          return norm.includes('tribunal regional federal') && norm.includes('1');
+        },
       ],
     },
   ];

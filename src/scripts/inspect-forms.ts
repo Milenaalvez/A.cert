@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = join(__dirname, '..', '..', 'tmp');
 mkdirSync(OUT, { recursive: true });
 
-async function logForm(page: puppeteer.Page, label: string) {
+async function logForm(page: any, label: string) {
   await new Promise(r => setTimeout(r, 2000));
   const html = await page.content().catch(() => '(error)');
   writeFileSync(join(OUT, `${label}.html`), typeof html === 'string' ? html : '', 'utf-8');

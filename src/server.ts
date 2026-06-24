@@ -8,6 +8,14 @@ import { criarConectores } from './connectors/index.js';
 import { gerarDossiePDF } from './services/dossie.service.js';
 import { closeBrowser } from './utils/browser.js';
 import authRoutes from './routes/auth.js';
+import dashboardRoutes from './routes/dashboard.js';
+import peopleRoutes from './routes/people.js';
+import dossierRoutes from './routes/dossiers.js';
+import { teamRouter, justificationsRouter, timeRecordsRouter, referenceRouter } from './routes/team.js';
+import reportsRoutes from './routes/reports.js';
+import searchRoutes from './routes/search.js';
+import captchaRoutes from './routes/captcha.js';
+import propertiesRoutes from './routes/properties.js';
 
 const LOG = (msg: string) => console.log(`[Server] ${msg}`);
 
@@ -21,6 +29,17 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/people', peopleRoutes);
+app.use('/api/dossiers', dossierRoutes);
+app.use('/api/team', teamRouter);
+app.use('/api/justifications', justificationsRouter);
+app.use('/api/time-records', timeRecordsRouter);
+app.use('/api/reference', referenceRouter);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/captcha', captchaRoutes);
+app.use('/api/properties', propertiesRoutes);
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
@@ -244,6 +263,13 @@ app.get('/api/dossie/:jobId', async (req, res) => {
     console.error('Erro ao gerar dossiê:', error);
     res.status(500).json({ error: 'Erro ao gerar dossiê' });
   }
+});
+
+// Serve frontend (Electron production mode)
+const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
+app.use(express.static(frontendOut));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(frontendOut, 'index.html'));
 });
 
 process.on('SIGINT', async () => {

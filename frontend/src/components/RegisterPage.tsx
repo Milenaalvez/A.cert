@@ -13,11 +13,13 @@ import {
   FileText,
   Shield,
   MailCheck,
+  X,
 } from "lucide-react";
 import AuthLayout from "./AuthLayout";
 import LoginTransition from "./LoginTransition";
 import Link from "next/link";
 import { register } from "@/lib/api";
+import Captcha from "./Captcha";
 
 function Field({
   label,
@@ -61,13 +63,25 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [captchaToken, setCaptchaToken] = useState("");
+
+  const passwordChecks = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  };
 
   const isValid =
     nome.trim().length >= 2 &&
     email.includes("@") &&
-    password.length >= 6 &&
+    passwordChecks.length &&
+    passwordChecks.upper &&
+    passwordChecks.lower &&
+    passwordChecks.symbol &&
     confirm === password &&
-    acceptTerms;
+    acceptTerms &&
+    !!captchaToken;
 
   useEffect(() => {
     if (!registered) return;
@@ -81,14 +95,15 @@ export default function RegisterPage() {
     const errs: Record<string, string> = {};
     if (!nome || nome.trim().length < 2) errs.nome = "Informe seu nome completo";
     if (!email || !email.includes("@")) errs.email = "Informe um email válido";
-    if (!password || password.length < 6) errs.password = "Mínimo de 6 caracteres";
+    if (!password || !passwordChecks.length || !passwordChecks.upper || !passwordChecks.lower || !passwordChecks.symbol) errs.password = "Mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 símbolo";
     if (password !== confirm) errs.confirm = "Senhas não conferem";
     if (!acceptTerms) errs.terms = "Aceite os termos para continuar";
+    if (!captchaToken) errs.captcha = "Resolva o CAPTCHA";
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
     try {
-      const res = await register(nome.trim(), email.trim(), password);
+      const res = await register(nome.trim(), email.trim(), password, captchaToken);
       setRegisteredEmail(email.trim());
       if ((res as Record<string, unknown>).confirmationLink) {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
@@ -290,6 +305,21 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff size={20} strokeWidth={1.5} /> : <Eye size={20} strokeWidth={1.5} />}
               </button>
             </div>
+            {password.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                {[
+                  { ok: passwordChecks.length, label: "8+ caracteres" },
+                  { ok: passwordChecks.upper, label: "Maiúscula" },
+                  { ok: passwordChecks.lower, label: "Minúscula" },
+                  { ok: passwordChecks.symbol, label: "Símbolo" },
+                ].map((item) => (
+                  <span key={item.label} className={`flex items-center gap-1 text-[12px] transition-colors ${item.ok ? "text-green-400" : "text-white/40"}`}>
+                    {item.ok ? <Check size={12} strokeWidth={2.5} /> : <X size={12} strokeWidth={2} />}
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </Field>
 
           <Field label="Confirmar senha" error={errors.confirm}>
@@ -362,7 +392,7 @@ export default function RegisterPage() {
                     <section><h3 className="text-white font-semibold text-base mb-1">1. Introdução</h3><p>A A.CERT valoriza sua privacidade. Esta política descreve como tratamos seus dados.</p></section>
                     <section><h3 className="text-white font-semibold text-base mb-1">2. Dados Coletados</h3><p>Coletamos nome, e-mail, CPF, dados de acesso e informações sobre certidões emitidas.</p></section>
                     <section><h3 className="text-white font-semibold text-base mb-1">3. Finalidade</h3><p>Seus dados são usados para fornecer os serviços, processar emissões, cumprir obrigações legais e garantir a segurança.</p></section>
-                    <section><h3 className="text-white font-semibold text-base mb-1">4. Compartilhamento</h3><p>Compartilhamos dados apenas quando necessário para o serviço (cartórios, órgãos públicos) ou por obrigação legal.</p></section>
+                    <section><h3 className="text-white font-semibold text-base mb-1">4. Compartilhamento</h3><p>Compartilhamos dados apenas quando necessário para o serviço (inscrição do imóvel, órgãos públicos) ou por obrigação legal.</p></section>
                     <section><h3 className="text-white font-semibold text-base mb-1">5. Segurança</h3><p>Adotamos criptografia e medidas técnicas para proteger seus dados contra acesso não autorizado.</p></section>
                     <section><h3 className="text-white font-semibold text-base mb-1">6. Seus Direitos (LGPD)</h3><p>Você pode acessar, corrigir, excluir ou solicitar portabilidade dos seus dados a qualquer momento.</p></section>
                     <section><h3 className="text-white font-semibold text-base mb-1">7. Retenção</h3><p>Mantemos seus dados enquanto sua conta estiver ativa ou conforme exigido por lei.</p></section>
@@ -373,6 +403,9 @@ export default function RegisterPage() {
               </div>
             )}
           </div>
+
+          <Captcha onSolved={(t) => { setCaptchaToken(t); setErrors((p) => ({ ...p, captcha: "" })); }} />
+          {errors.captcha && <span className="text-xs text-[#EF4444]">{errors.captcha}</span>}
 
           {errors.form && (
             <span className="text-sm text-[#EF4444] text-center">{errors.form}</span>

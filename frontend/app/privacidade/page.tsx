@@ -41,7 +41,7 @@ export default function PrivacidadePage() {
             <h2 className="text-white font-semibold text-lg mb-2">4. Compartilhamento de Dados</h2>
             <p>Não compartilhamos seus dados pessoais com terceiros, exceto:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Quando necessário para a prestação do serviço (cartórios, órgãos públicos)</li>
+              <li>Quando necessário para a prestação do serviço (inscrição do imóvel, órgãos públicos)</li>
               <li>Para cumprimento de obrigação legal ou ordem judicial</li>
               <li>Com prestadores de serviços contratados (processamento de pagamentos, hospedagem)</li>
             </ul>
