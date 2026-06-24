@@ -337,10 +337,10 @@ export default function RelatoriosPage() {
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><BarChart3 size={14} strokeWidth={1.5} color="#FF7A00" /> Desempenho dos Dossiês</div>
           <table className="w-full border-collapse">
-            <thead><tr className="border-b border-default">{["Status", "Quantidade", "Percentual", "Tempo médio", "Tendência"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <thead><tr className="">{["Status", "Quantidade", "Percentual", "Tempo médio", "Tendência"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
               {d.dossierDetails.map((s, i) => (
-                <tr key={i} className={i < d.dossierDetails.length - 1 ? "border-b border-default" : ""}>
+                <tr key={i} className="">
                   <td className="px-4 py-3.5 flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: STATUS_COLORS[s.label] || "#6B7280" }} /><span className="text-[13px] font-medium text-primary">{s.label}</span></td>
                   <td className="px-4 py-3.5 text-[13px] font-semibold text-primary">{s.total}</td>
                   <td className="px-4 py-3.5 text-[13px] text-secondary">{s.pct}%</td>
@@ -361,10 +361,10 @@ export default function RelatoriosPage() {
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><FileText size={14} strokeWidth={1.5} color="#FF7A00" /> Performance das Certidões</div>
           <table className="w-full border-collapse">
-            <thead><tr className="border-b border-default">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className="text-left px-3 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <thead><tr className="">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className="text-left px-3 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
               {d.certByOrgan.map((c, i) => (
-                <tr key={i} className={i < d.certByOrgan.length - 1 ? "border-b border-default" : ""}>
+                <tr key={i} className="">
                   <td className="px-3 py-3 text-[13px] font-medium text-primary">{c.name.length > 18 ? c.name.slice(0, 18) + "…" : c.name}</td>
                   <td className="px-3 py-3 text-[13px] font-semibold text-primary">{c.total}</td>
                   <td className="px-3 py-3 text-[13px] text-[#059669]">{c.success}</td>
@@ -381,10 +381,10 @@ export default function RelatoriosPage() {
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Building2 size={14} strokeWidth={1.5} color="#FF7A00" /> Movimentação Imobiliária</div>
           <table className="w-full border-collapse">
-            <thead><tr className="border-b border-default">{["Tipo de imóvel", "Quantidade", "Dossiês gerados", "Certidões emitidas", "Taxa de conclusão"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <thead><tr className="">{["Tipo de imóvel", "Quantidade", "Dossiês gerados", "Certidões emitidas", "Taxa de conclusão"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
               {d.propertiesByType.map((p, i) => (
-                <tr key={i} className={i < d.propertiesByType.length - 1 ? "border-b border-default" : ""}>
+                <tr key={i} className="">
                   <td className="px-4 py-3.5 text-[13px] font-medium text-primary">{p.type}</td>
                   <td className="px-4 py-3.5 text-[13px] font-semibold text-primary">{p.total}</td>
                   <td className="px-4 py-3.5 text-[13px] text-secondary">{p.dossiers_generated || "—"}</td>
@@ -400,12 +400,12 @@ export default function RelatoriosPage() {
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Users size={14} strokeWidth={1.5} color="#FF7A00" /> Produtividade dos Corretores</div>
           <table className="w-full border-collapse">
-            <thead><tr className="border-b border-default">{["Usuário", "Dossiês", "Certidões", "Conclusões", "Taxa"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <thead><tr className="">{["Usuário", "Dossiês", "Certidões", "Conclusões", "Taxa"].map(h => <th key={h} className="text-left px-4 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
             <tbody>
               {d.productivityRanking.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-[13px] text-muted">Nenhum dado de produtividade disponível.</td></tr>
               ) : d.productivityRanking.map((p, i) => (
-                <tr key={p.id} className={i < d.productivityRanking.length - 1 ? "border-b border-default" : ""}>
+                <tr key={p.id} className="">
                   <td className="px-4 py-3.5 flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-[11px] font-bold text-primary">{getInitials(p.name)}</div><span className="text-[13px] font-medium text-primary">{p.name}</span></td>
                   <td className="px-4 py-3.5 text-[13px] font-semibold text-primary">{p.total_dossiers}</td>
                   <td className="px-4 py-3.5 text-[13px] text-secondary">{p.total_certs}</td>
