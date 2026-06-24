@@ -46,9 +46,10 @@ const STATUS_COLORS: Record<string, string> = {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-surface px-4 py-3 rounded-lg shadow-lg border border-default">
-      <p className="text-[12px] text-secondary mb-1">{label}</p>
-      <p className="text-[16px] font-bold text-primary">{payload[0].value} certidões</p>
+    <div className="bg-surface px-5 py-3 rounded-xl shadow-lg border border-default text-center min-w-[130px]">
+      <p className="text-[11px] text-muted uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-[18px] font-bold" style={{ color: "#FF7A00" }}>{payload[0].value}</p>
+      <p className="text-[11px] text-secondary">certidões</p>
     </div>
   );
 }
