@@ -56,7 +56,7 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function RelatoriosPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<"daily" | "monthly">("monthly");
+  const [period, setPeriod] = useState("mes");
 
   const fetchData = useCallback(async () => {
     try {
@@ -73,7 +73,7 @@ export default function RelatoriosPage() {
 
   const d = data;
   const now = new Date();
-  const chartData = period === "daily" ? d.dailyEmission : d.monthlyEmission;
+  const chartData = period === "hoje" || period === "ontem" ? d.dailyEmission : d.monthlyEmission;
 
   const insights: { title: string; desc: string; icon: typeof TrendingUp; color: string }[] = [];
   if (d.trends.certGrowthPct > 5) insights.push({ title: "Crescimento detectado", desc: `Certidões emitidas cresceram ${d.trends.certGrowthPct}% em relação ao mês anterior.`, icon: TrendingUp, color: "#059669" });
@@ -98,20 +98,21 @@ export default function RelatoriosPage() {
 
         {/* Controles */}
         <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
-          <div className="flex gap-2">
-            {[{ k: "monthly", l: "Mês" }, { k: "daily", l: "Dia" }].map(f => (
-              <button key={f.k} onClick={() => setPeriod(f.k as any)}
-                className={`px-4 py-1.5 rounded-[20px] text-[13px] font-medium transition-colors cursor-pointer border ${period === f.k ? "border-[#FF7A00] text-[#FF7A00] bg-accent/8" : "border-default text-secondary hover:border-hover"}`}
+          <div className="flex gap-3">
+            {[
+              { k: "hoje", l: "Hoje" },
+              { k: "ontem", l: "Ontem" },
+              { k: "semana", l: "Esta semana" },
+              { k: "mes", l: "Este mês" },
+              { k: "ano", l: "Este ano" },
+              { k: "personalizado", l: "Personalizado" },
+            ].map(f => (
+              <button key={f.k} onClick={() => setPeriod(f.k)}
+                className={`px-6 py-2.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer border text-center min-w-[90px] ${period === f.k ? "border-[#FF7A00] text-[#FF7A00] bg-accent/8" : "border-default text-secondary hover:border-hover"}`}
               >{f.l}</button>
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <select className="h-[38px] px-3 rounded-lg border border-default bg-surface text-[13px] text-primary outline-none cursor-pointer">
-              <option>Este mês</option><option>Este ano</option><option>7 dias</option><option>30 dias</option>
-            </select>
-            <select className="h-[38px] px-3 rounded-lg border border-default bg-surface text-[13px] text-primary outline-none cursor-pointer">
-              <option>Todos os usuários</option>
-            </select>
             <button className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-lg border border-default bg-transparent text-[13px] font-semibold text-secondary hover:bg-muted transition-colors">
               <FileSpreadsheet size={14} /> Resumido
             </button>
