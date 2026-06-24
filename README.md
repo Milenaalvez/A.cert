@@ -8,8 +8,6 @@ Plataforma completa de automação de certidões imobiliárias com gestão inter
 
 A A.CERT automatiza consultas a **7 órgãos públicos brasileiros** para emissão de certidões imobiliárias e cíveis. O sistema realiza consultas via Puppeteer, gerencia CAPTCHAs interativos e consolida os resultados em um dossiê PDF profissional.
 
-Além da automação de certidões, o projeto inclui um sistema interno completo de gestão de equipe com controle de ponto, justificativas e permissões RBAC.
-
 ---
 
 ## Stack Tecnológica
@@ -109,13 +107,6 @@ A.CERT/
 - CRUD de Dossiês com templates de certidão
 - Relatórios exportáveis
 - Busca global
-
-### Gestão de Equipe (RH)
-- Membros da equipe com cargos e departamentos
-- Controle de ponto eletrônico
-- Justificativas com fluxo de aprovação/rejeição
-- Sistema de permissões RBAC (14 permissões)
-- Registro de atividades
 
 ### Autenticação
 - Login/registro com JWT
