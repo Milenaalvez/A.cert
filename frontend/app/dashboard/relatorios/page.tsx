@@ -124,7 +124,7 @@ export default function RelatoriosPage() {
             <div className="relative" ref={exportRef}>
               <button
                 onClick={() => setExportOpen(!exportOpen)}
-                className="inline-flex items-center justify-center gap-1.5 h-[38px] px-6 min-w-[140px] rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-[38px] px-5 min-w-[120px] rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer"
                 style={{ background: "#FF7A00" }}
               ><Download size={14} /> Exportar</button>
               {exportOpen && (
