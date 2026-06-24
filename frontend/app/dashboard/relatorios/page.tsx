@@ -162,7 +162,21 @@ export default function RelatoriosPage() {
               </ResponsiveContainer>
             )}
           </div>
-          <div style={{ flex: "1 1 50%", background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }} />
+          <div style={{ flex: "1 1 50%", background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+              <BarChart3 size={14} strokeWidth={1.5} color="#FF7A00" /> Certidões por Órgão
+            </div>
+            <div style={{ flex: 1, minHeight: 240 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={d.certByOrgan.map(c => ({ name: c.name.length > 10 ? c.name.slice(0, 10) : c.name, total: c.total }))} layout="vertical" margin={{ top: 0, right: 16, left: -8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} width={80} />
+                  <Bar dataKey="total" fill="#FF7A00" radius={[0, 4, 4, 0]} barSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* Duas colunas: Clientes + Insights */}
@@ -225,39 +239,24 @@ export default function RelatoriosPage() {
           </table>
         </div>
 
-        {/* Certidões + Gráfico */}
-        <div className="flex gap-6">
-          <div className="flex-1 bg-surface rounded-2xl p-6">
-            <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><FileText size={16} color="#FF7A00" /> Performance das Certidões</h3>
-            <table className="w-full border-collapse">
-              <thead><tr className="border-b border-default">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className="text-left px-3 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
-              <tbody>
-                {d.certByOrgan.map((c, i) => (
-                  <tr key={i} className={i < d.certByOrgan.length - 1 ? "border-b border-default" : ""}>
-                    <td className="px-3 py-3 text-[13px] font-medium text-primary">{c.name.length > 18 ? c.name.slice(0, 18) + "…" : c.name}</td>
-                    <td className="px-3 py-3 text-[13px] font-semibold text-primary">{c.total}</td>
-                    <td className="px-3 py-3 text-[13px] text-[#059669]">{c.success}</td>
-                    <td className="px-3 py-3 text-[13px] text-[#DC2626]">{c.failed}</td>
-                    <td className="px-3 py-3"><span className={`text-[12px] font-semibold ${c.successRate >= 95 ? "text-[#059669]" : c.successRate < 80 ? "text-[#DC2626]" : "text-secondary"}`}>{c.successRate}%</span></td>
-                    <td className="px-3 py-3 text-[12px] text-secondary">{c.avgMinutes > 0 ? `${c.avgMinutes} min` : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="w-[35%] bg-surface rounded-2xl p-6 flex flex-col">
-            <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default">Certidões por Órgão</h3>
-            <div className="flex-1" style={{ minHeight: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={d.certByOrgan.map(c => ({ name: c.name.length > 10 ? c.name.slice(0, 10) : c.name, total: c.total }))} layout="vertical" margin={{ top: 0, right: 16, left: -8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} width={80} />
-                  <Bar dataKey="total" fill="#FF7A00" radius={[0, 4, 4, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        {/* Certidões */}
+        <div className="bg-surface rounded-2xl p-6">
+          <h3 className="text-[14px] font-bold text-primary pb-2.5 mb-4 border-b border-default flex items-center gap-2"><FileText size={16} color="#FF7A00" /> Performance das Certidões</h3>
+          <table className="w-full border-collapse">
+            <thead><tr className="border-b border-default">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className="text-left px-3 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <tbody>
+              {d.certByOrgan.map((c, i) => (
+                <tr key={i} className={i < d.certByOrgan.length - 1 ? "border-b border-default" : ""}>
+                  <td className="px-3 py-3 text-[13px] font-medium text-primary">{c.name.length > 18 ? c.name.slice(0, 18) + "…" : c.name}</td>
+                  <td className="px-3 py-3 text-[13px] font-semibold text-primary">{c.total}</td>
+                  <td className="px-3 py-3 text-[13px] text-[#059669]">{c.success}</td>
+                  <td className="px-3 py-3 text-[13px] text-[#DC2626]">{c.failed}</td>
+                  <td className="px-3 py-3"><span className={`text-[12px] font-semibold ${c.successRate >= 95 ? "text-[#059669]" : c.successRate < 80 ? "text-[#DC2626]" : "text-secondary"}`}>{c.successRate}%</span></td>
+                  <td className="px-3 py-3 text-[12px] text-secondary">{c.avgMinutes > 0 ? `${c.avgMinutes} min` : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Movimentação Imobiliária */}
