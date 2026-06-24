@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, UserPlus, MoreHorizontal, UserCog,
@@ -38,12 +38,30 @@ interface EnrichedUser {
 }
 
 /* ── Constants ─────────────────────────────────────── */
-const ROLE_LABEL: Record<string, string> = { ADMIN: "Administrador", RH: "RH", EMPLOYEE: "Colaborador", DEVELOPER: "Desenvolvedor" };
-const ROLE_BADGE: Record<string, string> = { ADMIN: "rgba(59,130,246,0.1)", RH: "rgba(16,185,129,0.1)", EMPLOYEE: "rgba(156,163,175,0.1)", DEVELOPER: "rgba(139,92,246,0.1)" };
-const ROLE_COLOR: Record<string, string> = { ADMIN: "#3B82F6", RH: "#10B981", EMPLOYEE: "#6B7280", DEVELOPER: "#8B5CF6" };
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: "Administrador",
+  RH: "RH",
+  EMPLOYEE: "Colaborador",
+  DEVELOPER: "Desenvolvedor",
+};
+
+const ROLE_STYLES: Record<string, { bg: string; text: string }> = {
+  ADMIN: { bg: "rgba(59,130,246,0.1)", text: "#3B82F6" },
+  RH: { bg: "rgba(16,185,129,0.1)", text: "#10B981" },
+  EMPLOYEE: { bg: "rgba(156,163,175,0.1)", text: "#6B7280" },
+  DEVELOPER: { bg: "rgba(139,92,246,0.1)", text: "#8B5CF6" },
+};
 
 /* ── Helpers ───────────────────────────────────────── */
-function getInitials(name: string) { return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(); }
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 function timeAgo(dateStr: string | undefined): string {
   if (!dateStr) return "—";
   const now = Date.now();
@@ -52,12 +70,10 @@ function timeAgo(dateStr: string | undefined): string {
   if (diff < 60) return "Agora";
   if (diff < 3600) return `Há ${Math.floor(diff / 60)} min`;
   if (diff < 86400) {
-    const h = new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    return diff < 21600 ? `Hoje às ${h}` : `Hoje às ${h}`;
+    return `Hoje às ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
   }
   if (diff < 172800) {
-    const h = new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    return `Ontem às ${h}`;
+    return `Ontem às ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
   }
   return new Date(dateStr).toLocaleDateString("pt-BR");
 }
@@ -81,19 +97,40 @@ export default function UsuariosPage() {
   const [permUserId, setPermUserId] = useState("");
   const [permUserName, setPermUserName] = useState("");
   const [contextOpen, setContextOpen] = useState<string | null>(null);
+  const contextRef = useRef<HTMLDivElement>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
       const data = await teamApi.enriched();
       setUsers(data || []);
-    } catch {} finally { setLoading(false); }
+    } catch {
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const filtered = users.filter(u => {
+  useEffect(() => {
+    if (!contextOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (contextRef.current && !contextRef.current.contains(e.target as Node)) {
+        setContextOpen(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [contextOpen]);
+
+  const filtered = users.filter((u) => {
     const s = search.toLowerCase();
-    const matchSearch = !s || u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s) || (u.department || "").toLowerCase().includes(s);
+    const matchSearch =
+      !s ||
+      u.name.toLowerCase().includes(s) ||
+      u.email.toLowerCase().includes(s) ||
+      (u.department || "").toLowerCase().includes(s);
     if (!matchSearch) return false;
     if (activeFilter === "admins") return u.role === "ADMIN";
     if (activeFilter === "rh") return u.role === "RH";
@@ -105,11 +142,11 @@ export default function UsuariosPage() {
 
   const counts = {
     todos: users.length,
-    admins: users.filter(u => u.role === "ADMIN").length,
-    rh: users.filter(u => u.role === "RH").length,
-    employees: users.filter(u => u.role === "EMPLOYEE").length,
-    developers: users.filter(u => u.role === "DEVELOPER").length,
-    inactive: users.filter(u => u.isActive === false).length,
+    admins: users.filter((u) => u.role === "ADMIN").length,
+    rh: users.filter((u) => u.role === "RH").length,
+    employees: users.filter((u) => u.role === "EMPLOYEE").length,
+    developers: users.filter((u) => u.role === "DEVELOPER").length,
+    inactive: users.filter((u) => u.isActive === false).length,
   };
 
   const FILTERS = [
@@ -138,46 +175,81 @@ export default function UsuariosPage() {
     }
   }
 
-  const pillStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" };
+  const contextMenuItems = (u: EnrichedUser) => [
+    {
+      icon: UserCog,
+      label: "Visualizar",
+      action: () => router.push(`/dashboard/usuarios/${u.id}`),
+    },
+    {
+      icon: Edit,
+      label: "Editar",
+      action: () => router.push(`/dashboard/usuarios/${u.id}`),
+    },
+    {
+      icon: Shield,
+      label: "Alterar permissões",
+      action: () => {
+        setPermUserId(u.id);
+        setPermUserName(u.name);
+        setPermOpen(true);
+      },
+    },
+    { icon: Key, label: "Resetar senha", action: () => handleAction("reset", u) },
+    {
+      icon: u.isActive ? XCircle : CheckCircle2,
+      label: u.isActive ? "Desativar" : "Ativar",
+      action: () => handleAction("toggle", u),
+    },
+    { icon: Trash2, label: "Remover", action: () => handleAction("delete", u) },
+  ];
 
   return (
     <DashboardLayout>
-      <div style={{ padding: "24px 28px", maxWidth: 1400 }}>
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Usuários</h1>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "4px 0 0" }}>Gerencie acessos, permissões e atividades da equipe.</p>
+        <div style={{ marginTop: 24 }} className="flex items-start justify-between gap-8 mb-5">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Usuários</h1>
+            <p className="text-[14px] text-secondary leading-relaxed">Gerencie acessos, permissões e atividades da equipe.</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <div style={{ position: "relative" }}>
-              <Search size={14} color="var(--text-tertiary)" style={{ position: "absolute", left: 10, top: 11 }} />
+          <div className="flex items-center gap-3 shrink-0 pt-0.5">
+            <div className="relative">
+              <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
               <input
+                type="text"
                 placeholder="Buscar usuário..."
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ width: 220, height: 38, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 12px 0 32px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" }}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-[260px] h-[44px] rounded-[8px] border border-default text-[14px] text-primary bg-surface placeholder:text-muted outline-none transition-colors"
+                style={{ paddingLeft: "42px", paddingRight: "16px" }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
               />
             </div>
             <button
               onClick={() => setCreateOpen(true)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "0 18px", height: 38, borderRadius: 8, border: "none", background: "#FF7A00", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+              className="flex items-center gap-2 h-10 px-6 rounded-[8px] bg-[#FF7A00] text-white text-[13px] font-semibold hover:bg-[#E06900] transition-colors"
             >
-              <UserPlus size={14} /> Novo Usuário
+              <UserPlus size={16} strokeWidth={2.5} /> Novo Usuário
             </button>
           </div>
         </div>
 
         {/* Quick Filters */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-          {FILTERS.map(f => (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setActiveFilter(f.key)}
+              className={`px-4 py-1.5 rounded-[20px] text-[13px] font-medium transition-colors cursor-pointer border ${
+                activeFilter === f.key
+                  ? "border-[#FF7A00] text-[#FF7A00]"
+                  : "border-default text-secondary hover:text-primary"
+              }`}
               style={{
-                padding: "6px 16px", borderRadius: 20, border: activeFilter === f.key ? "1px solid #FF7A00" : "1px solid var(--border-default)",
-                background: activeFilter === f.key ? "rgba(255,122,0,0.08)" : "var(--bg-app)",
-                color: activeFilter === f.key ? "#FF7A00" : "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                background: activeFilter === f.key ? "var(--badge-orange-bg)" : "transparent",
               }}
             >
               {f.label} ({f.count})
@@ -186,93 +258,160 @@ export default function UsuariosPage() {
         </div>
 
         {/* Table */}
-        <div style={{ border: "1px solid var(--border-default)", borderRadius: 12, background: "var(--bg-app)", overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
+        <div           className="rounded-xl overflow-hidden"
+          style={{ background: "var(--bg-app)" }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse min-w-[1000px]">
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--border-default)", background: "var(--bg-secondary)" }}>
-                  {["Usuário", "Cargo", "Departamento", "Status", "Último acesso", "Carga horária", "Perfil de acesso", "Ações"].map(h => (
-                    <th key={h} style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "left" }}>{h}</th>
+                <tr
+                  className="border-b border-default"
+                  style={{ background: "var(--bg-elevated)" }}
+                >
+                  {[
+                    "Usuário",
+                    "Cargo",
+                    "Departamento",
+                    "Status",
+                    "Último acesso",
+                    "Carga horária",
+                    "Perfil de acesso",
+                    "Ações",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left px-4 py-3 text-[11px] font-bold text-muted uppercase tracking-[0.5px]"
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)", fontSize: 13 }}>Carregando...</td></tr>
+                  <tr>
+                    <td colSpan={8} className="py-10 text-center text-[13px] text-muted">
+                      Carregando...
+                    </td>
+                  </tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)", fontSize: 13 }}>Nenhum usuário encontrado.</td></tr>
+                  <tr>
+                    <td colSpan={8} className="py-10 text-center text-[13px] text-muted">
+                      Nenhum usuário encontrado.
+                    </td>
+                  </tr>
                 ) : (
-                  filtered.map(u => {
-                    const st = statusDot(u.todayStatus || (u.isActive ? "offline" : undefined), u.isActive);
+                  filtered.map((u) => {
+                    const st = statusDot(
+                      u.todayStatus || (u.isActive ? "offline" : undefined),
+                      u.isActive
+                    );
                     const Icon = st.Icon;
+                    const roleStyle = ROLE_STYLES[u.role] || ROLE_STYLES.EMPLOYEE;
                     return (
                       <tr
                         key={u.id}
-                        style={{ borderBottom: "1px solid var(--border-default)", cursor: "pointer", transition: "background 0.12s" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                        className="border-b border-default cursor-pointer transition-colors"
+                        style={{ background: "transparent" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                         onClick={() => router.push(`/dashboard/usuarios/${u.id}`)}
                       >
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", flexShrink: 0 }}>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-[14px] font-bold text-primary shrink-0"
+                              style={{ background: "var(--bg-elevated)" }}
+                            >
                               {getInitials(u.name)}
                             </div>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{u.name}</div>
-                              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{u.email}</div>
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-semibold text-primary truncate">{u.name}</div>
+                              <div className="text-[12px] text-muted truncate">{u.email}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <span style={{ ...pillStyle, background: ROLE_BADGE[u.role] || "rgba(156,163,175,0.1)", color: ROLE_COLOR[u.role] || "#6B7280" }}>{ROLE_LABEL[u.role] || u.role}</span>
-                        </td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{u.department || "—"}</span>
-                        </td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <Icon size={14} color={st.color} />
-                            <span style={{ fontSize: 12, fontWeight: 500, color: st.color }}>{st.label}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: "14px 16px", fontSize: 12, color: "var(--text-secondary)" }}>{timeAgo(u.lastAccessAt)}</td>
-                        <td style={{ padding: "14px 16px", fontSize: 13, color: "var(--text-secondary)" }}>{u.weeklyHours || 40}h semanais</td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <span style={{ fontSize: 12, fontWeight: 500, color: u.role === "ADMIN" ? "#3B82F6" : "var(--text-secondary)" }}>
-                            {u.role === "ADMIN" ? "Administrador Total" : u.role === "RH" ? "Recursos Humanos" : u.role === "DEVELOPER" ? "Desenvolvedor" : "Operacional"}
+                        <td className="px-4 py-3.5">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[12px] text-[11px] font-semibold whitespace-nowrap"
+                            style={{ background: roleStyle.bg, color: roleStyle.text }}
+                          >
+                            {ROLE_LABEL[u.role] || u.role}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ position: "relative" }}>
+                        <td className="px-4 py-3.5">
+                          <span className="text-[13px] text-secondary">
+                            {u.department || "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5">
+                            <Icon size={14} strokeWidth={2} style={{ color: st.color }} />
+                            <span className="text-[12px] font-medium" style={{ color: st.color }}>
+                              {st.label}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-[12px] text-secondary">
+                          {timeAgo(u.lastAccessAt)}
+                        </td>
+                        <td className="px-4 py-3.5 text-[13px] text-secondary">
+                          {u.weeklyHours || 40}h semanais
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className="text-[12px] font-medium"
+                            style={{
+                              color: u.role === "ADMIN" ? "#3B82F6" : "var(--text-secondary)",
+                            }}
+                          >
+                            {u.role === "ADMIN"
+                              ? "Administrador Total"
+                              : u.role === "RH"
+                                ? "Recursos Humanos"
+                                : u.role === "DEVELOPER"
+                                  ? "Desenvolvedor"
+                                  : "Operacional"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="relative" ref={contextOpen === u.id ? contextRef : undefined}>
                             <button
-                              onClick={e => { e.stopPropagation(); setContextOpen(contextOpen === u.id ? null : u.id); }}
-                              style={{ background: "transparent", border: "none", cursor: "pointer", padding: 6, borderRadius: 6, color: "var(--text-tertiary)" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setContextOpen(contextOpen === u.id ? null : u.id);
+                              }}
+                              className="w-8 h-8 rounded-[6px] flex items-center justify-center text-muted hover:text-primary transition-colors"
+                              style={{ background: contextOpen === u.id ? "var(--bg-muted)" : "transparent" }}
+                              onMouseEnter={(e) => { if (contextOpen !== u.id) e.currentTarget.style.background = "var(--bg-muted)"; }}
+                              onMouseLeave={(e) => { if (contextOpen !== u.id) e.currentTarget.style.background = "transparent"; }}
                             >
-                              <MoreHorizontal size={16} />
+                              <MoreHorizontal size={16} strokeWidth={1.5} />
                             </button>
                             {contextOpen === u.id && (
-                              <div style={{ position: "absolute", right: 0, top: 34, zIndex: 50, minWidth: 200, background: "var(--bg-app)", border: "1px solid var(--border-default)", borderRadius: 10, boxShadow: "0 8px 30px rgba(0,0,0,0.15)", overflow: "hidden" }}
-                                onClick={e => e.stopPropagation()}
+                              <div
+                                className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-[10px] overflow-hidden border border-default"
+                                style={{
+                                  background: "var(--bg-surface)",
+                                  boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                {[
-                                  { icon: UserCog, label: "Visualizar", action: () => router.push(`/dashboard/usuarios/${u.id}`) },
-                                  { icon: Edit, label: "Editar", action: () => router.push(`/dashboard/usuarios/${u.id}`) },
-                                  { icon: Shield, label: "Alterar permissões", action: () => { setPermUserId(u.id); setPermUserName(u.name); setPermOpen(true); } },
-                                  { icon: Key, label: "Resetar senha", action: () => handleAction("reset", u) },
-                                  { icon: u.isActive ? XCircle : CheckCircle2, label: u.isActive ? "Desativar" : "Ativar", action: () => handleAction("toggle", u) },
-                                  { icon: Trash2, label: "Remover", action: () => handleAction("delete", u) },
-                                ].map((item, i) => (
-                                  <button
-                                    key={i}
-                                    onClick={() => item.action()}
-                                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: "none", background: "transparent", color: "var(--text-primary)", fontSize: 13, cursor: "pointer", textAlign: "left" }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <item.icon size={14} color="var(--text-tertiary)" /> {item.label}
-                                  </button>
-                                ))}
+                                {contextMenuItems(u).map((item, i) => {
+                                  const isDanger = item.label === "Remover";
+                                  return (
+                                    <button
+                                      key={i}
+                                      onClick={() => item.action()}
+                                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-left transition-colors"
+                                      style={{ background: "transparent", border: "none", cursor: "pointer", color: isDanger ? "#DC2626" : "var(--text-primary)" }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = isDanger ? "var(--badge-red-bg)" : "var(--bg-muted)"; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                    >
+                                      <item.icon size={14} strokeWidth={1.5} style={{ color: isDanger ? "#DC2626" : "var(--text-muted)" }} />
+                                      {item.label}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -286,8 +425,17 @@ export default function UsuariosPage() {
           </div>
         </div>
 
-        <NovoUsuarioModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} />
-        <PermissoesModal open={permOpen} onClose={() => setPermOpen(false)} userId={permUserId} userName={permUserName} />
+        <NovoUsuarioModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={fetchUsers}
+        />
+        <PermissoesModal
+          open={permOpen}
+          onClose={() => setPermOpen(false)}
+          userId={permUserId}
+          userName={permUserName}
+        />
       </div>
     </DashboardLayout>
   );

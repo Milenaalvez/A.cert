@@ -4,9 +4,10 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, useCallback } from "react";
 import {
   Settings, Save, Mail, Building2, Image, Shield, FileText, Database,
-  Download, Upload, CheckCircle2, XCircle, AlertTriangle, Clock, Plus, Edit, Eye,
+  Download, Upload, CheckCircle2, XCircle, AlertTriangle, Clock, Plus, Edit,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PageHeader } from "@/components/PageHeader";
 
 /* ── Types ─────────────────────────────────────────── */
 interface SettingsData { [key: string]: string; }
@@ -134,7 +135,6 @@ export default function ConfiguracoesPage() {
   }
 
   async function updateOrganStatus(id: string, status: string) {
-    // Organ status is managed via the organs table directly
     const token = localStorage.getItem("acert_token");
     await fetch(`${apiBase}/api/settings`, {
       method: "PUT",
@@ -143,11 +143,6 @@ export default function ConfiguracoesPage() {
     });
     fetchAll();
   }
-
-  const inputStyle: React.CSSProperties = { width: "100%", height: 40, borderRadius: 8, border: "1px solid var(--border-default)", background: "var(--bg-app)", padding: "0 12px", fontSize: 13, color: "var(--text-primary)", outline: "none", boxSizing: "border-box" };
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 };
-  const SECTION_S: React.CSSProperties = { border: "1px solid var(--border-default)", borderRadius: 12, background: "var(--bg-app)", padding: "22px 24px", marginBottom: 18 };
-  const SECT_T: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 16px", paddingBottom: 10, borderBottom: "1px solid var(--border-default)", display: "flex", alignItems: "center", gap: 8 };
 
   const statusIcon = (s: string) => {
     if (s === "online") return <CheckCircle2 size={14} color="#10B981" />;
@@ -158,57 +153,67 @@ export default function ConfiguracoesPage() {
   const statusLabel = (s: string) => s === "online" ? "Online" : s === "unstable" ? "Instável" : s === "maintenance" ? "Manutenção" : "Offline";
   const statusColor = (s: string) => s === "online" ? "#10B981" : s === "unstable" ? "#F59E0B" : s === "maintenance" ? "#3B82F6" : "#EF4444";
 
+  const tabs = [
+    { key: "geral", label: "Geral", icon: Building2 },
+    { key: "identidade", label: "Identidade Visual", icon: Image },
+    { key: "smtp", label: "SMTP", icon: Mail },
+    { key: "orgaos", label: "Órgãos Integrados", icon: Shield },
+    { key: "templates", label: "Templates", icon: FileText },
+    { key: "auditoria", label: "Auditoria", icon: FileText },
+    { key: "backup", label: "Backup", icon: Database },
+  ];
+
   return (
     <DashboardLayout>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 24px 64px" }}>
+      <div className="max-w-[900px] mx-auto px-6 pt-7 pb-16">
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(255,122,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Settings size={22} color="#FF7A00" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Configurações</h1>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "2px 0 0" }}>Gerencie as configurações globais do sistema.</p>
-            </div>
+        <div className="mb-6">
+          <PageHeader title="Configurações" subtitle="Gerencie as configurações globais do sistema." />
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={saveSettings}
+              disabled={saving}
+              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-[13px] font-semibold text-white transition-colors ${
+                saved
+                  ? "bg-[#10B981]"
+                  : saving
+                    ? "bg-[var(--accent-primary)] opacity-60 cursor-not-allowed"
+                    : "bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
+              }`}
+            >
+              <Save size={14} /> {saved ? "Salvo!" : saving ? "Salvando..." : "Salvar alterações"}
+            </button>
           </div>
-          <button
-            onClick={saveSettings}
-            disabled={saving}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 24px", borderRadius: 8, border: "none", background: saved ? "#10B981" : saving ? "rgba(255,122,0,0.5)" : "#FF7A00", color: "#fff", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}
-          >
-            <Save size={14} /> {saved ? "Salvo!" : saving ? "Salvando..." : "Salvar alterações"}
-          </button>
         </div>
 
         {/* Section Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-          {[
-            { key: "geral", label: "Geral", icon: Building2 },
-            { key: "identidade", label: "Identidade Visual", icon: Image },
-            { key: "smtp", label: "SMTP", icon: Mail },
-            { key: "orgaos", label: "Órgãos Integrados", icon: Shield },
-            { key: "templates", label: "Templates", icon: FileText },
-            { key: "auditoria", label: "Auditoria", icon: FileText },
-            { key: "backup", label: "Backup", icon: Database },
-          ].map(tab => {
+        <div className="flex flex-wrap gap-2 mb-5">
+          {tabs.map(tab => {
             const Icon = tab.icon;
+            const isActive = activeSection === tab.key;
             return (
-              <button key={tab.key} onClick={() => setActiveSection(tab.key)} style={{
-                display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8,
-                border: activeSection === tab.key ? "1px solid #FF7A00" : "1px solid var(--border-default)",
-                background: activeSection === tab.key ? "rgba(255,122,0,0.08)" : "var(--bg-app)",
-                color: activeSection === tab.key ? "#FF7A00" : "var(--text-secondary)", fontSize: 12, fontWeight: 600, cursor: "pointer",
-              }}><Icon size={14} /> {tab.label}</button>
+              <button
+                key={tab.key}
+                onClick={() => setActiveSection(tab.key)}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold cursor-pointer transition-colors ${
+                  isActive
+                    ? "border border-[var(--accent-primary)] bg-[var(--accent-light)] text-[var(--accent-primary)]"
+                    : "border border-default bg-app text-secondary hover:text-primary hover:border-[var(--border-hover)]"
+                }`}
+              >
+                <Icon size={14} /> {tab.label}
+              </button>
             );
           })}
         </div>
 
         {/* GERAL */}
         {activeSection === "geral" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><Building2 size={16} color="#FF7A00" /> Configurações Gerais</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <Building2 size={16} className="text-[var(--accent-primary)]" /> Configurações Gerais
+            </h3>
+            <div className="grid grid-cols-2 gap-3.5">
               {[
                 { label: "Nome da empresa", value: companyName, set: setCompanyName, placeholder: "Ex: DONNOS Docs" },
                 { label: "Razão social", value: legalName, set: setLegalName, placeholder: "Ex: Bloco Imobiliária LTDA" },
@@ -218,8 +223,14 @@ export default function ConfiguracoesPage() {
                 { label: "Site institucional", value: companySite, set: setCompanySite, placeholder: "https://..." },
               ].map((f, i) => (
                 <div key={i}>
-                  <label style={labelStyle}>{f.label}</label>
-                  <input type={f.type || "text"} value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} style={inputStyle} />
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">{f.label}</label>
+                  <input
+                    type={f.type || "text"}
+                    value={f.value}
+                    onChange={e => f.set(e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full h-10 px-3 rounded-lg border border-default bg-surface text-[14px] text-primary outline-none placeholder:text-muted"
+                  />
                 </div>
               ))}
             </div>
@@ -228,24 +239,31 @@ export default function ConfiguracoesPage() {
 
         {/* IDENTIDADE */}
         {activeSection === "identidade" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><Image size={16} color="#FF7A00" /> Identidade Visual</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <Image size={16} className="text-[var(--accent-primary)]" /> Identidade Visual
+            </h3>
+            <div className="grid grid-cols-2 gap-3.5">
               {[
                 { label: "Logo principal (URL)", value: settings.logo_url || "", placeholder: "https://.../logo.png" },
                 { label: "Logo reduzida (URL)", value: settings.logo_small_url || "", placeholder: "https://.../logo-small.png" },
               ].map((f, i) => (
                 <div key={i}>
-                  <label style={labelStyle}>{f.label}</label>
-                  <input value={f.value} readOnly placeholder={f.placeholder} style={inputStyle} />
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">{f.label}</label>
+                  <input
+                    value={f.value}
+                    readOnly
+                    placeholder={f.placeholder}
+                    className="w-full h-10 px-3 rounded-lg border border-default bg-surface text-[14px] text-primary outline-none placeholder:text-muted"
+                  />
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 14, display: "flex", gap: 20 }}>
-              <div style={{ width: 120, height: 60, borderRadius: 8, border: "1px dashed var(--border-default)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--text-tertiary)" }}>
+            <div className="mt-3.5 flex gap-5">
+              <div className="w-[120px] h-[60px] rounded-lg border border-dashed border-default flex items-center justify-center text-[11px] text-muted">
                 Prévia logo
               </div>
-              <div style={{ width: 60, height: 60, borderRadius: 8, border: "1px dashed var(--border-default)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--text-tertiary)" }}>
+              <div className="w-[60px] h-[60px] rounded-lg border border-dashed border-default flex items-center justify-center text-[11px] text-muted">
                 Ícone
               </div>
             </div>
@@ -254,9 +272,11 @@ export default function ConfiguracoesPage() {
 
         {/* SMTP */}
         {activeSection === "smtp" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><Mail size={16} color="#FF7A00" /> Configuração SMTP</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <Mail size={16} className="text-[var(--accent-primary)]" /> Configuração SMTP
+            </h3>
+            <div className="grid grid-cols-2 gap-3.5">
               {[
                 { label: "SMTP Host", value: smtpHost, set: setSmtpHost, placeholder: "smtp.gmail.com" },
                 { label: "SMTP Porta", value: smtpPort, set: setSmtpPort, placeholder: "587" },
@@ -266,23 +286,33 @@ export default function ConfiguracoesPage() {
                 { label: "Nome do Remetente", value: smtpFromName, set: setSmtpFromName, placeholder: "DONNOS Docs" },
               ].map((f, i) => (
                 <div key={i}>
-                  <label style={labelStyle}>{f.label}</label>
-                  <input type={f.type || "text"} value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} style={inputStyle} />
+                  <label className="text-[12px] font-semibold text-secondary block mb-1">{f.label}</label>
+                  <input
+                    type={f.type || "text"}
+                    value={f.value}
+                    onChange={e => f.set(e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full h-10 px-3 rounded-lg border border-default bg-surface text-[14px] text-primary outline-none placeholder:text-muted"
+                  />
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="mt-4 flex items-center gap-3">
               <button
                 onClick={testSmtp}
                 disabled={testing || !smtpHost || !smtpUser}
-                style={{ padding: "10px 20px", borderRadius: 8, border: "1px solid #FF7A00", background: "transparent", color: testing ? "var(--text-tertiary)" : "#FF7A00", fontSize: 13, fontWeight: 600, cursor: testing ? "not-allowed" : "pointer" }}
+                className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg border text-[13px] font-semibold transition-colors ${
+                  testing || !smtpHost || !smtpUser
+                    ? "border-default text-muted cursor-not-allowed"
+                    : "border-[var(--accent-primary)] text-[var(--accent-primary)] hover:bg-[var(--accent-light)] cursor-pointer"
+                }`}
               >
                 {testing ? "Testando..." : "Testar SMTP"}
               </button>
               {testResult && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className="flex items-center gap-1.5">
                   {testResult.success ? <CheckCircle2 size={14} color="#10B981" /> : <XCircle size={14} color="#EF4444" />}
-                  <span style={{ fontSize: 12, color: testResult.success ? "#10B981" : "#EF4444" }}>{testResult.message}</span>
+                  <span className={`text-[12px] ${testResult.success ? "text-[#10B981]" : "text-[#EF4444]"}`}>{testResult.message}</span>
                 </div>
               )}
             </div>
@@ -291,31 +321,40 @@ export default function ConfiguracoesPage() {
 
         {/* ÓRGÃOS */}
         {activeSection === "orgaos" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><Shield size={16} color="#FF7A00" /> Órgãos Integrados</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <Shield size={16} className="text-[var(--accent-primary)]" /> Órgãos Integrados
+            </h3>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
               {organs.map(org => (
-                <div key={org.id} style={{ border: "1px solid var(--border-default)", borderRadius: 10, background: "var(--bg-app)", padding: "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div key={org.id} className="rounded-[10px] bg-app p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
                       {statusIcon(org.status)}
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{org.name}</span>
+                      <span className="text-[13px] font-semibold text-primary">{org.name}</span>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 500, color: statusColor(org.status), background: `${statusColor(org.status)}15`, padding: "2px 8px", borderRadius: 10 }}>{statusLabel(org.status)}</span>
+                    <span
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-[10px]"
+                      style={{ color: statusColor(org.status), background: `${statusColor(org.status)}15` }}
+                    >
+                      {statusLabel(org.status)}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>Última verificação: {new Date(org.updated_at).toLocaleDateString("pt-BR")}</span>
+                  <div className="flex flex-col gap-1 mb-2.5">
+                    <span className="text-[11px] text-muted">
+                      Última verificação: {new Date(org.updated_at).toLocaleDateString("pt-BR")}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", gap: 4 }}>
+                  <div className="flex gap-1">
                     {["online", "offline", "maintenance"].map(s => (
                       <button
                         key={s}
                         onClick={() => updateOrganStatus(org.id, s)}
-                        style={{
-                          padding: "4px 10px", borderRadius: 6, border: org.status === s ? "1px solid #FF7A00" : "1px solid var(--border-default)",
-                          background: org.status === s ? "rgba(255,122,0,0.1)" : "transparent",
-                          color: org.status === s ? "#FF7A00" : "var(--text-tertiary)", fontSize: 11, fontWeight: 500, cursor: "pointer",
-                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                          org.status === s
+                            ? "border border-[var(--accent-primary)] bg-[var(--accent-light)] text-[var(--accent-primary)]"
+                            : "border border-default bg-transparent text-muted hover:text-secondary"
+                        }`}
                       >
                         {s === "online" ? "Online" : s === "offline" ? "Off" : "Manut."}
                       </button>
@@ -329,28 +368,34 @@ export default function ConfiguracoesPage() {
 
         {/* TEMPLATES */}
         {activeSection === "templates" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><FileText size={16} color="#FF7A00" /> Templates de Certidões</h3>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <FileText size={16} className="text-[var(--accent-primary)]" /> Templates de Certidões
+            </h3>
+            <table className="w-full border-collapse">
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--border-default)" }}>
+                <tr className="border-b border-default">
                   {["Nome", "Tipo", "Categoria", "Ordem", "Status"].map(h => (
-                    <th key={h} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", textAlign: "left" }}>{h}</th>
+                    <th key={h} className="px-3.5 py-2.5 text-[11px] font-bold text-muted uppercase text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {templates.map((t, i) => (
-                  <tr key={t.id} style={{ borderBottom: i < templates.length - 1 ? "1px solid var(--border-default)" : "none", cursor: "pointer" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  <tr
+                    key={t.id}
+                    className={`cursor-pointer transition-colors hover:bg-[var(--bg-hover)] ${
+                      i < templates.length - 1 ? "border-b border-default" : ""
+                    }`}
                   >
-                    <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{t.label}</td>
-                    <td style={{ padding: "12px 14px", fontSize: 12, color: "var(--text-secondary)" }}>{t.type === "pessoa_fisica" ? "PF" : t.type === "pessoa_juridica" ? "PJ" : t.type === "imovel" ? "Imóvel" : "Ambos"}</td>
-                    <td style={{ padding: "12px 14px", fontSize: 12, color: "var(--text-secondary)" }}>{t.category}</td>
-                    <td style={{ padding: "12px 14px", fontSize: 12, color: "var(--text-secondary)" }}>{t.ordem}</td>
-                    <td style={{ padding: "12px 14px" }}>
-                      <span style={{ fontSize: 11, fontWeight: 500, color: "#10B981", background: "rgba(16,185,129,0.1)", padding: "2px 8px", borderRadius: 10 }}>Ativo</span>
+                    <td className="px-3.5 py-3 text-[13px] font-medium text-primary">{t.label}</td>
+                    <td className="px-3.5 py-3 text-[12px] text-secondary">
+                      {t.type === "pessoa_fisica" ? "PF" : t.type === "pessoa_juridica" ? "PJ" : t.type === "imovel" ? "Imóvel" : "Ambos"}
+                    </td>
+                    <td className="px-3.5 py-3 text-[12px] text-secondary">{t.category}</td>
+                    <td className="px-3.5 py-3 text-[12px] text-secondary">{t.ordem}</td>
+                    <td className="px-3.5 py-3">
+                      <span className="text-[11px] font-medium text-[#10B981] bg-[rgba(16,185,129,0.1)] px-2 py-0.5 rounded-[10px]">Ativo</span>
                     </td>
                   </tr>
                 ))}
@@ -361,27 +406,33 @@ export default function ConfiguracoesPage() {
 
         {/* AUDITORIA */}
         {activeSection === "auditoria" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><FileText size={16} color="#FF7A00" /> Auditoria do Sistema</h3>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <FileText size={16} className="text-[var(--accent-primary)]" /> Auditoria do Sistema
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[600px]">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-default)" }}>
+                  <tr className="border-b border-default">
                     {["Data", "Usuário", "Ação", "Módulo"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", textAlign: "left" }}>{h}</th>
+                      <th key={h} className="px-3.5 py-2.5 text-[11px] font-bold text-muted uppercase text-left">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {auditLog.length === 0 ? (
-                    <tr><td colSpan={4} style={{ padding: 24, textAlign: "center", fontSize: 12, color: "var(--text-tertiary)" }}>Nenhum registro de auditoria.</td></tr>
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-[12px] text-muted">Nenhum registro de auditoria.</td>
+                    </tr>
                   ) : (
                     auditLog.map((log, i) => (
-                      <tr key={log.id} style={{ borderBottom: i < auditLog.length - 1 ? "1px solid var(--border-default)" : "none" }}>
-                        <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{new Date(log.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-primary)" }}>{log.user_name || "Sistema"}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-primary)" }}>{log.action}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-secondary)" }}>{log.module}</td>
+                      <tr key={log.id} className={i < auditLog.length - 1 ? "border-b border-default" : ""}>
+                        <td className="px-3.5 py-2.5 text-[12px] text-secondary whitespace-nowrap">
+                          {new Date(log.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-[12px] text-primary">{log.user_name || "Sistema"}</td>
+                        <td className="px-3.5 py-2.5 text-[12px] text-primary">{log.action}</td>
+                        <td className="px-3.5 py-2.5 text-[12px] text-secondary">{log.module}</td>
                       </tr>
                     ))
                   )}
@@ -393,20 +444,30 @@ export default function ConfiguracoesPage() {
 
         {/* BACKUP */}
         {activeSection === "backup" && (
-          <div style={SECTION_S}>
-            <h3 style={SECT_T}><Database size={16} color="#FF7A00" /> Backup</h3>
-            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-              <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 20px", borderRadius: 8, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <div className="bg-surface rounded-xl p-6 mb-[18px]">
+            <h3 className="text-[14px] font-bold text-primary flex items-center gap-2 pb-2.5 mb-4 border-b border-default">
+              <Database size={16} className="text-[var(--accent-primary)]" /> Backup
+            </h3>
+            <div className="flex gap-3 mb-4">
+              <button className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg border border-default bg-transparent text-secondary text-[13px] font-semibold cursor-pointer hover:bg-[var(--bg-hover)] transition-colors">
                 <Download size={14} /> Gerar Backup
               </button>
-              <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 20px", borderRadius: 8, border: "1px solid var(--border-default)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <button className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg border border-default bg-transparent text-secondary text-[13px] font-semibold cursor-pointer hover:bg-[var(--bg-hover)] transition-colors">
+                <Download size={14} /> Baixar Backup
+              </button>
+              <button className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg border border-default bg-transparent text-secondary text-[13px] font-semibold cursor-pointer hover:bg-[var(--bg-hover)] transition-colors">
                 <Upload size={14} /> Restaurar Backup
               </button>
             </div>
-            <div style={{ display: "flex", gap: 32, fontSize: 12, color: "var(--text-secondary)" }}>
-              <span>Último backup: <strong>{backupInfo.lastBackupAt ? new Date(backupInfo.lastBackupAt).toLocaleString("pt-BR") : "Nunca"}</strong></span>
-              <span>Tamanho: <strong>{backupInfo.size || "0"} KB</strong></span>
-              <span>Status: <span style={{ color: backupInfo.lastBackupAt ? "#10B981" : "var(--text-tertiary)", fontWeight: 600 }}>{backupInfo.lastBackupAt ? "Atualizado" : "Nenhum"}</span></span>
+            <div className="flex gap-8 text-[12px] text-secondary">
+              <span>Último backup: <strong className="text-primary font-semibold">{backupInfo.lastBackupAt ? new Date(backupInfo.lastBackupAt).toLocaleString("pt-BR") : "Nunca"}</strong></span>
+              <span>Tamanho: <strong className="text-primary font-semibold">{backupInfo.size || "0"} KB</strong></span>
+              <span>
+                Status:{" "}
+                <span className={`font-semibold ${backupInfo.lastBackupAt ? "text-[#10B981]" : "text-muted"}`}>
+                  {backupInfo.lastBackupAt ? "Atualizado" : "Nenhum"}
+                </span>
+              </span>
             </div>
           </div>
         )}
