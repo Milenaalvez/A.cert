@@ -114,6 +114,49 @@ export default function RelatoriosPage() {
     const logoUrl = window.location.origin + "/images/logo.png";
     const dataPT = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
     const horaPT = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    // SVG Line Chart — emissions
+    const lineData = d.monthlyEmission;
+    const maxLine = Math.max(...lineData.map(l => l.total), 1);
+    const lineW = 600, lineH = 200, padL = 40, padR = 20, padT = 10, padB = 24;
+    const lineSvg = lineData.length > 0 ? `
+      <svg width="100%" viewBox="0 0 ${lineW} ${lineH}" style="max-width:600px">
+        <line x1="${padL}" y1="${lineH - padB}" x2="${lineW - padR}" y2="${lineH - padB}" stroke="#E5E7EB" stroke-width="1"/>
+        ${[0, 0.25, 0.5, 0.75, 1].map(r => `<line x1="${padL}" y1="${Math.round(padT + (lineH - padT - padB) * (1 - r))}" x2="${lineW - padR}" y2="${Math.round(padT + (lineH - padT - padB) * (1 - r))}" stroke="#F0F0F0" stroke-width="1" stroke-dasharray="3,3"/>`).join("")}
+        ${lineData.map((pt, i) => {
+          const x = padL + i / Math.max(lineData.length - 1, 1) * (lineW - padL - padR);
+          const y = padT + (lineH - padT - padB) * (1 - pt.total / maxLine);
+          return `<circle cx="${Math.round(x)}" cy="${Math.round(y)}" r="4" fill="#FF7A00" stroke="#fff" stroke-width="2"/>`;
+        }).join("")}
+        ${lineData.map((pt, i, arr) => {
+          if (i === arr.length - 1) return "";
+          const x1 = padL + i / Math.max(arr.length - 1, 1) * (lineW - padL - padR);
+          const y1 = padT + (lineH - padT - padB) * (1 - pt.total / maxLine);
+          const x2 = padL + (i + 1) / Math.max(arr.length - 1, 1) * (lineW - padL - padR);
+          const y2 = padT + (lineH - padT - padB) * (1 - arr[i + 1].total / maxLine);
+          return `<line x1="${Math.round(x1)}" y1="${Math.round(y1)}" x2="${Math.round(x2)}" y2="${Math.round(y2)}" stroke="#FF7A00" stroke-width="2.5"/>`;
+        }).join("")}
+        ${lineData.map((pt, i) => `<text x="${Math.round(padL + i / Math.max(lineData.length - 1, 1) * (lineW - padL - padR))}" y="${lineH - 6}" text-anchor="middle" font-size="9" fill="#9CA3AF">${pt.label}</text>`).join("")}
+        <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" font-size="9" fill="#9CA3AF">${maxLine}</text>
+      </svg>` : '<p style="color:#9CA3AF;text-align:center">Sem dados</p>';
+
+    // SVG Bar Chart — organs
+    const barData = [...d.certByOrgan].sort((a, b) => b.total - a.total).slice(0, 7);
+    const maxBar = Math.max(...barData.map(b => b.total), 1);
+    const barH = barData.length * 28 + 8;
+    const barSvg = barData.length > 0 ? `
+      <svg width="100%" viewBox="0 0 500 ${barH}" style="max-width:500px">
+        ${barData.map((b, i) => {
+          const y = i * 28 + 4;
+          const w = Math.max((b.total / maxBar) * 350, 4);
+          return `<g>
+            <text x="110" y="${y + 15}" text-anchor="end" font-size="10" fill="#6B7280">${b.name.length > 14 ? b.name.slice(0, 14) + '…' : b.name}</text>
+            <rect x="116" y="${y + 4}" width="${Math.round(w)}" height="18" rx="3" fill="#FF7A00" opacity="0.85"/>
+            <text x="${Math.round(116 + w + 6)}" y="${y + 16}" font-size="10" fill="#374151" font-weight="600">${b.total}</text>
+          </g>`;
+        }).join("")}
+      </svg>` : '<p style="color:#9CA3AF;text-align:center">Sem dados</p>';
+
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Completo A.CERT</title><style>
       @page{size:A4;margin:1.2cm 1.5cm 2.2cm 1.5cm}body{font-family:Inter,sans-serif;color:#111827}
       .cover{page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90vh;text-align:center}
@@ -125,6 +168,7 @@ export default function RelatoriosPage() {
       table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
       th{background:#FFF7ED;padding:7px 8px;border:1px solid #FFEDD5;font-size:9px;text-transform:uppercase;color:#FF7A00;text-align:left}
       td{padding:6px 8px;border:1px solid #F0F0F0}tr:nth-child(even){background:#FAFAFA}
+      .chart{text-align:center;margin:16px 0;padding:12px;background:#FAFAFA;border-radius:8px}
       .insight{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:11px;color:#374151;padding:8px;background:#FFF7ED;border-radius:6px}
       .insight .dot{width:6px;height:6px;border-radius:3px;background:#FF7A00;margin-top:5px;flex-shrink:0}
       .footer{position:fixed;bottom:0;left:0;right:0;background:#FF7A00;height:20px;display:flex;align-items:center;justify-content:center;color:#FFF;font-size:9px}
@@ -132,11 +176,13 @@ export default function RelatoriosPage() {
       <div class="cover"><img src="${logoUrl}"><h1>A<span>CERT</span></h1><p class="sub">Relatório Operacional Completo</p><p class="meta">${dataPT} • ${horaPT} • ${d.metadata.totalRecords} registros analisados<br>${d.metadata.dataSource}</p></div>
       <div class="h"><div><h2>A<span>CERT</span></h2></div><div style="font-size:10px;color:#6B7280">${dataPT} às ${horaPT}</div></div>
       <div class="section"><h3>Análise Operacional</h3>${insights.map(ins => `<div class="insight"><div class="dot"></div><div><strong>${ins.title}</strong> — ${ins.desc}</div></div>`).join("")}</div>
-      <div class="section"><h3>Desempenho dos Dossiês</h3>
+      <div class="section"><h3>Emissões de Certidões por Período</h3><div class="chart">${lineSvg}</div></div>
+      <div class="section"><h3>Certidões por Órgão</h3><div class="chart">${barSvg}</div></div>
+      <div class="page-break section"><h3>Desempenho dos Dossiês</h3>
       <table><tr><th>Status</th><th>Qtd</th><th>%</th><th>Tempo médio</th></tr>${d.dossierDetails.map(s => `<tr><td>${s.label}</td><td>${s.total}</td><td>${s.pct}%</td><td>${s.avgHours > 0 ? s.avgHours + 'h' : '—'}</td></tr>`).join("")}</table></div>
       <div class="section"><h3>Performance das Certidões</h3>
       <table><tr><th>Órgão</th><th>Emitidas</th><th>Sucesso</th><th>Falhas</th><th>Taxa</th><th>Tempo médio</th></tr>${d.certByOrgan.map(c => `<tr><td>${c.name}</td><td>${c.total}</td><td>${c.success}</td><td>${c.failed}</td><td>${c.successRate}%</td><td>${c.avgMinutes > 0 ? c.avgMinutes + ' min' : '—'}</td></tr>`).join("")}</table></div>
-      <div class="page-break section"><h3>Movimentação Imobiliária</h3>
+      <div class="section"><h3>Movimentação Imobiliária</h3>
       <table><tr><th>Tipo</th><th>Qtd</th><th>Dossiês</th><th>Certidões</th><th>Taxa conclusão</th></tr>${d.propertiesByType.map(p => `<tr><td>${p.type}</td><td>${p.total}</td><td>${p.dossiers_generated || '—'}</td><td>${p.certs_emitted || '—'}</td><td>${p.completion_rate}%</td></tr>`).join("")}</table></div>
       <div class="section"><h3>Crescimento de Clientes</h3>
       <table><tr><th>Período</th><th>Novos clientes</th></tr><tr><td>Hoje</td><td>${d.clientGrowth.today}</td></tr><tr><td>Esta semana</td><td>${d.clientGrowth.week}</td></tr><tr><td>Este mês</td><td>${d.clientGrowth.month}</td></tr><tr><td>Este ano</td><td>${d.clientGrowth.year}</td></tr></table></div>
