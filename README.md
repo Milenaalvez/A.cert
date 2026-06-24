@@ -6,7 +6,7 @@ Plataforma completa de automação de certidões imobiliárias com gestão inter
 
 ## Sobre o Projeto
 
-A A.CERT (também chamada DONNOS Docs) automatiza consultas a **7 órgãos públicos brasileiros** para emissão de certidões imobiliárias e cíveis. O sistema realiza consultas via Puppeteer, gerencia CAPTCHAs interativos e consolida os resultados em um dossiê PDF profissional.
+A A.CERT automatiza consultas a **7 órgãos públicos brasileiros** para emissão de certidões imobiliárias e cíveis. O sistema realiza consultas via Puppeteer, gerencia CAPTCHAs interativos e consolida os resultados em um dossiê PDF profissional.
 
 Além da automação de certidões, o projeto inclui um sistema interno completo de gestão de equipe com controle de ponto, justificativas e permissões RBAC.
 
