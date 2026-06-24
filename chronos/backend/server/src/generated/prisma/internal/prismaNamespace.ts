@@ -395,6 +395,7 @@ export const ModelName = {
   Notification: 'Notification',
   ActivityLog: 'ActivityLog',
   Document: 'Document',
+  CertificateTodo: 'CertificateTodo',
   Integration: 'Integration',
   TermAcceptance: 'TermAcceptance',
   FaceRegistration: 'FaceRegistration',
@@ -418,7 +419,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "company" | "branch" | "department" | "position" | "user" | "timeRecord" | "pointEvent" | "justification" | "notification" | "activityLog" | "document" | "integration" | "termAcceptance" | "faceRegistration" | "ticket" | "ticketMessage" | "ticketAttachment" | "monthClosing" | "companyConfig"
+    modelProps: "company" | "branch" | "department" | "position" | "user" | "timeRecord" | "pointEvent" | "justification" | "notification" | "activityLog" | "document" | "certificateTodo" | "integration" | "termAcceptance" | "faceRegistration" | "ticket" | "ticketMessage" | "ticketAttachment" | "monthClosing" | "companyConfig"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1233,6 +1234,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.DocumentCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.DocumentCountAggregateOutputType> | number
+        }
+      }
+    }
+    CertificateTodo: {
+      payload: Prisma.$CertificateTodoPayload<ExtArgs>
+      fields: Prisma.CertificateTodoFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CertificateTodoFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CertificateTodoFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
+        }
+        findFirst: {
+          args: Prisma.CertificateTodoFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CertificateTodoFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
+        }
+        findMany: {
+          args: Prisma.CertificateTodoFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>[]
+        }
+        create: {
+          args: Prisma.CertificateTodoCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
+        }
+        createMany: {
+          args: Prisma.CertificateTodoCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CertificateTodoCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>[]
+        }
+        delete: {
+          args: Prisma.CertificateTodoDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
+        }
+        update: {
+          args: Prisma.CertificateTodoUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
+        }
+        deleteMany: {
+          args: Prisma.CertificateTodoDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CertificateTodoUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CertificateTodoUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>[]
+        }
+        upsert: {
+          args: Prisma.CertificateTodoUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
+        }
+        aggregate: {
+          args: Prisma.CertificateTodoAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCertificateTodo>
+        }
+        groupBy: {
+          args: Prisma.CertificateTodoGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CertificateTodoGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CertificateTodoCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CertificateTodoCountAggregateOutputType> | number
         }
       }
     }
@@ -2090,6 +2165,20 @@ export const DocumentScalarFieldEnum = {
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
 
 
+export const CertificateTodoScalarFieldEnum = {
+  id: 'id',
+  certificateKey: 'certificateKey',
+  status: 'status',
+  notes: 'notes',
+  obtainedAt: 'obtainedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  userId: 'userId'
+} as const
+
+export type CertificateTodoScalarFieldEnum = (typeof CertificateTodoScalarFieldEnum)[keyof typeof CertificateTodoScalarFieldEnum]
+
+
 export const IntegrationScalarFieldEnum = {
   id: 'id',
   provider: 'provider',
@@ -2429,6 +2518,20 @@ export type ListEnumNotificationTypeFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
+ * Reference to a field of type 'CertificateStatus'
+ */
+export type EnumCertificateStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CertificateStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'CertificateStatus[]'
+ */
+export type ListEnumCertificateStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CertificateStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'IntegrationProvider'
  */
 export type EnumIntegrationProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntegrationProvider'>
@@ -2590,6 +2693,7 @@ export type GlobalOmitConfig = {
   notification?: Prisma.NotificationOmit
   activityLog?: Prisma.ActivityLogOmit
   document?: Prisma.DocumentOmit
+  certificateTodo?: Prisma.CertificateTodoOmit
   integration?: Prisma.IntegrationOmit
   termAcceptance?: Prisma.TermAcceptanceOmit
   faceRegistration?: Prisma.FaceRegistrationOmit

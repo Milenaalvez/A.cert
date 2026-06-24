@@ -97,6 +97,11 @@ export type ActivityLog = Prisma.ActivityLogModel
  */
 export type Document = Prisma.DocumentModel
 /**
+ * Model CertificateTodo
+ * 
+ */
+export type CertificateTodo = Prisma.CertificateTodoModel
+/**
  * Model Integration
  * 
  */

@@ -62,6 +62,7 @@ export const ModelName = {
   Notification: 'Notification',
   ActivityLog: 'ActivityLog',
   Document: 'Document',
+  CertificateTodo: 'CertificateTodo',
   Integration: 'Integration',
   TermAcceptance: 'TermAcceptance',
   FaceRegistration: 'FaceRegistration',
@@ -309,6 +310,20 @@ export const DocumentScalarFieldEnum = {
 } as const
 
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
+export const CertificateTodoScalarFieldEnum = {
+  id: 'id',
+  certificateKey: 'certificateKey',
+  status: 'status',
+  notes: 'notes',
+  obtainedAt: 'obtainedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  userId: 'userId'
+} as const
+
+export type CertificateTodoScalarFieldEnum = (typeof CertificateTodoScalarFieldEnum)[keyof typeof CertificateTodoScalarFieldEnum]
 
 
 export const IntegrationScalarFieldEnum = {

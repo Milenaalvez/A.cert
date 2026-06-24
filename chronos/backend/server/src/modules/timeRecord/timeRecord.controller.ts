@@ -18,7 +18,7 @@ export async function list(req: AuthRequest, res: Response, next: NextFunction) 
 
 export async function getById(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const record = await service.getRecord(req.params['id'], req.user!.userId)
+    const record = await service.getRecord(req.params['id'] as string, req.user!.userId)
     if (!record) {
       res.status(404).json({ error: 'Registro não encontrado' })
       return
@@ -41,7 +41,7 @@ export async function upsert(req: AuthRequest, res: Response, next: NextFunction
 
 export async function remove(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const ok = await service.deleteRecord(req.params['id'], req.user!.userId)
+    const ok = await service.deleteRecord(req.params['id'] as string, req.user!.userId)
     if (!ok) {
       res.status(404).json({ error: 'Registro não encontrado' })
       return
@@ -53,7 +53,7 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
 export async function approve(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { note } = req.body
-    const result = await service.approveRecord(req.params['id'], req.user!.userId, req.user!.companyId, note)
+    const result = await service.approveRecord(req.params['id'] as string, req.user!.userId, req.user!.companyId, note)
     if (!result) { res.status(404).json({ error: 'Registro não encontrado' }); return }
     res.json(result)
   } catch (err) { next(err) }
@@ -62,7 +62,7 @@ export async function approve(req: AuthRequest, res: Response, next: NextFunctio
 export async function reject(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { note } = req.body
-    const result = await service.rejectRecord(req.params['id'], req.user!.userId, req.user!.companyId, note)
+    const result = await service.rejectRecord(req.params['id'] as string, req.user!.userId, req.user!.companyId, note)
     if (!result) { res.status(404).json({ error: 'Registro não encontrado' }); return }
     res.json(result)
   } catch (err) { next(err) }

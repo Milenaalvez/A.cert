@@ -6,6 +6,7 @@ import { generateToken, generateRefreshToken, consumeRefreshToken } from '../../
 import { validateCPF, stripCPF } from '../../utils/cpf.js'
 import { validatePassword } from '../../utils/password.js'
 import { getEffectivePermissions } from '../../utils/permissions.js'
+import { validateCPFWithGovRateLimited } from '../../services/cpf.service.js'
 import {
   sendWelcomeEmail,
   sendVerificationEmail,
@@ -80,6 +81,10 @@ export async function registerUser(data: {
     const existingCpf = await prisma.user.findUnique({ where: { cpf: cpfCleaned } })
     if (existingCpf) {
       throw Object.assign(new Error('CPF já cadastrado'), { statusCode: 409 })
+    }
+    const govResult = await validateCPFWithGovRateLimited(cpfCleaned)
+    if (!govResult.valid) {
+      throw Object.assign(new Error(govResult.message || 'CPF não verificado na Receita Federal'), { statusCode: 400 })
     }
   }
 

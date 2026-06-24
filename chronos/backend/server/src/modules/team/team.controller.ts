@@ -12,7 +12,7 @@ export async function list(req: AuthRequest, res: Response, next: NextFunction) 
 
 export async function getById(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const member = await service.getTeamMember(req.params['id'], req.user!.companyId, req.user!.userId)
+    const member = await service.getTeamMember(req.params['id'] as string, req.user!.companyId, req.user!.userId)
     if (!member) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -47,7 +47,7 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
 
 export async function update(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const result = await service.updateTeamMember(req.params['id'], req.user!.companyId, req.user!.userId, req.body)
+    const result = await service.updateTeamMember(req.params['id'] as string, req.user!.companyId, req.user!.userId, req.body)
     if (!result) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -58,7 +58,7 @@ export async function update(req: AuthRequest, res: Response, next: NextFunction
 
 export async function remove(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const result = await service.hardDeleteTeamMember(req.params['id'], req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
+    const result = await service.hardDeleteTeamMember(req.params['id'] as string, req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
     if (!result) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -69,7 +69,7 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
 
 export async function deactivate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const result = await service.deleteTeamMember(req.params['id'], req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
+    const result = await service.deleteTeamMember(req.params['id'] as string, req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
     if (!result) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -80,7 +80,7 @@ export async function deactivate(req: AuthRequest, res: Response, next: NextFunc
 
 export async function resetPassword(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const result = await service.resetTeamMemberPassword(req.params['id'], req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
+    const result = await service.resetTeamMemberPassword(req.params['id'] as string, req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
     if (!result) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -91,7 +91,7 @@ export async function resetPassword(req: AuthRequest, res: Response, next: NextF
 
 export async function resendVerification(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const result = await service.resendVerification(req.params['id'], req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
+    const result = await service.resendVerification(req.params['id'] as string, req.user!.companyId, req.user!.userId, req.user!.name || 'Administrador')
     if (!result) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -132,7 +132,7 @@ export async function updateRole(req: AuthRequest, res: Response, next: NextFunc
   try {
     const { role } = req.body
     if (!role) { res.status(400).json({ error: 'Role é obrigatório' }); return }
-    const result = await service.updateTeamMember(req.params['id'], req.user!.companyId, req.user!.userId, { role })
+    const result = await service.updateTeamMember(req.params['id'] as string, req.user!.companyId, req.user!.userId, { role })
     if (!result) { res.status(404).json({ error: 'Membro não encontrado' }); return }
     res.json(result)
   } catch (err) { next(err) }
@@ -142,7 +142,7 @@ export async function updateStatus(req: AuthRequest, res: Response, next: NextFu
   try {
     const { isActive } = req.body
     if (isActive === undefined) { res.status(400).json({ error: 'isActive é obrigatório' }); return }
-    const result = await service.updateTeamMember(req.params['id'], req.user!.companyId, req.user!.userId, { isActive })
+    const result = await service.updateTeamMember(req.params['id'] as string, req.user!.companyId, req.user!.userId, { isActive })
     if (!result) { res.status(404).json({ error: 'Membro não encontrado' }); return }
     res.json(result)
   } catch (err) { next(err) }
@@ -150,7 +150,7 @@ export async function updateStatus(req: AuthRequest, res: Response, next: NextFu
 
 export async function getProfile(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const profile = await service.getProfile(req.params['id'], req.user!.companyId, req.user!.userId)
+    const profile = await service.getProfile(req.params['id'] as string, req.user!.companyId, req.user!.userId)
     if (!profile) {
       res.status(404).json({ error: 'Membro não encontrado' })
       return
@@ -162,7 +162,7 @@ export async function getProfile(req: AuthRequest, res: Response, next: NextFunc
 export async function getPermissions(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const user = await prisma.user.findFirst({
-      where: { id: req.params['id'], companyId: req.user!.companyId },
+      where: { id: req.params['id'] as string, companyId: req.user!.companyId },
       select: { id: true, role: true, permissions: true },
     })
     if (!user) { res.status(404).json({ error: 'Membro não encontrado' }); return }
@@ -175,11 +175,11 @@ export async function updatePermissions(req: AuthRequest, res: Response, next: N
     const { permissions } = req.body
     if (!Array.isArray(permissions)) { res.status(400).json({ error: 'permissions deve ser um array' }); return }
     const user = await prisma.user.findFirst({
-      where: { id: req.params['id'], companyId: req.user!.companyId },
+      where: { id: req.params['id'] as string, companyId: req.user!.companyId },
     })
     if (!user) { res.status(404).json({ error: 'Membro não encontrado' }); return }
     const updated = await prisma.user.update({
-      where: { id: req.params['id'] },
+      where: { id: req.params['id'] as string },
       data: { permissions },
     })
     prisma.activityLog.create({
