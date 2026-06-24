@@ -96,7 +96,7 @@ export default function RelatoriosPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ gap: 32 }}>
         <div style={{ marginTop: 24, marginBottom: 20 }}>
           <PageHeader
             title="Relatórios"
