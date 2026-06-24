@@ -142,7 +142,7 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Gráfico principal + Card ao lado */}
-        <div style={{ display: "flex", gap: 14, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 14 }}>
           <div style={{ flex: "1 1 50%", background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
               <Activity size={14} strokeWidth={1.5} color="#FF7A00" /> Emissões de Certidões por Período
