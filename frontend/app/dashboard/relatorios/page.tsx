@@ -361,16 +361,16 @@ export default function RelatoriosPage() {
         <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><FileText size={14} strokeWidth={1.5} color="#FF7A00" /> Performance das Certidões</div>
           <table className="w-full border-collapse">
-            <thead><tr className="">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className="text-left px-3 py-2.5 text-[11px] font-bold text-muted uppercase">{h}</th>)}</tr></thead>
+            <thead><tr className="">{["Órgão", "Emitidas", "Sucesso", "Falhas", "Taxa", "Tempo"].map(h => <th key={h} className={`text-[11px] font-bold text-muted uppercase px-3 py-2.5 ${h === "Órgão" ? "text-left" : "text-center"}`}>{h}</th>)}</tr></thead>
             <tbody>
               {d.certByOrgan.map((c, i) => (
                 <tr key={i} className="">
                   <td className="px-3 py-3 text-[13px] font-medium text-primary">{c.name.length > 18 ? c.name.slice(0, 18) + "…" : c.name}</td>
-                  <td className="px-3 py-3 text-[13px] font-semibold text-primary">{c.total}</td>
-                  <td className="px-3 py-3 text-[13px] text-[#059669]">{c.success}</td>
-                  <td className="px-3 py-3 text-[13px] text-[#DC2626]">{c.failed}</td>
-                  <td className="px-3 py-3"><span className={`text-[12px] font-semibold ${c.successRate >= 95 ? "text-[#059669]" : c.successRate < 80 ? "text-[#DC2626]" : "text-secondary"}`}>{c.successRate}%</span></td>
-                  <td className="px-3 py-3 text-[12px] text-secondary">{c.avgMinutes > 0 ? `${c.avgMinutes} min` : "—"}</td>
+                  <td className="px-3 py-3 text-[13px] font-semibold text-primary text-center">{c.total}</td>
+                  <td className="px-3 py-3 text-[13px] text-[#059669] text-center">{c.success}</td>
+                  <td className="px-3 py-3 text-[13px] text-[#DC2626] text-center">{c.failed}</td>
+                  <td className="px-3 py-3 text-center"><span className={`text-[12px] font-semibold ${c.successRate >= 95 ? "text-[#059669]" : c.successRate < 80 ? "text-[#DC2626]" : "text-secondary"}`}>{c.successRate}%</span></td>
+                  <td className="px-3 py-3 text-[12px] text-secondary text-center">{c.avgMinutes > 0 ? `${c.avgMinutes} min` : "—"}</td>
                 </tr>
               ))}
             </tbody>
