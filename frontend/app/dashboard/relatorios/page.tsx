@@ -88,14 +88,16 @@ export default function RelatoriosPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-8 pt-6 pb-24 w-full" style={{ gap: 24 }}>
-        <PageHeader
-          title="Relatórios"
-          subtitle="Análises operacionais, produtividade e desempenho da plataforma."
-        />
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+        <div style={{ marginTop: 24, marginBottom: 20 }}>
+          <PageHeader
+            title="Relatórios"
+            subtitle="Análises operacionais, produtividade e desempenho da plataforma."
+          />
+        </div>
 
         {/* Controles */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
           <div className="flex gap-2">
             {[{ k: "monthly", l: "Mês" }, { k: "daily", l: "Dia" }].map(f => (
               <button key={f.k} onClick={() => setPeriod(f.k as any)}
