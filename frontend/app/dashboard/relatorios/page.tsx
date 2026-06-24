@@ -69,6 +69,33 @@ export default function RelatoriosPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  function handleExportResumido() {
+    setExportOpen(false);
+    const rows = [["Métrica", "Valor"], ["Dossiês concluídos", String(d.dossierBreakdown.concluidos)], ["Certidões emitidas", String(d.totalCertificates)], ["Taxa de sucesso", String(d.totalCertificates > 0 ? Math.round(d.certByOrgan.reduce((a, c) => a + c.success, 0) / d.totalCertificates * 100) : 0) + "%"], ["Pendências", String(d.dossierBreakdown.pendentes)]];
+    const csv = rows.map(r => r.join(";")).join("\n");
+    downloadCSV(csv, `relatorio_resumido_${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  function handleExportCompleto() {
+    setExportOpen(false);
+    const rows = [["Órgão", "Total", "Sucesso", "Falhas", "Taxa"]];
+    d.certByOrgan.forEach(c => rows.push([c.name, String(c.total), String(c.success), String(c.failed), c.successRate + "%"]));
+    rows.push([], ["Status", "Quantidade", "%"]);
+    d.dossierDetails.forEach(s => rows.push([s.label, String(s.total), s.pct + "%"]));
+    rows.push([], ["Tipo de imóvel", "Qtd", "Dossiês", "Conclusão"]);
+    d.propertiesByType.forEach(p => rows.push([p.type, String(p.total), String(p.dossiers_generated), p.completion_rate + "%"]));
+    const csv = rows.map(r => r.join(";")).join("\n");
+    downloadCSV(csv, `relatorio_completo_${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  function downloadCSV(csv: string, filename: string) {
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center min-h-[60vh] w-full"><div className="w-8 h-8 border-2 border-default border-t-[#FF7A00] rounded-full animate-spin" /></div></DashboardLayout>;
   if (!data) return <DashboardLayout><div className="flex items-center justify-center min-h-[60vh] text-[14px] text-muted">Erro ao carregar relatórios.</div></DashboardLayout>;
 
@@ -137,7 +164,7 @@ export default function RelatoriosPage() {
                   <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>Selecione o formato de exportação:</p>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", marginTop: 4 }}>
-                  <button onClick={() => { setExportOpen(false); }} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "1px solid var(--border-light)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left", transition: "all 0.15s ease" }}
+                  <button onClick={handleExportResumido} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "1px solid var(--border-light)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left", transition: "all 0.15s ease" }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF7A00"; e.currentTarget.style.background = "rgba(255,122,0,0.04)"; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-app)"; }}
                   >
@@ -149,7 +176,7 @@ export default function RelatoriosPage() {
                       </div>
                     </div>
                   </button>
-                  <button onClick={() => { setExportOpen(false); }} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "1px solid var(--border-light)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left", transition: "all 0.15s ease" }}
+                  <button onClick={handleExportCompleto} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "1px solid var(--border-light)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left", transition: "all 0.15s ease" }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF7A00"; e.currentTarget.style.background = "rgba(255,122,0,0.04)"; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-app)"; }}
                   >
