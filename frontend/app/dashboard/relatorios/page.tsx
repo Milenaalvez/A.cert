@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   TrendingUp, TrendingDown, FileText, Download, BarChart3, FileSpreadsheet,
   AlertTriangle, CheckCircle2, Clock, Users, Building2, Target, Activity,
@@ -57,6 +57,14 @@ export default function RelatoriosPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("mes");
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) { if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false); }
+    if (exportOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [exportOpen]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -113,12 +121,23 @@ export default function RelatoriosPage() {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <button className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-lg border border-default bg-transparent text-[13px] font-semibold text-secondary hover:bg-muted transition-colors">
-              <FileSpreadsheet size={14} /> Resumido
-            </button>
-            <button className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer" style={{ background: "#FF7A00" }}>
-              <Download size={14} /> Completo
-            </button>
+            <div className="relative" ref={exportRef}>
+              <button
+                onClick={() => setExportOpen(!exportOpen)}
+                className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer"
+                style={{ background: "#FF7A00" }}
+              ><Download size={14} /> Exportar</button>
+              {exportOpen && (
+                <div className="absolute right-0 top-full mt-1.5 min-w-[160px] bg-surface rounded-[10px] border border-default shadow-lg overflow-hidden z-20">
+                  <button className="w-full text-left px-4 py-2.5 text-[13px] text-primary hover:bg-muted transition-colors flex items-center gap-2" onClick={() => { setExportOpen(false); }}>
+                    <FileSpreadsheet size={14} className="text-secondary" /> Resumido (PDF)
+                  </button>
+                  <button className="w-full text-left px-4 py-2.5 text-[13px] text-primary hover:bg-muted transition-colors flex items-center gap-2" onClick={() => { setExportOpen(false); }}>
+                    <Download size={14} className="text-secondary" /> Completo (PDF)
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
