@@ -329,6 +329,72 @@ if (certTemplateCount === 0) {
   }
 }
 
+// Settings table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+// Support tickets table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS support_tickets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Problema técnico',
+    message TEXT NOT NULL,
+    protocol TEXT UNIQUE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Aberto',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
+  )
+`);
+
+// Audit log table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    user_name TEXT,
+    action TEXT NOT NULL,
+    module TEXT NOT NULL,
+    detail TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+// Seed settings if empty
+const settingsCount = (db.prepare('SELECT COUNT(*) as count FROM settings').get() as { count: number }).count;
+if (settingsCount === 0) {
+  const defaultSettings = [
+    { key: 'company_name', value: 'DONNOS Docs' },
+    { key: 'company_legal_name', value: 'Bloco Imobiliária LTDA' },
+    { key: 'company_cnpj', value: '00.000.000/0001-00' },
+    { key: 'company_email', value: 'contato@blocoimob.com.br' },
+    { key: 'company_phone', value: '(61) 3000-0000' },
+    { key: 'company_site', value: 'https://donnos.com.br' },
+    { key: 'smtp_host', value: '' },
+    { key: 'smtp_port', value: '587' },
+    { key: 'smtp_user', value: '' },
+    { key: 'smtp_pass', value: '' },
+    { key: 'smtp_from_email', value: 'noreply@donnos.com.br' },
+    { key: 'smtp_from_name', value: 'DONNOS Docs' },
+    { key: 'logo_url', value: '' },
+    { key: 'logo_small_url', value: '' },
+    { key: 'favicon_url', value: '' },
+    { key: 'last_backup_at', value: '' },
+    { key: 'backup_size', value: '0' },
+  ];
+  const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+  for (const s of defaultSettings) {
+    insertSetting.run(s.key, s.value);
+  }
+}
+
 // Seed data only if tables are empty
 const dossierCount = (db.prepare('SELECT COUNT(*) as count FROM dossiers').get() as { count: number }).count;
 
