@@ -135,6 +135,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
       items: [
         { label: "Usuários", icon: UserCog, page: "usuarios" },
         { label: "Configurações", icon: Settings, page: "configuracoes" },
+        { label: "Suporte", icon: LifeBuoy, page: "suporte" },
       ],
     },
   ], [])

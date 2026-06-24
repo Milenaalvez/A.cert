@@ -16,6 +16,8 @@ import reportsRoutes from './routes/reports.js';
 import searchRoutes from './routes/search.js';
 import captchaRoutes from './routes/captcha.js';
 import propertiesRoutes from './routes/properties.js';
+import settingsRoutes from './routes/settings.js';
+import supportRoutes from './routes/support.js';
 
 const LOG = (msg: string) => console.log(`[Server] ${msg}`);
 
@@ -40,6 +42,8 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/captcha', captchaRoutes);
 app.use('/api/properties', propertiesRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/support', supportRoutes);
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
