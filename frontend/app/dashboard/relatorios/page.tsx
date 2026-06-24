@@ -142,10 +142,10 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Gráfico principal */}
-        <div className="bg-surface rounded-2xl p-6">
-          <h3 className="text-[14px] font-bold text-primary mb-4 flex items-center gap-2">
-            <Activity size={16} color="#FF7A00" /> Emissões de Certidões por Período
-          </h3>
+        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+            <Activity size={14} strokeWidth={1.5} color="#FF7A00" /> Emissões de Certidões por Período
+          </div>
           {chartData.length === 0 ? (
             <div className="h-[360px] flex items-center justify-center text-[14px] text-muted">Sem dados de emissão no período.</div>
           ) : (
