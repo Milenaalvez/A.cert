@@ -141,25 +141,28 @@ export default function RelatoriosPage() {
           </div>
         </div>
 
-        {/* Gráfico principal */}
-        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
-            <Activity size={14} strokeWidth={1.5} color="#FF7A00" /> Emissões de Certidões por Período
+        {/* Gráfico principal + Card ao lado */}
+        <div style={{ display: "flex", gap: 14, marginTop: 16 }}>
+          <div style={{ flex: "1 1 50%", background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+              <Activity size={14} strokeWidth={1.5} color="#FF7A00" /> Emissões de Certidões por Período
+            </div>
+            {chartData.length === 0 ? (
+              <div className="h-[360px] flex items-center justify-center text-[14px] text-muted">Sem dados de emissão no período.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={360}>
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF7A00" stopOpacity={0.2} /><stop offset="100%" stopColor="#FF7A00" stopOpacity={0} /></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="total" stroke="#FF7A00" strokeWidth={2.5} fill="url(#grad)" dot={{ fill: "#FF7A00", r: 4, strokeWidth: 0 }} activeDot={{ fill: "#FF7A00", r: 6, stroke: "#fff", strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
-          {chartData.length === 0 ? (
-            <div className="h-[360px] flex items-center justify-center text-[14px] text-muted">Sem dados de emissão no período.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={360}>
-              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FF7A00" stopOpacity={0.2} /><stop offset="100%" stopColor="#FF7A00" stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="total" stroke="#FF7A00" strokeWidth={2.5} fill="url(#grad)" dot={{ fill: "#FF7A00", r: 4, strokeWidth: 0 }} activeDot={{ fill: "#FF7A00", r: 6, stroke: "#fff", strokeWidth: 2 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
+          <div style={{ flex: "1 1 50%", background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }} />
         </div>
 
         {/* Duas colunas: Clientes + Insights */}
