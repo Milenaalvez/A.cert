@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   TrendingUp, TrendingDown, FileText, Download, BarChart3, FileSpreadsheet,
   AlertTriangle, CheckCircle2, Clock, Users, Building2, Target, Activity,
@@ -58,13 +58,6 @@ export default function RelatoriosPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("mes");
   const [exportOpen, setExportOpen] = useState(false);
-  const exportRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) { if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false); }
-    if (exportOpen) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [exportOpen]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -122,25 +115,63 @@ export default function RelatoriosPage() {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative" ref={exportRef}>
-              <button
-                onClick={() => setExportOpen(!exportOpen)}
-                className="inline-flex items-center justify-center gap-1.5 h-[38px] px-5 min-w-[120px] rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer"
-                style={{ background: "#FF7A00" }}
-              ><Download size={14} /> Exportar</button>
-              {exportOpen && (
-                <div className="absolute right-0 top-full mt-1.5 min-w-[160px] bg-surface rounded-[10px] border border-default shadow-lg overflow-hidden z-20">
-                  <button className="w-full text-left px-4 py-2.5 text-[13px] text-primary hover:bg-muted transition-colors flex items-center gap-2" onClick={() => { setExportOpen(false); }}>
-                    <FileSpreadsheet size={14} className="text-secondary" /> Resumido (PDF)
-                  </button>
-                  <button className="w-full text-left px-4 py-2.5 text-[13px] text-primary hover:bg-muted transition-colors flex items-center gap-2" onClick={() => { setExportOpen(false); }}>
-                    <Download size={14} className="text-secondary" /> Completo (PDF)
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => setExportOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 h-[38px] px-5 min-w-[120px] rounded-lg border-none text-white text-[13px] font-semibold cursor-pointer"
+              style={{ background: "#FF7A00" }}
+            ><Download size={14} /> Exportar</button>
           </div>
         </div>
+
+        {/* Modal Exportar */}
+        {exportOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }} onClick={() => setExportOpen(false)} />
+            <div className="relative w-full animate-in fade-in zoom-in-95 duration-200" style={{ maxWidth: 400, borderRadius: 10, background: "var(--bg-surface)", boxShadow: "0 25px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: "36px 32px 20px 32px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 16 }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,122,0,0.12)" }}>
+                  <Download size={24} strokeWidth={2.5} color="#FF7A00" />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>Exportar Relatório</h3>
+                  <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>Selecione o formato de exportação:</p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", marginTop: 4 }}>
+                  <button onClick={() => { setExportOpen(false); }} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "1px solid var(--border-light)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left", transition: "all 0.15s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF7A00"; e.currentTarget.style.background = "rgba(255,122,0,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-app)"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <FileSpreadsheet size={18} strokeWidth={1.5} color="#FF7A00" />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Resumido</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>PDF executivo com indicadores principais</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button onClick={() => { setExportOpen(false); }} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "1px solid var(--border-light)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left", transition: "all 0.15s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF7A00"; e.currentTarget.style.background = "rgba(255,122,0,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-app)"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Download size={18} strokeWidth={1.5} color="#FF7A00" />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Completo</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>PDF corporativo com todas as tabelas e gráficos</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, padding: "0 32px 32px 32px", justifyContent: "center" }}>
+                <button onClick={() => setExportOpen(false)} style={{ height: 42, padding: "0 24px", borderRadius: 8, border: "1px solid var(--border-light)", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-muted)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                >Fechar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Gráfico principal + Card ao lado */}
         <div style={{ display: "flex", gap: 14 }}>
