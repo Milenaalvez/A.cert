@@ -7,3 +7,31 @@ package-lock.json
 cli/
 argv.json
 chronos-dashboard.html
+
+# Ambiente
+.env
+.env.local
+
+# Build
+.next/
+dist/
+*.tsbuildinfo
+
+# Dados e runtime
+data/
+tmp/
+*.log
+*.db
+*.db-wal
+*.db-shm
+
+# Debug
+debug-*.png
+*.dossie-cache/
+
+# Release
+release/
+
+# OS
+desktop.ini
+Thumbs.db
