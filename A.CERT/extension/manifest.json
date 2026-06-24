@@ -1,0 +1,78 @@
+{
+  "manifest_version": 3,
+  "name": "A.CERT — Automação de Certidões",
+  "version": "1.0.0",
+  "description": "Preenche automaticamente formulários de certidões e captura PDFs para o sistema A.CERT.",
+  "permissions": [
+    "downloads",
+    "tabs",
+    "scripting",
+    "storage",
+    "activeTab",
+    "notifications"
+  ],
+  "host_permissions": [
+    "*://*.trf1.jus.br/*",
+    "*://*.tst.jus.br/*",
+    "*://*.trt10.jus.br/*",
+    "*://*.tjdft.jus.br/*",
+    "*://*.receitafederal.gov.br/*",
+    "*://*.receita.fazenda.df.gov.br/*",
+    "*://*.registradores.onr.org.br/*",
+    "http://localhost:3001/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://localhost:3000/*"],
+      "js": ["content/acert-bridge.js"],
+      "run_at": "document_end"
+    },
+      "matches": ["*://sistemas.trf1.jus.br/certidao/*"],
+      "js": ["content/trf1.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://www.tst.jus.br/certidao*"],
+      "js": ["content/tst.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://www.trt10.jus.br/certidao_online/*"],
+      "js": ["content/trt.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://cnc.tjdft.jus.br/*"],
+      "js": ["content/tjdft.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://ww1.receita.fazenda.df.gov.br/cidadao/certidoes/*", "*://ww1.receita.fazenda.df.gov.br/cidadao/consulta/imoveis/*"],
+      "js": ["content/sefaz.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://servicos.receitafederal.gov.br/*"],
+      "js": ["content/rf.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://registradores.onr.org.br/*"],
+      "js": ["content/onr.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.trf1.jus.br/*", "*://*.tst.jus.br/*", "*://*.trt10.jus.br/*", "*://*.tjdft.jus.br/*", "*://*.receitafederal.gov.br/*", "*://*.receita.fazenda.df.gov.br/*", "*://*.registradores.onr.org.br/*"],
+      "js": ["content/detector.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

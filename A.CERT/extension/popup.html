@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 320px; font-family: Arial, sans-serif; background: #0D1425; color: #FFF; padding: 16px; }
+    h2 { font-size: 16px; color: #FF7A00; margin-bottom: 12px; }
+    .btn { display: block; width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #FF7A00; color: #FFF; }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: #CBD5E1; }
+    .status { font-size: 11px; color: #8899B0; margin-top: 12px; }
+    .active { color: #059669; }
+  </style>
+</head>
+<body>
+  <h2>A.CERT</h2>
+  <p style="font-size: 12px; color: #8899B0; margin-bottom: 16px;">Automação de certidões imobiliárias</p>
+  <button class="btn btn-primary" id="openDossies">Abrir Dossiês</button>
+  <button class="btn btn-secondary" id="checkStatus">Verificar Status</button>
+  <div class="status" id="status">Pronto para usar</div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const db = new Database(path.join(__dirname, '..', 'data', 'acert.db'));
+const info = db.prepare("UPDATE properties SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = ''").run();
+console.log('Updated', info.changes, 'rows');
+const rows = db.prepare('SELECT id, identifier, created_at, updated_at FROM properties').all();
+rows.forEach(r => console.log(r.id, r.identifier, 'updated:', r.updated_at));
+db.close();

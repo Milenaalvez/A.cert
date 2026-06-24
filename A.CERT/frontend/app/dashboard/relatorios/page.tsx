@@ -1,0 +1,5 @@
+export const dynamic = "force-dynamic";
+import EmDesenvolvimento from "@/components/EmDesenvolvimento";
+export default function Page() {
+  return <EmDesenvolvimento titulo="Relatórios" />;
+}
