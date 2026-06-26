@@ -479,7 +479,7 @@ export default function ConfiguracoesPage() {
             <div className="flex gap-8">
               <div className="flex-1 min-w-0">
                 <div className={sectionBox}>
-                  <div className="flex items-start gap-6 mb-8 pb-8 border-b border-default">
+                  <div className="flex items-start gap-6 mb-10 pb-10 border-b border-default">
                     <div className="relative group shrink-0">
                       <div className="w-20 h-20 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
                         {user?.avatar ? (
@@ -537,7 +537,7 @@ export default function ConfiguracoesPage() {
 
               <div style={{ width: "320px", minWidth: "320px" }}>
                 <div className="bg-surface rounded-[10px] p-6">
-                  <h3 className="text-[15px] font-semibold text-primary mb-6">Informações da Conta</h3>
+                  <h3 className="text-[15px] font-semibold text-primary mb-8">Informações da Conta</h3>
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-4 py-4 border-b border-default last:border-0">
                       <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(59,130,246,0.1)" }}>
@@ -596,7 +596,7 @@ export default function ConfiguracoesPage() {
           <div className="flex gap-8">
             <div className="flex-1 min-w-0">
               <div className={sectionBox}>
-                <h3 className="text-[15px] font-semibold text-primary mb-8">Configurações Operacionais</h3>
+                <h3 className="text-[15px] font-semibold text-primary mb-10">Configurações Operacionais</h3>
                 <div className={grid2}>
                   <div>
                     <label className={labelStyle}>Prazo padrão para conclusão de dossiês (dias)</label>
@@ -650,7 +650,7 @@ export default function ConfiguracoesPage() {
             </div>
             <div style={{ width: "320px", minWidth: "320px" }}>
               <div className="bg-surface rounded-[10px] p-6">
-                <h3 className="text-[15px] font-semibold text-primary mb-6">Preferências do Sistema</h3>
+                <h3 className="text-[15px] font-semibold text-primary mb-8">Preferências do Sistema</h3>
                 <Switch checked={showNotifications} onChange={setShowNotifications} label="Exibir notificações" desc="Alertas e notificações do sistema" />
                 <Switch checked={confirmDelete} onChange={setConfirmDelete} label="Confirmar antes de excluir" desc="Exibir confirmação ao mover para lixeira" />
                 <Switch checked={confirmFinalize} onChange={setConfirmFinalize} label="Confirmar finalização de dossiê" desc="Exibir confirmação ao concluir um dossiê" />
@@ -665,7 +665,7 @@ export default function ConfiguracoesPage() {
             <div className="flex gap-8">
               <div className="flex-1 min-w-0">
                 <div className={sectionBox}>
-                  <h3 className="text-[15px] font-semibold text-primary mb-8">Alterar Senha</h3>
+                  <h3 className="text-[15px] font-semibold text-primary mb-10">Alterar Senha</h3>
                   <div className="flex flex-col gap-5 max-w-md">
                     <div>
                       <label className={labelStyle}>Senha atual</label>
@@ -692,7 +692,7 @@ export default function ConfiguracoesPage() {
               </div>
               <div style={{ width: "320px", minWidth: "320px" }}>
                 <div className="bg-surface rounded-[10px] p-6">
-                  <h3 className="text-[15px] font-semibold text-primary mb-6">Sessões Ativas</h3>
+                  <h3 className="text-[15px] font-semibold text-primary mb-8">Sessões Ativas</h3>
                   <p className="text-[13px] text-secondary">Você será desconectado dos outros dispositivos após alterar a senha.</p>
                   <div className="mt-6 flex items-center gap-4 py-4 border-t border-default">
                     <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(59,130,246,0.1)" }}>
@@ -807,7 +807,7 @@ export default function ConfiguracoesPage() {
         {activeTab === "email" && (
           <div>
             <div className={sectionBox} style={{ maxWidth: "640px" }}>
-              <h3 className="text-[15px] font-semibold text-primary mb-8">Configuração de E-mail (SMTP)</h3>
+              <h3 className="text-[15px] font-semibold text-primary mb-10">Configuração de E-mail (SMTP)</h3>
               <p className="text-[13px] text-muted mb-8">Configure o servidor SMTP para envio de e-mails do sistema.</p>
               <div className="flex flex-col gap-5">
                 <div className={grid2}>
@@ -858,7 +858,7 @@ export default function ConfiguracoesPage() {
         {activeTab === "templates" && (
           <div>
             <div className={sectionBox} style={{ maxWidth: "800px" }}>
-              <h3 className="text-[15px] font-semibold text-primary mb-8">Modelos de Documentos</h3>
+              <h3 className="text-[15px] font-semibold text-primary mb-10">Modelos de Documentos</h3>
               <div className="space-y-4 mb-10">
                 {[
                   { key: "dossie_operacional", label: "Dossiê Operacional", desc: "Modelo padrão para dossiês operacionais do sistema." },
@@ -879,7 +879,7 @@ export default function ConfiguracoesPage() {
                 ))}
               </div>
 
-              <h3 className="text-[15px] font-semibold text-primary mb-8">Personalização de PDFs</h3>
+              <h3 className="text-[15px] font-semibold text-primary mb-10">Personalização de PDFs</h3>
               <p className="text-[13px] text-muted mb-8">Configure as cores e logotipo utilizados nos PDFs gerados pelo sistema.</p>
               <div className={grid2}>
                 {[
@@ -926,7 +926,7 @@ export default function ConfiguracoesPage() {
         {activeTab === "backup" && (
           <div>
             <div className={sectionBox} style={{ maxWidth: "720px" }}>
-              <h3 className="text-[15px] font-semibold text-primary mb-8">Gerenciamento de Backup</h3>
+              <h3 className="text-[15px] font-semibold text-primary mb-10">Gerenciamento de Backup</h3>
               <p className="text-[13px] text-muted mb-8">Gerencie os backups do sistema. Os backups incluem todos os dados e configurações.</p>
 
               <div className="flex items-center justify-between p-6 rounded-[10px] border border-default mb-8">
@@ -987,7 +987,7 @@ export default function ConfiguracoesPage() {
         {activeTab === "auditoria" && (
           <div>
             <div className={sectionBox}>
-              <h3 className="text-[15px] font-semibold text-primary mb-8">Log de Auditoria</h3>
+              <h3 className="text-[15px] font-semibold text-primary mb-10">Log de Auditoria</h3>
               <div className="flex items-center gap-4 mb-8 flex-wrap">
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
@@ -1065,7 +1065,7 @@ export default function ConfiguracoesPage() {
         {activeTab === "sistema" && (
           <div>
             <div className={sectionBox} style={{ maxWidth: "600px" }}>
-              <h3 className="text-[15px] font-semibold text-primary mb-8">Informações do Sistema</h3>
+              <h3 className="text-[15px] font-semibold text-primary mb-10">Informações do Sistema</h3>
               {systemInfo ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
