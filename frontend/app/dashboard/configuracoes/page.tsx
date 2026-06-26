@@ -5,9 +5,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
   User, Settings, Building2, FileText, Activity,
   Save, Mail, CheckCircle2, XCircle, AlertTriangle, Clock, Plus,
-  Server, Eye, Edit3, Trash2, Search, RefreshCw,
+  Server, Eye, Trash2, Search, RefreshCw,
   Camera, Phone, Calendar, FileSpreadsheet, FileCheck,
-  Upload, Shield, HardDrive, Download,
+  Shield, HardDrive, Download,
   Lock, Smartphone, Database,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -406,16 +406,6 @@ export default function ConfiguracoesPage() {
     );
   };
 
-  const activityIcon = (action: string) => {
-    const a = action.toLowerCase();
-    if (a.includes("criou") || a.includes("criação")) return <FileSpreadsheet size={16} className="text-[#3B82F6]" />;
-    if (a.includes("certidão") || a.includes("certidao") || a.includes("emitiu")) return <FileCheck size={16} className="text-[#059669]" />;
-    if (a.includes("anexo") || a.includes("upload")) return <Upload size={16} className="text-[#FF7A00]" />;
-    if (a.includes("alterou") || a.includes("editou") || a.includes("atualizou")) return <Edit3 size={16} className="text-[#D97706]" />;
-    if (a.includes("excluiu") || a.includes("removeu")) return <Trash2 size={16} className="text-[#DC2626]" />;
-    return <Clock size={16} className="text-muted" />;
-  };
-
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -599,31 +589,6 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
 
-            <div className={`${sectionBox} mt-6`}>
-              <h3 className="text-[15px] font-semibold text-primary mb-6">Atividades Recentes</h3>
-              {!stats?.recentActivities?.length ? (
-                <p className="text-[13px] text-secondary py-8 text-center">Nenhuma atividade recente encontrada.</p>
-              ) : (
-                <div className="relative pl-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-px before:bg-border-default">
-                  {stats.recentActivities.map((act: any, i: number) => (
-                    <div key={act.id} className={`relative pb-6 last:pb-0 ${i > 0 ? "pt-2" : ""}`}>
-                      <div className="absolute -left-8 w-8 flex items-start justify-center">
-                        <div className="w-8 h-8 flex items-center justify-center bg-surface border border-default rounded-full">
-                          {activityIcon(act.action)}
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] text-primary font-medium">{act.action}</p>
-                        {(act.reference || act.dossier_ref) && (
-                          <p className="text-[12px] text-muted mt-0.5">{act.reference || act.dossier_ref}</p>
-                        )}
-                        <p className="text-[11px] text-secondary mt-1">{formatDate(act.created_at)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
