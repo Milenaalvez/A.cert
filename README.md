@@ -56,7 +56,10 @@ A.CERT/
 │   │   ├── reports.ts            # /api/reports
 │   │   ├── search.ts             # /api/search
 │   │   ├── captcha.ts            # /api/captcha
-│   │   └── team.ts               # /api/team (RH interno)
+│   │   ├── settings.ts           # /api/settings (config, backup, SMTP, auditoria)
+│   │   ├── team.ts               # /api/team (RH interno)
+│   │   ├── support.ts            # /api/support
+│   │   └── trash.ts              # /api/trash (lixeira)
 │   ├── middleware/
 │   │   └── auth.ts               # JWT middleware
 │   └── utils/
@@ -105,7 +108,19 @@ A.CERT/
 - CRUD de Pessoas (pessoa física + jurídica)
 - CRUD de Imóveis com categorias
 - CRUD de Dossiês com templates de certidão
-- Relatórios exportáveis
+- Gestão de Usuários com perfis de acesso e permissões
+- Central de Configurações (9 abas):
+  - **Perfil**: avatar, dados pessoais, atividades recentes
+  - **Geral**: fuso horário, formato de data/hora, preferências do sistema
+  - **Segurança**: alteração de senha, sessões ativas
+  - **Órgãos Integrados**: status, sincronização, tokens
+  - **E-mail (SMTP)**: configuração e teste de conexão
+  - **Templates PDF**: cores, logotipo, elementos dos documentos
+  - **Backup**: gerar, baixar, restaurar e excluir backups
+  - **Auditoria**: logs de ações com filtros por usuário/período
+  - **Sistema**: versão, ambiente, banco de dados, uptime
+- Relatórios exportáveis (PDF/CSV)
+- Lixeira com restauração
 - Busca global
 
 ### Autenticação
