@@ -502,34 +502,37 @@ export default function ConfiguracoesPage() {
                     </div>
                   </div>
 
-                  <div className={grid2}>
-                    <div>
-                      <label className={labelStyle}>Nome completo</label>
-                      <input type="text" value={user?.name || ""} readOnly className={inputBase} />
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Nome completo</span>
+                      <span className="text-[14px] font-semibold text-primary">{user?.name || "—"}</span>
                     </div>
-                    <div>
-                      <label className={labelStyle}>Cargo</label>
-                      <input type="text" value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly className={inputBase} />
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Cargo</span>
+                      <span className="text-[14px] font-semibold" style={{ color: "#FF7A00" }}>{(user?.role && ROLES_MAP[user.role]) || "Corretor"}</span>
                     </div>
-                    <div>
-                      <label className={labelStyle}>Matrícula</label>
-                      <input type="text" value={user?.registration_number || "—"} readOnly className={inputBase} />
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Matrícula</span>
+                      <span className="text-[14px] font-semibold text-primary">{user?.registration_number || "—"}</span>
                     </div>
-                    <div>
-                      <label className={labelStyle}>E-mail corporativo</label>
-                      <input type="text" value={user?.email || ""} readOnly className={inputBase} />
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">E-mail corporativo</span>
+                      <span className="text-[14px] font-semibold text-primary break-all">{user?.email || "—"}</span>
                     </div>
-                    <div>
-                      <label className={labelStyle}>Telefone</label>
-                      <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className={inputBase} placeholder="(61) 99999-9999" />
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Telefone</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-semibold text-primary">(61) 99999-9999</span>
+                        <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="flex-1 h-9 rounded-[6px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" placeholder="(61) 99999-9999" />
+                      </div>
                     </div>
-                    <div>
-                      <label className={labelStyle}>Data de criação da conta</label>
-                      <input type="text" value={formatDateShort(user?.created_at)} readOnly className={inputBase} />
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Data de criação</span>
+                      <span className="text-[14px] font-semibold text-primary">{formatDateShort(user?.created_at)}</span>
                     </div>
-                    <div>
-                      <label className={labelStyle}>Último acesso</label>
-                      <input type="text" value={user?.last_access_at ? formatDate(user.last_access_at) : "—"} readOnly className={inputBase} />
+                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
+                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Último acesso</span>
+                      <span className="text-[14px] font-semibold text-primary">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</span>
                     </div>
                   </div>
                 </div>
