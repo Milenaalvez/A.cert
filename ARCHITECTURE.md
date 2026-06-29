@@ -367,10 +367,10 @@ Projeto educacional simples com HTML, CSS (variáveis e temas) e JavaScript bás
 | Vite 8 | ✅ | ❌ | ✅ | ❌ |
 | Prisma | ✅ | ❌ | ❌ | ❌ |
 | PostgreSQL | ✅ | ❌ | ❌ | ❌ |
-| SQLite | ❌ | ✅ | ❌ | ❌ |
+| SQLite | ❌ | ❌ | ❌ | ❌ |
 | JWT Auth | ✅ | ✅ | ❌ | ❌ |
 | Puppeteer | ❌ | ✅ | ❌ | ❌ |
-| Electron | ❌ | ✅ | ❌ | ❌ |
+| Prisma | ❌ | ✅ | ❌ | ❌ |
 | Framer Motion | ❌ | ❌ | ✅ | ❌ |
 | Chart.js | ✅ | ❌ | ❌ | ❌ |
 
@@ -381,7 +381,7 @@ Projeto educacional simples com HTML, CSS (variáveis e temas) e JavaScript bás
 | Projeto | Frontend | Backend | Database |
 |---|---|---|---|
 | **Chronos** | Vercel | Render (Docker) | Neon PostgreSQL |
-| **A.CERT** | Next.js (localhost) | Express (localhost) | SQLite (arquivo) |
+| **A.CERT** | Next.js (localhost) | Express (localhost) | PostgreSQL / Prisma |
 | **Portfolio** | GitHub Pages | N/A (estático) | N/A |
 | **MAVIE** | GitHub Pages (repo separado) | N/A (estático) | N/A |
 | **Bradesco** | N/A (local) | N/A | N/A |
