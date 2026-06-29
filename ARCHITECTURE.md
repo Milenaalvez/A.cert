@@ -132,11 +132,13 @@ User ──┬── Company (multi-tenant)
 
 ---
 
-## 2. A.CERT — Central de Certidões (DONNOS Docs)
+## 2. A.CERT — Central de Certidões (v1.1)
 
 ### 2.1 Visão Geral
 
-Plataforma completa de automação de certidões imobiliárias com 3 interfaces distintas: pública (consulta), dashboard interno (gestão) e desktop (Electron). Consulta 7 órgãos públicos brasileiros via Puppeteer com stealth.
+Plataforma completa de automação de certidões imobiliárias com 2 interfaces: pública (consulta) e dashboard interno (gestão). Consulta 7 órgãos públicos brasileiros via Puppeteer com stealth. O módulo Electron foi congelado a pedido do cliente — foco na versão web.
+
+**v1.1 (Jun/2026):** Fluxo de dossiê reestruturado com múltiplos participantes + multiempresas + certidões por pessoa + PDF organizado por participante.
 
 ### 2.2 Stack Detalhada
 
@@ -145,7 +147,7 @@ Plataforma completa de automação de certidões imobiliárias com 3 interfaces 
 │                      INTERFACES                               │
 │  Pública:     HTML5 + CSS3 + JS Vanilla (public/)             │
 │  Dashboard:   Next.js 15 + React 19 + Tailwind CSS 4          │
-│  Desktop:     Electron (NSIS installer, Windows)              │
+│  Desktop:     Electron (congelado)                             │
 │  Extensão:    Chrome Manifest V3                              │
 ├──────────────────────────────────────────────────────────────┤
 │                      BACKEND                                  │
@@ -167,7 +169,7 @@ Cada órgão implementa a interface `IConnector`:
 ```typescript
 interface IConnector {
   nome: string
-  consultar(dados: DadosProprietario, captchaManager?: CaptchaManager): Promise<ConnectorResult>
+  consultar(dados: DadosProprietario, captchaManager?: CaptchaManager, jobId?: string, certKeys?: string[]): Promise<ConnectorResult>
 }
 ```
 
@@ -184,8 +186,8 @@ interface IConnector {
    ├── detectarCaptcha() → identifica hCaptcha/reCAPTCHA/texto
    ├── Screenshot → envia para cliente
    └── captchaManager.waitForSolution() → aguarda resolução manual
-8. Captura resultado como PDF (page.pdf())
-9. Retorna ConnectorResult com status
+8. Captura resultado como PDF (tentarBaixarPDF: 3 níveis de fallback)
+9. Retorna ConnectorResult com status + documento (buffer Uint8Array)
 ```
 
 **Órgãos suportados:**
@@ -200,29 +202,36 @@ interface IConnector {
 | SEFAZ-DF | `sefaz-df.connector.ts` | Fiscal (PF/PJ/Imóvel) |
 | ONR | `onr.connector.ts` | Ônus Reais |
 
-### 2.4 Orquestração de Consultas
+### 2.4 Orquestração de Consultas (v1.1)
 
 ```
-POST /api/consultar
+POST /api/consultar { nome, cpf, ..., personId, dossierId }
   │
   ├── 1. Cria job (in-memory Map)
   ├── 2. Inicia orquestrador:
   │      para cada conector (sequencial):
   │        ├── Executa consulta com timeout
   │        ├── Se CAPTCHA: pausa e aguarda resolução
-  │        ├── Se sucesso: salva certidão no DB
+  │        ├── Se sucesso: persistirResultado(personId, dossierId, resultado)
+  │        │   ├── Insere em dossier_participants
+  │        │   ├── Insere certificate com person_id
+  │        │   └── Salva PDF em data/documents/
   │        └── Se falha: retry com backoff
-  ├── 3. Cria/atualiza dossiê
-  └── 4. Gera PDF consolidado (pdf-lib)
-       ├── Capa (logo DONNOS Docs + dados do proprietário)
-       ├── Página por certidão (status, órgão, data)
-       └── Sumário final
+  ├── 3. Polling: GET /api/consultar/:jobId
+  └── 4. PDF consolidado (/:id/generate) → organizado por participante com embed de certidões
 ```
 
-### 2.5 Banco de Dados (SQLite — 18 tabelas)
+### 2.5 Banco de Dados (SQLite — 21 tabelas)
+
+**Novas tabelas v1.1:** `dossier_participants`, `companies`, `company_settings`
+**Novas colunas:** `certificates.person_id`, `dossiers.transaction_type`, `users.password_change_required`
 
 ```
-users ──┬── persons ──┬── dossiers ──┬── certificates
+users ──┬── companies ── company_settings
+        │
+        ├── persons ──┬── dossier_participants ── dossiers
+        │              │       (role: proprietario/comprador/vendedor/locador/locatario)
+        │              ├── dossiers ──┬── certificates (person_id)
         │              │              └── certificate_templates
         │              ├── properties ── property_owners
         │              │               └── property_timeline
@@ -372,7 +381,7 @@ Projeto educacional simples com HTML, CSS (variáveis e temas) e JavaScript bás
 | Projeto | Frontend | Backend | Database |
 |---|---|---|---|
 | **Chronos** | Vercel | Render (Docker) | Neon PostgreSQL |
-| **A.CERT** | Next.js (localhost) / Electron | Express (localhost) | SQLite (arquivo) |
+| **A.CERT** | Next.js (localhost) | Express (localhost) | SQLite (arquivo) |
 | **Portfolio** | GitHub Pages | N/A (estático) | N/A |
 | **MAVIE** | GitHub Pages (repo separado) | N/A (estático) | N/A |
 | **Bradesco** | N/A (local) | N/A | N/A |
