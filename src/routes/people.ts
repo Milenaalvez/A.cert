@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import db from '../database.js';
+import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 import { iniciarJob, getJob } from '../services/orquestrador.service.js';
 import { validarCPF, validarCNPJ, validarEmail, validarTelefone, validarCEP } from '../utils/validation.js';
 
 const router = Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { type, includeArchived, q } = req.query;
     const showArchived = includeArchived === 'true';
@@ -23,14 +23,15 @@ router.get('/', (req, res) => {
       whereParts.push('p.cnpj IS NOT NULL');
     }
     if (q && typeof q === 'string' && q.trim()) {
-      whereParts.push('(p.name LIKE ? OR p.cpf LIKE ? OR p.cnpj LIKE ? OR p.email LIKE ?)');
+      const idx = params.length + 1;
+      whereParts.push(`(p.name LIKE $${idx} OR p.cpf LIKE $${idx + 1} OR p.cnpj LIKE $${idx + 2} OR p.email LIKE $${idx + 3})`);
       const like = `%${q.trim()}%`;
       params.push(like, like, like, like);
     }
 
     const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
 
-    const people = db.prepare(`
+    const people = await queryRaw(`
       SELECT
         p.id, p.name, p.cpf, p.cnpj, p.email, p.phone, p.cell_phone,
         p.city, p.state, p.created_at, p.is_pre_cadastro, p.archived_at,
@@ -50,29 +51,24 @@ router.get('/', (req, res) => {
       ${whereClause}
       ORDER BY p.created_at DESC
       LIMIT 100
-    `).all(...params) as {
-      id: string; name: string; cpf: string | null; cnpj: string | null; email: string | null;
-      phone: string | null; cell_phone: string | null; city: string | null; state: string | null;
-      created_at: string; is_pre_cadastro: number; archived_at: string | null; dossier_count: number;
-      property_count: number; last_update: string;
-    }[];
+    `, ...params);
 
-    const stats = db.prepare(`
+    const stats = await queryRawOne(`
       SELECT
         (SELECT COUNT(*) FROM persons WHERE archived_at IS NULL) as total,
         (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND EXISTS (SELECT 1 FROM dossier_participants dp WHERE dp.person_id = p.id)) as vinculadas
-    `).get() as { total: number; vinculadas: number };
+    `);
 
-    const result = people.map(p => {
-      const certStats = db.prepare(`
+    const result = await Promise.all(people.map(async p => {
+      const certStats = await queryRawOne(`
         SELECT
           COUNT(*) as total_certs,
           SUM(CASE WHEN c.status = 'Obtida' THEN 1 ELSE 0 END) as obtidas,
           SUM(CASE WHEN c.status = 'Pendente' THEN 1 ELSE 0 END) as pendentes
         FROM certificates c
         JOIN dossiers d ON d.id = c.dossier_id
-        WHERE d.person_id = ?
-      `).get(p.id) as { total_certs: number; obtidas: number; pendentes: number };
+        WHERE d.person_id = $1
+      `, p.id);
 
       let docStatus: string;
       if (certStats.total_certs === 0) {
@@ -92,18 +88,18 @@ router.get('/', (req, res) => {
         personType = 'Pessoa Física';
       }
 
-      const relationshipCount = db.prepare(`
+      const relationshipCount = await queryRawOne(`
         SELECT COUNT(*) as count FROM person_relationships
-        WHERE person_id = ? OR related_person_id = ?
-      `).get(p.id, p.id) as { count: number };
+        WHERE person_id = $1 OR related_person_id = $2
+      `, p.id, p.id);
 
-      const dossiersVinculados = db.prepare(`
+      const dossiersVinculados = await queryRaw(`
         SELECT d.id, d.identifier, dp.role
         FROM dossier_participants dp
         JOIN dossiers d ON d.id = dp.dossier_id
-        WHERE dp.person_id = ?
+        WHERE dp.person_id = $1
         ORDER BY d.created_at DESC
-      `).all(p.id) as { id: string; identifier: string; role: string }[];
+      `, p.id);
 
       return {
         id: p.id,
@@ -133,7 +129,7 @@ router.get('/', (req, res) => {
           role: d.role,
         })),
       };
-    });
+    }));
 
     const docCompleta = result.filter(p => p.documentationStatus === 'Completa').length;
     const docPendente = result.filter(p =>
@@ -155,7 +151,7 @@ router.get('/', (req, res) => {
   }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, cpf, cnpj, email, phone, cellPhone, rg, birthDate, maritalStatus, nationality, zipCode, city, state, address, observation, isPreCadastro, motherName, fatherName } = req.body;
 
@@ -202,7 +198,7 @@ router.post('/', (req, res) => {
 
     if (email) {
       const emailClean = email.toLowerCase().trim();
-      const existingEmail = db.prepare('SELECT id FROM persons WHERE email = ?').get(emailClean);
+      const existingEmail = await queryRawOne('SELECT id FROM persons WHERE email = $1', emailClean);
       if (existingEmail) {
         res.status(409).json({ error: 'Este email já está cadastrado' });
         return;
@@ -212,7 +208,7 @@ router.post('/', (req, res) => {
     if (cpf) {
       const cpfClean = cpf.replace(/\D/g, '');
       if (cpfClean.length === 11) {
-        const existingCpf = db.prepare('SELECT id FROM persons WHERE cpf = ?').get(cpfClean);
+        const existingCpf = await queryRawOne('SELECT id FROM persons WHERE cpf = $1', cpfClean);
         if (existingCpf) {
           res.status(409).json({ error: 'Este CPF já está cadastrado' });
           return;
@@ -223,10 +219,10 @@ router.post('/', (req, res) => {
     const id = randomUUID();
     const created_at = new Date().toISOString();
 
-    db.prepare(`
+    await executeRaw(`
       INSERT INTO persons (id, name, cpf, cnpj, email, phone, cell_phone, rg, birth_date, mother_name, father_name, marital_status, nationality, zip_code, city, state, address, observation, is_pre_cadastro, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    `,
       id, name.trim(),
       cpf?.replace(/\D/g, '') || null,
       cnpj?.replace(/\D/g, '') || null,
@@ -255,20 +251,20 @@ router.post('/', (req, res) => {
   }
 });
 
-router.get('/:id/detail', (req, res) => {
+router.get('/:id/detail', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const person = db.prepare(`
-      SELECT id, name, cpf, email, phone, cell_phone, rg, birth_date, mother_name, father_name, marital_status, nationality, zip_code, city, state, address, observation, created_at FROM persons WHERE id = ?
-    `).get(id) as { id: string; name: string; cpf: string | null; email: string | null; phone: string | null; cell_phone: string | null; rg: string | null; birth_date: string | null; mother_name: string | null; father_name: string | null; marital_status: string | null; nationality: string | null; zip_code: string | null; city: string | null; state: string | null; address: string | null; observation: string | null; created_at: string } | undefined;
+    const person = await queryRawOne(`
+      SELECT id, name, cpf, email, phone, cell_phone, rg, birth_date, mother_name, father_name, marital_status, nationality, zip_code, city, state, address, observation, created_at FROM persons WHERE id = $1
+    `, id);
 
     if (!person) {
       res.status(404).json({ error: 'Pessoa não encontrada' });
       return;
     }
 
-    const dossiers = db.prepare(`
+    const dossiers = await queryRaw(`
       SELECT
         d.id,
         d.identifier,
@@ -281,31 +277,24 @@ router.get('/:id/detail', (req, res) => {
         p.address as property_address
       FROM dossiers d
       LEFT JOIN properties p ON p.id = d.property_id
-      WHERE d.person_id = ?
+      WHERE d.person_id = $1
       ORDER BY d.created_at DESC
-    `).all(id) as {
-      id: string; identifier: string; status: string; priority: string;
-      created_at: string; updated_at: string;
-      property_identifier: string | null; property_type: string | null; property_address: string | null;
-    }[];
+    `, id);
 
-    const dossiersWithCerts = dossiers.map(d => {
-      const certificates = db.prepare(`
+    const dossiersWithCerts = await Promise.all(dossiers.map(async d => {
+      const certificates = await queryRaw(`
         SELECT id, name, organ, status, protocol, obtained_at, document_path
         FROM certificates
-        WHERE dossier_id = ?
+        WHERE dossier_id = $1
         ORDER BY created_at ASC
-      `).all(d.id) as {
-        id: string; name: string; organ: string; status: string;
-        protocol: string | null; obtained_at: string | null; document_path: string | null;
-      }[];
+      `, d.id);
 
       return { ...d, certificates };
-    });
+    }));
 
     const totalCerts = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.length, 0);
-    const obtidas = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter(c => c.status === 'Obtida').length, 0);
-    const pendentes = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter(c => c.status === 'Pendente').length, 0);
+    const obtidas = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter((c: any) => c.status === 'Obtida').length, 0);
+    const pendentes = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter((c: any) => c.status === 'Pendente').length, 0);
 
     res.json({
       person: {
@@ -342,13 +331,11 @@ router.get('/:id/detail', (req, res) => {
   }
 });
 
-router.post('/:id/search', (req, res) => {
+router.post('/:id/search', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const person = db.prepare('SELECT id, name, cpf FROM persons WHERE id = ?').get(id) as {
-      id: string; name: string; cpf: string | null;
-    } | undefined;
+    const person = await queryRawOne('SELECT id, name, cpf FROM persons WHERE id = $1', id);
 
     if (!person) {
       res.status(404).json({ error: 'Pessoa não encontrada' });
@@ -374,7 +361,7 @@ router.post('/:id/search', (req, res) => {
   }
 });
 
-router.get('/:id/search/:jobId', (req, res) => {
+router.get('/:id/search/:jobId', async (req, res) => {
   try {
     const job = getJob(req.params.jobId);
 
@@ -402,37 +389,37 @@ router.get('/:id/search/:jobId', (req, res) => {
   }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, cnpj, email, phone, cellPhone, rg, birthDate, motherName, fatherName, maritalStatus, nationality, zipCode, city, state, address, observation } = req.body;
 
-    const existing = db.prepare('SELECT id FROM persons WHERE id = ?').get(id);
+    const existing = await queryRawOne('SELECT id FROM persons WHERE id = $1', id);
     if (!existing) {
       res.status(404).json({ error: 'Pessoa não encontrada' });
       return;
     }
 
-    db.prepare(`
+    await executeRaw(`
       UPDATE persons SET
-        name = COALESCE(?, name),
-        cnpj = COALESCE(?, cnpj),
-        email = COALESCE(?, email),
-        phone = COALESCE(?, phone),
-        cell_phone = COALESCE(?, cell_phone),
-        rg = COALESCE(?, rg),
-        birth_date = COALESCE(?, birth_date),
-        mother_name = COALESCE(?, mother_name),
-        father_name = COALESCE(?, father_name),
-        marital_status = COALESCE(?, marital_status),
-        nationality = COALESCE(?, nationality),
-        zip_code = COALESCE(?, zip_code),
-        city = COALESCE(?, city),
-        state = COALESCE(?, state),
-        address = COALESCE(?, address),
-        observation = COALESCE(?, observation)
-      WHERE id = ?
-    `).run(name, cnpj, email, phone, cellPhone, rg, birthDate, motherName, fatherName, maritalStatus, nationality, zipCode, city, state, address, observation, id);
+        name = COALESCE($1, name),
+        cnpj = COALESCE($2, cnpj),
+        email = COALESCE($3, email),
+        phone = COALESCE($4, phone),
+        cell_phone = COALESCE($5, cell_phone),
+        rg = COALESCE($6, rg),
+        birth_date = COALESCE($7, birth_date),
+        mother_name = COALESCE($8, mother_name),
+        father_name = COALESCE($9, father_name),
+        marital_status = COALESCE($10, marital_status),
+        nationality = COALESCE($11, nationality),
+        zip_code = COALESCE($12, zip_code),
+        city = COALESCE($13, city),
+        state = COALESCE($14, state),
+        address = COALESCE($15, address),
+        observation = COALESCE($16, observation)
+      WHERE id = $17
+    `, name, cnpj, email, phone, cellPhone, rg, birthDate, motherName, fatherName, maritalStatus, nationality, zipCode, city, state, address, observation, id);
 
     res.json({ success: true });
   } catch (error) {
@@ -441,10 +428,10 @@ router.put('/:id', (req, res) => {
   }
 });
 
-router.get('/:id/properties', (req, res) => {
+router.get('/:id/properties', async (req, res) => {
   try {
     const { id } = req.params;
-    const properties = db.prepare(`
+    const properties = await queryRaw(`
       SELECT
         p.id,
         p.identifier,
@@ -456,13 +443,9 @@ router.get('/:id/properties', (req, res) => {
         (SELECT COUNT(*) FROM dossiers d WHERE d.property_id = p.id) as dossier_count
       FROM properties p
       JOIN property_owners po ON po.property_id = p.id
-      WHERE po.person_id = ?
+      WHERE po.person_id = $1
       ORDER BY p.created_at DESC
-    `).all(id) as {
-      id: string; identifier: string; registration: string;
-      type: string; address: string; status: string;
-      participation: number; dossier_count: number;
-    }[];
+    `, id);
 
     res.json({ properties });
   } catch (error) {
@@ -471,18 +454,18 @@ router.get('/:id/properties', (req, res) => {
   }
 });
 
-router.post('/:id/archive', (req, res) => {
+router.post('/:id/archive', async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = db.prepare('SELECT id FROM persons WHERE id = ?').get(id);
+    const existing = await queryRawOne('SELECT id FROM persons WHERE id = $1', id);
     if (!existing) {
       res.status(404).json({ error: 'Pessoa não encontrada' });
       return;
     }
     // Archive by setting archived_at timestamp
-    const current = db.prepare('SELECT archived_at FROM persons WHERE id = ?').get(id) as { archived_at: string | null } | undefined;
+    const current = await queryRawOne('SELECT archived_at FROM persons WHERE id = $1', id);
     if (!current?.archived_at) {
-      db.prepare('UPDATE persons SET archived_at = ? WHERE id = ?').run(new Date().toISOString(), id);
+      await executeRaw('UPDATE persons SET archived_at = $1 WHERE id = $2', new Date().toISOString(), id);
     }
     res.json({ success: true });
   } catch (error) {
@@ -491,15 +474,15 @@ router.post('/:id/archive', (req, res) => {
   }
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = db.prepare('SELECT id FROM persons WHERE id = ?').get(id);
+    const existing = await queryRawOne('SELECT id FROM persons WHERE id = $1', id);
     if (!existing) {
       res.status(404).json({ error: 'Pessoa não encontrada' });
       return;
     }
-    db.prepare('UPDATE persons SET deleted_at = datetime(\'now\') WHERE id = ?').run(id);
+    await executeRaw('UPDATE persons SET deleted_at = NOW() WHERE id = $1', id);
     res.json({ success: true });
   } catch (error) {
     console.error('[People Delete] Erro:', error);
@@ -507,17 +490,17 @@ router.delete('/:id', (req, res) => {
   }
 });
 
-router.get('/:id/relationships', (req, res) => {
+router.get('/:id/relationships', async (req, res) => {
   try {
     const { id } = req.params;
-    const rels = db.prepare(`
+    const rels = await queryRaw(`
       SELECT pr.id, pr.relationship_type, pr.created_at,
-        CASE WHEN pr.person_id = ? THEN pr.related_person_id ELSE pr.person_id END as other_id,
+        CASE WHEN pr.person_id = $1 THEN pr.related_person_id ELSE pr.person_id END as other_id,
         p.name, p.cpf, p.cnpj, p.is_pre_cadastro
       FROM person_relationships pr
-      JOIN persons p ON p.id = CASE WHEN pr.person_id = ? THEN pr.related_person_id ELSE pr.person_id END
-      WHERE pr.person_id = ? OR pr.related_person_id = ?
-    `).all(id, id, id, id);
+      JOIN persons p ON p.id = CASE WHEN pr.person_id = $2 THEN pr.related_person_id ELSE pr.person_id END
+      WHERE pr.person_id = $3 OR pr.related_person_id = $4
+    `, id, id, id, id);
     res.json({ relationships: rels });
   } catch (error) {
     console.error('[People Relationships] Erro:', error);
@@ -525,7 +508,7 @@ router.get('/:id/relationships', (req, res) => {
   }
 });
 
-router.post('/:id/relationships', (req, res) => {
+router.post('/:id/relationships', async (req, res) => {
   try {
     const { id } = req.params;
     const { related_person_id, relationship_type } = req.body;
@@ -537,17 +520,19 @@ router.post('/:id/relationships', (req, res) => {
       res.status(400).json({ error: 'Não é possível vincular a mesma pessoa' });
       return;
     }
-    const existing = db.prepare(
-      'SELECT id FROM person_relationships WHERE (person_id = ? AND related_person_id = ?) OR (person_id = ? AND related_person_id = ?)'
-    ).get(id, related_person_id, related_person_id, id);
+    const existing = await queryRawOne(
+      'SELECT id FROM person_relationships WHERE (person_id = $1 AND related_person_id = $2) OR (person_id = $3 AND related_person_id = $4)',
+      id, related_person_id, related_person_id, id
+    );
     if (existing) {
       res.status(400).json({ error: 'Vínculo já existe' });
       return;
     }
     const relId = randomUUID();
-    db.prepare(
-      'INSERT INTO person_relationships (id, person_id, related_person_id, relationship_type) VALUES (?, ?, ?, ?)'
-    ).run(relId, id, related_person_id, relationship_type || 'parental');
+    await executeRaw(
+      'INSERT INTO person_relationships (id, person_id, related_person_id, relationship_type) VALUES ($1, $2, $3, $4)',
+      relId, id, related_person_id, relationship_type || 'parental'
+    );
     res.json({ success: true, id: relId });
   } catch (error) {
     console.error('[People Relationship Create] Erro:', error);
@@ -555,10 +540,10 @@ router.post('/:id/relationships', (req, res) => {
   }
 });
 
-router.delete('/:id/relationships/:rid', (req, res) => {
+router.delete('/:id/relationships/:rid', async (req, res) => {
   try {
     const { rid } = req.params;
-    db.prepare('DELETE FROM person_relationships WHERE id = ?').run(rid);
+    await executeRaw('DELETE FROM person_relationships WHERE id = $1', rid);
     res.json({ success: true });
   } catch (error) {
     console.error('[People Relationship Delete] Erro:', error);

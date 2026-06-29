@@ -22,7 +22,7 @@ import settingsRoutes from './routes/settings.js';
 import supportRoutes from './routes/support.js';
 import trashRoutes from './routes/trash.js';
 import companiesRoutes from './routes/companies.js';
-import db from './database.js';
+import prisma, { executeRaw } from './lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[Server] ${msg}`);
 
@@ -71,14 +71,14 @@ const upload = multer({
   },
 });
 
-app.post('/api/upload/avatar', upload.single('avatar'), (req, res) => {
+app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
   const userId = req.body.userId;
   if (!userId || !req.file) {
     res.status(400).json({ error: 'userId e avatar são obrigatórios' });
     return;
   }
   const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarUrl, userId);
+  await executeRaw('UPDATE users SET avatar = $1 WHERE id = $2', avatarUrl, userId);
   res.json({ avatarUrl });
 });
 

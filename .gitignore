@@ -10,3 +10,5 @@ data/
 tmp/
 debug-*.png
 release/
+
+/src/generated/prisma

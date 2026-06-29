@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import db from '../database.js';
+import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   Outros: '📋',
 };
 
-router.get('/cartorios', (_req, res) => {
+router.get('/cartorios', async (_req, res) => {
   try {
     const registrosDF = [
       "1º Ofício de Registro de Imóveis do DF — Asa Sul",
@@ -47,13 +47,13 @@ router.get('/cartorios', (_req, res) => {
   }
 });
 
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   try {
-    const categories = db.prepare(`
+    const categories = await queryRaw(`
       SELECT
         p.type,
         COUNT(*) as total,
-        COALESCE(SUM(CASE WHEN p.created_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END), 0) as novos,
+        COALESCE(SUM(CASE WHEN p.created_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END), 0) as novos,
         (
           SELECT COUNT(*) FROM dossiers d WHERE d.property_id IN (
             SELECT id FROM properties WHERE type = p.type
@@ -77,14 +77,11 @@ router.get('/', (_req, res) => {
           WHEN 'Chácara' THEN 7
           ELSE 99
         END
-    `).all() as {
-      type: string; total: number; novos: number;
-      dossier_count: number; owner_count: number;
-    }[];
+    `);
 
-    const totalProperties = db.prepare('SELECT COUNT(*) as count FROM properties').get() as { count: number };
+    const totalProperties = await queryRawOne('SELECT COUNT(*) as count FROM properties');
 
-    const allProperties = db.prepare(`
+    const allProperties = await queryRaw(`
       SELECT
         p.id, p.identifier, p.registration, p.type, p.address,
         p.status, p.neighborhood, p.created_at, p.updated_at,
@@ -95,7 +92,7 @@ router.get('/', (_req, res) => {
       FROM properties p
       ORDER BY p.updated_at DESC
       LIMIT 50
-    `).all() as any[];
+    `);
 
     const result = categories.map(c => ({
       type: c.type,
@@ -124,20 +121,20 @@ router.get('/', (_req, res) => {
   }
 });
 
-router.get('/search', (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const q = ((req.query.q as string) || '').trim();
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     if (!q) { res.json({ properties: [] }); return; }
 
-    const properties = db.prepare(`
+    const properties = await queryRaw(`
       SELECT id, identifier, registration, type, address, neighborhood, city, status
       FROM properties
-      WHERE (identifier LIKE ? OR address LIKE ? OR registration LIKE ? OR neighborhood LIKE ? OR city LIKE ?)
+      WHERE (identifier LIKE $1 OR address LIKE $2 OR registration LIKE $3 OR neighborhood LIKE $4 OR city LIKE $5)
         AND (deleted_at IS NULL OR deleted_at = '')
       ORDER BY updated_at DESC
-      LIMIT ?
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, limit) as any[];
+      LIMIT $6
+    `, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, limit);
 
     res.json({ properties });
   } catch (error) {
@@ -146,11 +143,11 @@ router.get('/search', (req, res) => {
   }
 });
 
-router.get('/category/:type', (req, res) => {
+router.get('/category/:type', async (req, res) => {
   try {
     const { type } = req.params;
 
-    const properties = db.prepare(`
+    const properties = await queryRaw(`
       SELECT
         p.id,
         p.identifier,
@@ -169,16 +166,9 @@ router.get('/category/:type', (req, res) => {
         9 as cert_count,
         (SELECT COALESCE(SUM(CASE WHEN c.status = 'Obtida' THEN 1 ELSE 0 END), 0) FROM certificates c JOIN dossiers d ON d.id = c.dossier_id WHERE d.property_id = p.id) as cert_obtidas
       FROM properties p
-      WHERE p.type = ?
+      WHERE p.type = $1
       ORDER BY p.created_at DESC
-    `).all(type) as {
-      id: string; identifier: string; registration: string;
-      type: string; address: string; status: string;
-      neighborhood: string; city: string; state: string;
-      area: string; created_at: string; updated_at: string;
-      owner_name: string | null; dossier_count: number;
-      cert_count: number; cert_obtidas: number;
-    }[];
+    `, type);
 
     res.json({
       type,
@@ -209,47 +199,36 @@ router.get('/category/:type', (req, res) => {
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const property = db.prepare(`
-      SELECT * FROM properties WHERE id = ?
-    `).get(id) as {
-      id: string; identifier: string; registration: string;
-      type: string; address: string; owner_id: string | null;
-      notary_office: string; cartorio: string; status: string;
-      neighborhood: string; city: string; state: string;
-      zip_code: string; area: string; land_area: string;
-      description: string; created_at: string; updated_at: string;
-    } | undefined;
+    const property = await queryRawOne(`
+      SELECT * FROM properties WHERE id = $1
+    `, id);
 
     if (!property) {
       res.status(404).json({ error: 'Imóvel não encontrado' });
       return;
     }
 
-    const owners = db.prepare(`
+    const owners = await queryRaw(`
       SELECT
         po.id as link_id,
         po.participation,
         p.id as person_id,
         p.name,
         p.cpf,
-        (SELECT COUNT(*) FROM dossiers d WHERE d.person_id = p.id AND d.property_id = ?) as dossier_count,
-        (SELECT COALESCE(SUM(CASE WHEN c.status = 'Obtida' THEN 1 ELSE 0 END), 0) FROM certificates c JOIN dossiers d ON d.id = c.dossier_id WHERE d.person_id = p.id AND d.property_id = ?) as cert_obtidas,
-        (SELECT COUNT(*) FROM certificates c JOIN dossiers d ON d.id = c.dossier_id WHERE d.person_id = p.id AND d.property_id = ?) as cert_total
+        (SELECT COUNT(*) FROM dossiers d WHERE d.person_id = p.id AND d.property_id = $1) as dossier_count,
+        (SELECT COALESCE(SUM(CASE WHEN c.status = 'Obtida' THEN 1 ELSE 0 END), 0) FROM certificates c JOIN dossiers d ON d.id = c.dossier_id WHERE d.person_id = p.id AND d.property_id = $2) as cert_obtidas,
+        (SELECT COUNT(*) FROM certificates c JOIN dossiers d ON d.id = c.dossier_id WHERE d.person_id = p.id AND d.property_id = $3) as cert_total
       FROM property_owners po
       JOIN persons p ON p.id = po.person_id
-      WHERE po.property_id = ?
+      WHERE po.property_id = $4
       ORDER BY po.participation DESC
-    `).all(id, id, id, id) as {
-      link_id: string; participation: number;
-      person_id: string; name: string; cpf: string | null;
-      dossier_count: number; cert_obtidas: number; cert_total: number;
-    }[];
+    `, id, id, id, id);
 
-    const dossiers = db.prepare(`
+    const dossiers = await queryRaw(`
       SELECT
         d.id,
         d.identifier,
@@ -263,16 +242,11 @@ router.get('/:id', (req, res) => {
         (SELECT COALESCE(SUM(CASE WHEN c.status = 'Obtida' THEN 1 ELSE 0 END), 0) FROM certificates c WHERE c.dossier_id = d.id) as cert_obtidas
       FROM dossiers d
       LEFT JOIN persons p ON p.id = d.person_id
-      WHERE d.property_id = ?
+      WHERE d.property_id = $1
       ORDER BY d.created_at DESC
-    `).all(id) as {
-      id: string; identifier: string; status: string;
-      priority: string; created_at: string; updated_at: string;
-      person_id: string; person_name: string | null;
-      cert_total: number; cert_obtidas: number;
-    }[];
+    `, id);
 
-    const certificates = db.prepare(`
+    const certificates = await queryRaw(`
       SELECT
         c.id,
         c.name,
@@ -284,23 +258,16 @@ router.get('/:id', (req, res) => {
         d.identifier as dossier_identifier
       FROM certificates c
       JOIN dossiers d ON d.id = c.dossier_id
-      WHERE d.property_id = ?
+      WHERE d.property_id = $1
       ORDER BY c.obtained_at DESC NULLS LAST, c.created_at DESC
-    `).all(id) as {
-      id: string; name: string; organ: string;
-      status: string; protocol: string | null;
-      obtained_at: string | null; document_path: string | null;
-      dossier_identifier: string;
-    }[];
+    `, id);
 
-    const timeline = db.prepare(`
+    const timeline = await queryRaw(`
       SELECT id, action, description, created_at
       FROM property_timeline
-      WHERE property_id = ?
+      WHERE property_id = $1
       ORDER BY created_at DESC
-    `).all(id) as {
-      id: string; action: string; description: string; created_at: string;
-    }[];
+    `, id);
 
     const totalCerts = certificates.length;
     const obtidas = certificates.filter(c => c.status === 'Obtida').length;
@@ -359,7 +326,7 @@ router.get('/:id', (req, res) => {
   }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       identifier, registration, type, address, ownerId,
@@ -373,7 +340,7 @@ router.post('/', (req, res) => {
     }
 
     if (registration) {
-      const dup = db.prepare('SELECT id FROM properties WHERE registration = ?').get(registration);
+      const dup = await queryRawOne('SELECT id FROM properties WHERE registration = $1', registration);
       if (dup) {
         res.status(409).json({ error: 'Matrícula já cadastrada para outro imóvel' });
         return;
@@ -394,10 +361,10 @@ router.post('/', (req, res) => {
       return `REG-${yy}${mm}${dd}-${rand}`;
     })();
 
-    db.prepare(`
+    await executeRaw(`
       INSERT INTO properties (id, identifier, registration, type, address, owner_id, notary_office, status, neighborhood, city, state, zip_code, area, land_area, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+    `,
       id, identifier, finalRegistration, finalType, address, ownerId || null,
       notaryOffice || '', status || 'Regular', neighborhood || '', city || '',
       state || '', zipCode || '', area || '', landArea || '', description || '',
@@ -405,15 +372,15 @@ router.post('/', (req, res) => {
     );
 
     if (ownerId) {
-      db.prepare(`
+      await executeRaw(`
         INSERT INTO property_owners (id, property_id, person_id, participation)
-        VALUES (?, ?, ?, ?)
-      `).run(randomUUID(), id, ownerId, 100.0);
+        VALUES ($1, $2, $3, $4)
+      `, randomUUID(), id, ownerId, 100.0);
 
-      db.prepare(`
+      await executeRaw(`
         INSERT INTO property_timeline (id, property_id, action, description, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(randomUUID(), id, 'Imóvel cadastrado', 'Imóvel cadastrado no sistema A.CERT', created_at);
+        VALUES ($1, $2, $3, $4, $5)
+      `, randomUUID(), id, 'Imóvel cadastrado', 'Imóvel cadastrado no sistema A.CERT', created_at);
     }
 
     res.status(201).json({ success: true, id });
@@ -423,7 +390,7 @@ router.post('/', (req, res) => {
   }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -432,14 +399,14 @@ router.put('/:id', (req, res) => {
       zipCode, area, landArea, description,
     } = req.body;
 
-    const existing = db.prepare('SELECT id FROM properties WHERE id = ?').get(id) as { id: string } | undefined;
+    const existing = await queryRawOne('SELECT id FROM properties WHERE id = $1', id);
     if (!existing) {
       res.status(404).json({ error: 'Imóvel não encontrado' });
       return;
     }
 
     if (registration) {
-      const dup = db.prepare('SELECT id FROM properties WHERE registration = ? AND id != ?').get(registration, id) as { id: string } | undefined;
+      const dup = await queryRawOne('SELECT id FROM properties WHERE registration = $1 AND id != $2', registration, id);
       if (dup) {
         res.status(409).json({ error: 'Matrícula já cadastrada para outro imóvel' });
         return;
@@ -449,26 +416,26 @@ router.put('/:id', (req, res) => {
     const validTypes = ['Apartamento', 'Casa', 'Sala Comercial', 'Terreno', 'Galpão', 'Condomínio', 'Chácara', 'Outros'];
     const finalType = type && validTypes.includes(type) ? type : undefined;
 
-    db.prepare(`
+    await executeRaw(`
       UPDATE properties SET
-        identifier = COALESCE(?, identifier),
-        registration = COALESCE(?, registration),
-        type = COALESCE(?, type),
-        address = COALESCE(?, address),
-        owner_id = COALESCE(?, owner_id),
-        notary_office = COALESCE(?, notary_office),
-        cartorio = COALESCE(?, cartorio),
-        status = COALESCE(?, status),
-        neighborhood = COALESCE(?, neighborhood),
-        city = COALESCE(?, city),
-        state = COALESCE(?, state),
-        zip_code = COALESCE(?, zip_code),
-        area = COALESCE(?, area),
-        land_area = COALESCE(?, land_area),
-        description = COALESCE(?, description),
-        updated_at = datetime('now')
-      WHERE id = ?
-    `).run(
+        identifier = COALESCE($1, identifier),
+        registration = COALESCE($2, registration),
+        type = COALESCE($3, type),
+        address = COALESCE($4, address),
+        owner_id = COALESCE($5, owner_id),
+        notary_office = COALESCE($6, notary_office),
+        cartorio = COALESCE($7, cartorio),
+        status = COALESCE($8, status),
+        neighborhood = COALESCE($9, neighborhood),
+        city = COALESCE($10, city),
+        state = COALESCE($11, state),
+        zip_code = COALESCE($12, zip_code),
+        area = COALESCE($13, area),
+        land_area = COALESCE($14, land_area),
+        description = COALESCE($15, description),
+        updated_at = NOW()
+      WHERE id = $16
+    `,
       identifier, registration, finalType, address, ownerId,
       notaryOffice, cartorio, status, neighborhood, city, state,
       zipCode, area, landArea, description, id
@@ -481,7 +448,7 @@ router.put('/:id', (req, res) => {
   }
 });
 
-router.post('/:id/owners', (req, res) => {
+router.post('/:id/owners', async (req, res) => {
   try {
     const { id } = req.params;
     const { personId, participation } = req.body;
@@ -491,37 +458,37 @@ router.post('/:id/owners', (req, res) => {
       return;
     }
 
-    const property = db.prepare('SELECT id FROM properties WHERE id = ?').get(id);
+    const property = await queryRawOne('SELECT id FROM properties WHERE id = $1', id);
     if (!property) {
       res.status(404).json({ error: 'Imóvel não encontrado' });
       return;
     }
 
-    const person = db.prepare('SELECT id FROM persons WHERE id = ?').get(personId);
+    const person = await queryRawOne('SELECT id FROM persons WHERE id = $1', personId);
     if (!person) {
       res.status(404).json({ error: 'Pessoa não encontrada' });
       return;
     }
 
-    const existing = db.prepare(
-      'SELECT id FROM property_owners WHERE property_id = ? AND person_id = ?'
-    ).get(id, personId);
+    const existing = await queryRawOne(
+      'SELECT id FROM property_owners WHERE property_id = $1 AND person_id = $2', id, personId
+    );
 
     if (existing) {
-      db.prepare('UPDATE property_owners SET participation = ? WHERE id = ?').run(
+      await executeRaw('UPDATE property_owners SET participation = $1 WHERE id = $2',
         participation || 0, (existing as { id: string }).id
       );
     } else {
-      db.prepare(`
+      await executeRaw(`
         INSERT INTO property_owners (id, property_id, person_id, participation)
-        VALUES (?, ?, ?, ?)
-      `).run(randomUUID(), id, personId, participation || 0);
+        VALUES ($1, $2, $3, $4)
+      `, randomUUID(), id, personId, participation || 0);
     }
 
-    db.prepare(`
+    await executeRaw(`
       INSERT INTO property_timeline (id, property_id, action, description, created_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
-    `).run(randomUUID(), id, 'Proprietário vinculado', 'Novo proprietário vinculado ao imóvel');
+      VALUES ($1, $2, $3, $4, NOW())
+    `, randomUUID(), id, 'Proprietário vinculado', 'Novo proprietário vinculado ao imóvel');
 
     res.json({ success: true });
   } catch (error) {
@@ -530,10 +497,10 @@ router.post('/:id/owners', (req, res) => {
   }
 });
 
-router.delete('/:id/owners/:ownerLinkId', (req, res) => {
+router.delete('/:id/owners/:ownerLinkId', async (req, res) => {
   try {
     const { id, ownerLinkId } = req.params;
-    db.prepare('DELETE FROM property_owners WHERE id = ? AND property_id = ?').run(ownerLinkId, id);
+    await executeRaw('DELETE FROM property_owners WHERE id = $1 AND property_id = $2', ownerLinkId, id);
     res.json({ success: true });
   } catch (error) {
     console.error('[Properties Remove Owner] Erro:', error);
@@ -541,12 +508,12 @@ router.delete('/:id/owners/:ownerLinkId', (req, res) => {
   }
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = db.prepare('SELECT id FROM properties WHERE id = ?').get(id);
+    const existing = await queryRawOne('SELECT id FROM properties WHERE id = $1', id);
     if (!existing) { res.status(404).json({ error: 'Imóvel não encontrado' }); return; }
-    db.prepare('UPDATE properties SET deleted_at = datetime(\'now\') WHERE id = ?').run(id);
+    await executeRaw('UPDATE properties SET deleted_at = NOW() WHERE id = $1', id);
     res.json({ success: true });
   } catch (error) {
     console.error('[Properties Delete] Erro:', error);
@@ -554,10 +521,10 @@ router.delete('/:id', (req, res) => {
   }
 });
 
-router.post('/:id/archive', (req, res) => {
+router.post('/:id/archive', async (req, res) => {
   try {
     const { id } = req.params;
-    db.prepare('UPDATE properties SET archived_at = datetime(\'now\') WHERE id = ?').run(id);
+    await executeRaw('UPDATE properties SET archived_at = NOW() WHERE id = $1', id);
     res.json({ success: true });
   } catch (error) {
     console.error('[Properties Archive] Erro:', error);

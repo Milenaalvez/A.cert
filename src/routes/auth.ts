@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { randomUUID, randomBytes } from 'node:crypto';
-import db from '../database.js';
+import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 import { gerarToken, authMiddleware } from '../middleware/auth.js';
 import { enviarEmailConfirmacao, enviarEmailRedefinirSenha } from '../services/email.service.js';
 import { validarSenhaForte, validarEmail } from '../utils/validation.js';
@@ -9,7 +9,7 @@ import { checkCaptchaVerified } from './captcha.js';
 
 const router = Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { name, email, password, captchaToken } = req.body;
 
@@ -34,7 +34,7 @@ router.post('/register', (req, res) => {
       return;
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = await queryRawOne('SELECT id FROM users WHERE email = $1', email);
     if (existing) {
       res.status(409).json({ error: 'Este email já está cadastrado' });
       return;
@@ -45,9 +45,10 @@ router.post('/register', (req, res) => {
     const confirmation_token = randomBytes(32).toString('hex');
     const created_at = new Date().toISOString();
 
-    db.prepare(
-      'INSERT INTO users (id, name, email, password_hash, confirmation_token, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(id, name.trim(), email.toLowerCase().trim(), password_hash, confirmation_token, created_at);
+    await executeRaw(
+      'INSERT INTO users (id, name, email, password_hash, confirmation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+      id, name.trim(), email.toLowerCase().trim(), password_hash, confirmation_token, created_at
+    );
 
     const smtpConfigurado = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
     enviarEmailConfirmacao(email.trim(), name.trim(), confirmation_token);
@@ -71,13 +72,13 @@ router.post('/register', (req, res) => {
   }
 });
 
-router.get('/confirmar/:token', (req, res) => {
+router.get('/confirmar/:token', async (req, res) => {
   try {
     const { token } = req.params;
 
-    const user = db.prepare(
-      'SELECT id, email_confirmed FROM users WHERE confirmation_token = ?'
-    ).get(token) as { id: string; email_confirmed: number } | undefined;
+    const user = await queryRawOne(
+      'SELECT id, email_confirmed FROM users WHERE confirmation_token = $1', token
+    );
 
     if (!user) {
       res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?confirmacao=invalido`);
@@ -89,7 +90,7 @@ router.get('/confirmar/:token', (req, res) => {
       return;
     }
 
-    db.prepare('UPDATE users SET email_confirmed = 1, confirmation_token = NULL WHERE id = ?').run(user.id);
+    await executeRaw('UPDATE users SET email_confirmed = 1, confirmation_token = NULL WHERE id = $1', user.id);
 
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?confirmacao=ok`);
   } catch (error) {
@@ -98,7 +99,7 @@ router.get('/confirmar/:token', (req, res) => {
   }
 });
 
-router.post('/reenviar-confirmacao', (req, res) => {
+router.post('/reenviar-confirmacao', async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -107,9 +108,9 @@ router.post('/reenviar-confirmacao', (req, res) => {
       return;
     }
 
-    const user = db.prepare(
-      'SELECT id, name, email_confirmed FROM users WHERE email = ?'
-    ).get(email.toLowerCase().trim()) as { id: string; name: string; email_confirmed: number } | undefined;
+    const user = await queryRawOne(
+      'SELECT id, name, email_confirmed FROM users WHERE email = $1', email.toLowerCase().trim()
+    );
 
     if (!user) {
       res.status(404).json({ error: 'Email não encontrado' });
@@ -122,7 +123,7 @@ router.post('/reenviar-confirmacao', (req, res) => {
     }
 
     const confirmation_token = randomBytes(32).toString('hex');
-    db.prepare('UPDATE users SET confirmation_token = ? WHERE id = ?').run(confirmation_token, user.id);
+    await executeRaw('UPDATE users SET confirmation_token = $1 WHERE id = $2', confirmation_token, user.id);
 
     enviarEmailConfirmacao(email.trim(), user.name, confirmation_token);
 
@@ -133,7 +134,7 @@ router.post('/reenviar-confirmacao', (req, res) => {
   }
 });
 
-router.post('/esqueci-senha', (req, res) => {
+router.post('/esqueci-senha', async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -142,9 +143,9 @@ router.post('/esqueci-senha', (req, res) => {
       return;
     }
 
-    const user = db.prepare(
-      'SELECT id, name FROM users WHERE email = ?'
-    ).get(email.toLowerCase().trim()) as { id: string; name: string } | undefined;
+    const user = await queryRawOne(
+      'SELECT id, name FROM users WHERE email = $1', email.toLowerCase().trim()
+    );
 
     // Não revela se o email existe ou não (segurança)
     if (!user) {
@@ -155,8 +156,8 @@ router.post('/esqueci-senha', (req, res) => {
     const reset_token = randomBytes(32).toString('hex');
     const reset_token_expires = new Date(Date.now() + 3600000).toISOString(); // 1h
 
-    db.prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?')
-      .run(reset_token, reset_token_expires, user.id);
+    await executeRaw('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3',
+      reset_token, reset_token_expires, user.id);
 
     enviarEmailRedefinirSenha(email.trim(), user.name, reset_token);
 
@@ -178,7 +179,7 @@ router.post('/esqueci-senha', (req, res) => {
   }
 });
 
-router.post('/verificar-token-redefinir', (req, res) => {
+router.post('/verificar-token-redefinir', async (req, res) => {
   try {
     const { token } = req.body;
 
@@ -187,9 +188,9 @@ router.post('/verificar-token-redefinir', (req, res) => {
       return;
     }
 
-    const user = db.prepare(
-      'SELECT id, reset_token_expires FROM users WHERE reset_token = ?'
-    ).get(token) as { id: string; reset_token_expires: string } | undefined;
+    const user = await queryRawOne(
+      'SELECT id, reset_token_expires FROM users WHERE reset_token = $1', token
+    );
 
     if (!user) {
       res.status(400).json({ error: 'Link inválido ou já utilizado.' });
@@ -208,7 +209,7 @@ router.post('/verificar-token-redefinir', (req, res) => {
   }
 });
 
-router.post('/redefinir-senha', (req, res) => {
+router.post('/redefinir-senha', async (req, res) => {
   try {
     const { token, password } = req.body;
 
@@ -223,9 +224,9 @@ router.post('/redefinir-senha', (req, res) => {
       return;
     }
 
-    const user = db.prepare(
-      'SELECT id, reset_token_expires FROM users WHERE reset_token = ?'
-    ).get(token) as { id: string; reset_token_expires: string } | undefined;
+    const user = await queryRawOne(
+      'SELECT id, reset_token_expires FROM users WHERE reset_token = $1', token
+    );
 
     if (!user) {
       res.status(400).json({ error: 'Link inválido ou já utilizado.' });
@@ -238,8 +239,8 @@ router.post('/redefinir-senha', (req, res) => {
     }
 
     const password_hash = bcrypt.hashSync(password, 10);
-    db.prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?')
-      .run(password_hash, user.id);
+    await executeRaw('UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
+      password_hash, user.id);
 
     res.json({ success: true, message: 'Senha atualizada com sucesso!' });
   } catch (error) {
@@ -248,7 +249,7 @@ router.post('/redefinir-senha', (req, res) => {
   }
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -257,9 +258,9 @@ router.post('/login', (req, res) => {
       return;
     }
 
-    const user = db.prepare(
-      'SELECT id, name, email, password_hash, email_confirmed, avatar, password_change_required FROM users WHERE email = ?'
-    ).get(email.toLowerCase().trim()) as { id: string; name: string; email: string; password_hash: string; email_confirmed: number; avatar: string | null; password_change_required: number } | undefined;
+    const user = await queryRawOne(
+      'SELECT id, name, email, password_hash, email_confirmed, avatar, password_change_required FROM users WHERE email = $1', email.toLowerCase().trim()
+    );
 
     if (!user) {
       res.status(401).json({ error: 'Email ou senha incorretos' });
@@ -277,7 +278,7 @@ router.post('/login', (req, res) => {
       return;
     }
 
-    db.prepare('UPDATE users SET last_access_at = datetime(\'now\') WHERE id = ?').run(user.id);
+    await executeRaw("UPDATE users SET last_access_at = NOW() WHERE id = $1", user.id);
 
     if (user.password_change_required) {
       const changeToken = gerarToken({ userId: user.id, email: user.email });
@@ -301,7 +302,7 @@ router.post('/login', (req, res) => {
   }
 });
 
-router.post('/trocar-senha', authMiddleware, (req, res) => {
+router.post('/trocar-senha', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -316,9 +317,9 @@ router.post('/trocar-senha', authMiddleware, (req, res) => {
       return;
     }
 
-    const user = db.prepare(
-      'SELECT password_hash, password_change_required FROM users WHERE id = ?'
-    ).get(req.user!.userId) as { password_hash: string; password_change_required: number } | undefined;
+    const user = await queryRawOne(
+      'SELECT password_hash, password_change_required FROM users WHERE id = $1', req.user!.userId
+    );
 
     if (!user) {
       res.status(404).json({ error: 'Usuário não encontrado' });
@@ -334,8 +335,8 @@ router.post('/trocar-senha', authMiddleware, (req, res) => {
     }
 
     const password_hash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ?, password_change_required = 0 WHERE id = ?')
-      .run(password_hash, req.user!.userId);
+    await executeRaw('UPDATE users SET password_hash = $1, password_change_required = 0 WHERE id = $2',
+      password_hash, req.user!.userId);
 
     const token = gerarToken({ userId: req.user!.userId, email: req.user!.email });
 
@@ -346,12 +347,12 @@ router.post('/trocar-senha', authMiddleware, (req, res) => {
   }
 });
 
-router.get('/me', authMiddleware, (req, res) => {
+router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const user = db.prepare(
+    const user = await queryRawOne(
       `SELECT id, name, email, phone, avatar, role, registration_number, created_at, last_access_at
-       FROM users WHERE id = ?`
-    ).get(req.user!.userId) as Record<string, unknown> | undefined;
+       FROM users WHERE id = $1`, req.user!.userId
+    );
 
     if (!user) {
       res.status(404).json({ error: 'Usuário não encontrado' });
@@ -365,14 +366,15 @@ router.get('/me', authMiddleware, (req, res) => {
   }
 });
 
-router.put('/me', authMiddleware, (req, res) => {
+router.put('/me', authMiddleware, async (req, res) => {
   try {
     const { phone, avatar } = req.body;
     const updates: string[] = [];
     const params: unknown[] = [];
 
-    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
-    if (avatar !== undefined) { updates.push('avatar = ?'); params.push(avatar); }
+    let idx = 1;
+    if (phone !== undefined) { updates.push(`phone = $${idx}`); params.push(phone); idx++; }
+    if (avatar !== undefined) { updates.push(`avatar = $${idx}`); params.push(avatar); idx++; }
 
     if (updates.length === 0) {
       res.status(400).json({ error: 'Nenhum campo para atualizar' });
@@ -380,12 +382,12 @@ router.put('/me', authMiddleware, (req, res) => {
     }
 
     params.push(req.user!.userId);
-    db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    await executeRaw(`UPDATE users SET ${updates.join(', ')} WHERE id = $${idx}`, ...params);
 
-    const user = db.prepare(
+    const user = await queryRawOne(
       `SELECT id, name, email, phone, avatar, role, registration_number, created_at, last_access_at
-       FROM users WHERE id = ?`
-    ).get(req.user!.userId);
+       FROM users WHERE id = $1`, req.user!.userId
+    );
 
     res.json({ success: true, user });
   } catch (error) {
@@ -400,29 +402,29 @@ const ROLES_LABEL: Record<string, string> = {
   EMPLOYE: 'Corretor',
 };
 
-router.get('/me/stats', authMiddleware, (req, res) => {
+router.get('/me/stats', authMiddleware, async (req, res) => {
   try {
     const userId = req.user!.userId;
 
-    const dossiersEmAndamento = (db.prepare(
-      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = ? AND status = 'Em andamento' AND deleted_at IS NULL"
-    ).get(userId) as { count: number }).count;
+    const dossiersEmAndamento = (await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = $1 AND status = 'Em andamento' AND deleted_at IS NULL", userId
+    ) as { count: number }).count;
 
-    const dossiersConcluidos = (db.prepare(
-      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = ? AND status = 'Concluído' AND deleted_at IS NULL"
-    ).get(userId) as { count: number }).count;
+    const dossiersConcluidos = (await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = $1 AND status = 'Concluído' AND deleted_at IS NULL", userId
+    ) as { count: number }).count;
 
-    const totalCertidoes = (db.prepare(
+    const totalCertidoes = (await queryRawOne(
       `SELECT COUNT(*) as count FROM certificates c
        JOIN dossiers d ON c.dossier_id = d.id
-       WHERE d.created_by = ? AND c.status = 'Emitida'`
-    ).get(userId) as { count: number }).count;
+       WHERE d.created_by = $1 AND c.status = 'Emitida'`, userId
+    ) as { count: number }).count;
 
-    const recentActivities = db.prepare(
+    const recentActivities = await queryRaw(
       `SELECT id, action, reference, dossier_ref, created_at
-       FROM activities WHERE user_name = (SELECT name FROM users WHERE id = ?)
-       ORDER BY created_at DESC LIMIT 15`
-    ).all(userId);
+       FROM activities WHERE user_name = (SELECT name FROM users WHERE id = $1)
+       ORDER BY created_at DESC LIMIT 15`, userId
+    ) as any[];
 
     res.json({
       dossiersEmAndamento,

@@ -1,30 +1,24 @@
 import { Router } from 'express';
 import { randomUUID, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import db from '../database.js';
+import prisma, { queryRaw } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
-function isAdmin(req: any): boolean {
-  return req.user?.email && db.prepare("SELECT role FROM users WHERE id = ? AND role = 'ADMIN'").get(req.user.userId) !== undefined;
-}
-
-router.get('/', authMiddleware, (_req, res) => {
+router.get('/', authMiddleware, async (_req, res) => {
   try {
-    const rows = db.prepare(`
-      SELECT c.*,
-        (SELECT COUNT(*) FROM users WHERE company_id = c.id AND deleted_at IS NULL) as user_count
-      FROM companies c
-      ORDER BY c.created_at DESC
-    `).all();
+    const rows = await queryRaw(
+      `SELECT c.*, (SELECT COUNT(*) FROM users WHERE company_id = c.id AND deleted_at IS NULL)::int as user_count
+      FROM companies c ORDER BY c.created_at DESC`
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao carregar empresas' });
   }
 });
 
-router.post('/', authMiddleware, (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { name, cnpj, plan, license_expires_at, admin_email, admin_name } = req.body;
 
@@ -34,24 +28,35 @@ router.post('/', authMiddleware, (req, res) => {
     }
 
     const companyId = randomUUID();
-    db.prepare(`
-      INSERT INTO companies (id, name, cnpj, plan, license_status, license_expires_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(companyId, name.trim(), cnpj || null, plan || 'trial', 'active', license_expires_at || null);
+    await prisma.company.create({
+      data: {
+        id: companyId, name: name.trim(), cnpj: cnpj || null,
+        plan: plan || 'trial', licenseStatus: 'active',
+        licenseExpiresAt: license_expires_at || null,
+        createdAt: new Date().toISOString(),
+      },
+    });
 
     const userId = randomUUID();
     const tempPassword = randomBytes(4).toString('hex');
     const password_hash = bcrypt.hashSync(tempPassword, 10);
+    const now = new Date().toISOString();
 
-    db.prepare(`
-      INSERT INTO users (id, name, email, password_hash, role, company_id, password_change_required, email_verified, is_active, created_at)
-      VALUES (?, ?, ?, ?, 'ADMIN', ?, 1, 1, 1, datetime('now'))
-    `).run(userId, admin_name.trim(), admin_email.toLowerCase().trim(), password_hash, companyId);
+    await prisma.user.create({
+      data: {
+        id: userId, name: admin_name.trim(), email: admin_email.toLowerCase().trim(),
+        passwordHash: password_hash, role: 'ADMIN', companyId,
+        passwordChangeRequired: 1, emailVerified: 1, isActive: 1, createdAt: now,
+      },
+    });
 
-    db.prepare(`
-      INSERT INTO team_activities (id, user_id, user_name, action, description, entity_type, entity_id, timestamp)
-      VALUES (?, ?, ?, 'CREATE_COMPANY', ?, 'company', ?, datetime('now'))
-    `).run(randomUUID(), userId, admin_name.trim(), `Empresa ${name.trim()} criada com admin ${admin_name.trim()}`, companyId);
+    await prisma.teamActivity.create({
+      data: {
+        id: randomUUID(), userId, userName: admin_name.trim(), action: 'CREATE_COMPANY',
+        description: `Empresa ${name.trim()} criada com admin ${admin_name.trim()}`,
+        entityType: 'company', entityId: companyId, timestamp: now,
+      },
+    });
 
     res.status(201).json({
       company: { id: companyId, name: name.trim() },
@@ -63,18 +68,23 @@ router.post('/', authMiddleware, (req, res) => {
   }
 });
 
-router.put('/:id', authMiddleware, (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { name, cnpj, plan, license_status, license_expires_at, logo_url } = req.body;
-    const existing = db.prepare('SELECT id FROM companies WHERE id = ?').get(req.params.id);
+    const existing = await prisma.company.findUnique({ where: { id: req.params.id as string } });
     if (!existing) { res.status(404).json({ error: 'Empresa não encontrada' }); return; }
 
-    db.prepare(`
-      UPDATE companies SET name = COALESCE(?, name), cnpj = COALESCE(?, cnpj), plan = COALESCE(?, plan),
-        license_status = COALESCE(?, license_status), license_expires_at = COALESCE(?, license_expires_at),
-        logo_url = COALESCE(?, logo_url)
-      WHERE id = ?
-    `).run(name || null, cnpj || null, plan || null, license_status || null, license_expires_at || null, logo_url || null, req.params.id);
+    await prisma.company.update({
+      where: { id: req.params.id as string },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(cnpj !== undefined && { cnpj }),
+        ...(plan !== undefined && { plan }),
+        ...(license_status !== undefined && { licenseStatus: license_status }),
+        ...(license_expires_at !== undefined && { licenseExpiresAt: license_expires_at }),
+        ...(logo_url !== undefined && { logoUrl: logo_url }),
+      },
+    });
 
     res.json({ success: true });
   } catch (err) {
@@ -82,9 +92,9 @@ router.put('/:id', authMiddleware, (req, res) => {
   }
 });
 
-router.get('/:id/settings', authMiddleware, (req, res) => {
+router.get('/:id/settings', authMiddleware, async (req, res) => {
   try {
-    const rows = db.prepare('SELECT key, value FROM company_settings WHERE company_id = ?').all(req.params.id) as any[];
+    const rows = await prisma.companySetting.findMany({ where: { companyId: req.params.id as string } });
     const settings: Record<string, string> = {};
     for (const r of rows) settings[r.key] = r.value;
     res.json(settings);
@@ -93,14 +103,15 @@ router.get('/:id/settings', authMiddleware, (req, res) => {
   }
 });
 
-router.put('/:id/settings', authMiddleware, (req, res) => {
+router.put('/:id/settings', authMiddleware, async (req, res) => {
   try {
     const body = req.body as Record<string, string>;
-    const upsert = db.prepare(
-      'INSERT INTO company_settings (company_id, key, value) VALUES (?, ?, ?) ON CONFLICT(company_id, key) DO UPDATE SET value = excluded.value'
-    );
     for (const [key, value] of Object.entries(body)) {
-      upsert.run(req.params.id, key, value);
+      await prisma.companySetting.upsert({
+        where: { companyId_key: { companyId: req.params.id as string, key } },
+        create: { companyId: req.params.id as string, key, value },
+        update: { value },
+      });
     }
     res.json({ success: true });
   } catch (err) {
@@ -108,20 +119,25 @@ router.put('/:id/settings', authMiddleware, (req, res) => {
   }
 });
 
-router.post('/:id/resend-credentials', authMiddleware, (req, res) => {
+router.post('/:id/resend-credentials', authMiddleware, async (req, res) => {
   try {
-    const company = db.prepare('SELECT id, name FROM companies WHERE id = ?').get(req.params.id) as any;
+    const company = await prisma.company.findUnique({ where: { id: req.params.id as string } });
     if (!company) { res.status(404).json({ error: 'Empresa não encontrada' }); return; }
 
-    const admins = db.prepare("SELECT id, name, email FROM users WHERE company_id = ? AND role = 'ADMIN'").all(req.params.id) as any[];
+    const admins = await prisma.user.findMany({
+      where: { companyId: req.params.id as string, role: 'ADMIN' },
+      select: { id: true, name: true, email: true },
+    });
     if (admins.length === 0) { res.status(400).json({ error: 'Nenhum admin encontrado para esta empresa' }); return; }
 
     const tempPassword = randomBytes(4).toString('hex');
     const password_hash = bcrypt.hashSync(tempPassword, 10);
 
     for (const admin of admins) {
-      db.prepare('UPDATE users SET password_hash = ?, password_change_required = 1 WHERE id = ?')
-        .run(password_hash, admin.id);
+      await prisma.user.update({
+        where: { id: admin.id },
+        data: { passwordHash: password_hash, passwordChangeRequired: 1 },
+      });
     }
 
     res.json({

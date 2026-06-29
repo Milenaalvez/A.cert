@@ -1,124 +1,79 @@
 import { Router } from 'express';
-import db from '../database.js';
+import prisma from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
-const ENTITY_MAP: Record<string, { table: string; label: string; idField: string; selectFields: string }> = {
-  pessoas: {
-    table: 'persons',
-    label: 'Pessoa',
-    idField: 'id',
-    selectFields: 'id, name as title, cpf as subtitle1, email as subtitle2, created_at, archived_at, deleted_at',
-  },
-  imoveis: {
-    table: 'properties',
-    label: 'Imóvel',
-    idField: 'id',
-    selectFields: "id, identifier as title, address as subtitle1, registration as subtitle2, type, created_at, deleted_at",
-  },
-  dossies: {
-    table: 'dossiers',
-    label: 'Dossiê',
-    idField: 'id',
-    selectFields: 'id, identifier as title, status as subtitle1, created_by as subtitle2, created_at, archived_at, deleted_at',
-  },
-  usuarios: {
-    table: 'users',
-    label: 'Usuário',
-    idField: 'id',
-    selectFields: "id, name as title, email as subtitle1, role as subtitle2, created_at, is_active, deleted_at",
-  },
-};
-
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const type = (_req.query.type as string) || '';
-    const keys = type ? [type] : Object.keys(ENTITY_MAP);
-    const results: any[] = [];
 
-    for (const key of keys) {
-      const cfg = ENTITY_MAP[key];
-      if (!cfg) continue;
+    const personas = (!type || type === 'pessoas') ? await prisma.person.findMany({
+      where: { OR: [{ archivedAt: { not: null } }, { deletedAt: { not: null } }] },
+      select: { id: true, name: true, cpf: true, email: true, createdAt: true, archivedAt: true, deletedAt: true },
+      orderBy: { createdAt: 'desc' }, take: 100,
+    }).then(rows => rows.map(r => ({
+      id: r.id, title: r.name, subtitle1: r.cpf || '', subtitle2: r.email || '',
+      entityType: 'pessoas', entityLabel: 'Pessoa', archivedAt: r.archivedAt, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: {},
+    }))) : [];
 
-      let query: string;
-      let params: any[] = [];
+    const imoveis = (!type || type === 'imoveis') ? await prisma.property.findMany({
+      where: { OR: [{ deletedAt: { not: null } }] },
+      select: { id: true, identifier: true, address: true, registration: true, type: true, createdAt: true, deletedAt: true },
+      orderBy: { createdAt: 'desc' }, take: 100,
+    }).then(rows => rows.map(r => ({
+      id: r.id, title: r.identifier || '', subtitle1: r.address || '', subtitle2: r.registration || '',
+      entityType: 'imoveis', entityLabel: 'Imóvel', archivedAt: null, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: { type: r.type, registration: r.registration },
+    }))) : [];
 
-      if (key === 'usuarios') {
-        query = `SELECT ${cfg.selectFields}, ? as entity_type FROM ${cfg.table} WHERE is_active = 0 OR deleted_at IS NOT NULL`;
-        params = [key];
-      } else {
-        query = `SELECT ${cfg.selectFields}, ? as entity_type FROM ${cfg.table} WHERE archived_at IS NOT NULL OR deleted_at IS NOT NULL`;
-        params = [key];
-      }
+    const dossies = (!type || type === 'dossies') ? await prisma.dossier.findMany({
+      where: { OR: [{ archivedAt: { not: null } }, { deletedAt: { not: null } }] },
+      select: { id: true, identifier: true, status: true, createdBy: true, createdAt: true, archivedAt: true, deletedAt: true },
+      orderBy: { createdAt: 'desc' }, take: 100,
+    }).then(rows => rows.map(r => ({
+      id: r.id, title: r.identifier || '', subtitle1: r.status || '', subtitle2: r.createdBy || '',
+      entityType: 'dossies', entityLabel: 'Dossiê', archivedAt: r.archivedAt, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: {},
+    }))) : [];
 
-      if (key === 'usuarios') {
-        query += ` ORDER BY COALESCE(deleted_at, created_at) DESC LIMIT 100`;
-      } else {
-        query += ` ORDER BY COALESCE(deleted_at, archived_at, created_at) DESC LIMIT 100`;
-      }
+    const usuarios = (!type || type === 'usuarios') ? await prisma.user.findMany({
+      where: { OR: [{ isActive: 0 }, { deletedAt: { not: null } }] },
+      select: { id: true, name: true, email: true, role: true, createdAt: true, isActive: true, deletedAt: true },
+      orderBy: { createdAt: 'desc' }, take: 100,
+    }).then(rows => rows.map(r => ({
+      id: r.id, title: r.name, subtitle1: r.email, subtitle2: r.role || '',
+      entityType: 'usuarios', entityLabel: 'Usuário', archivedAt: null, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: { isActive: r.isActive },
+    }))) : [];
 
-      const rows = db.prepare(query).all(...params) as any[];
-      for (const row of rows) {
-        results.push({
-          id: row.id,
-          title: row.title,
-          subtitle1: row.subtitle1 || '',
-          subtitle2: row.subtitle2 || '',
-          entityType: row.entity_type,
-          entityLabel: cfg.label,
-          archivedAt: row.archived_at || null,
-          deletedAt: row.deleted_at || null,
-          createdAt: row.created_at,
-          extra: key === 'imoveis' ? { type: row.type, registration: row.subtitle2 } : {},
-        });
-      }
-    }
-
-    const total = results.length;
+    const results = [...personas, ...imoveis, ...dossies, ...usuarios];
     results.sort((a, b) => {
       const dateA = new Date(a.deletedAt || a.archivedAt || a.createdAt).getTime();
       const dateB = new Date(b.deletedAt || b.archivedAt || b.createdAt).getTime();
       return dateB - dateA;
     });
 
-    res.json({ items: results, total });
+    res.json({ items: results, total: results.length });
   } catch (err) {
     console.error('[Trash] Erro ao listar:', err);
     res.status(500).json({ error: 'Erro ao carregar lixeira' });
   }
 });
 
-// GET /api/trash/:entity/:id — detalhes do item
-router.get('/:entity/:id', (req, res) => {
+router.post('/:entity/:id/restore', authMiddleware, async (req, res) => {
   try {
     const entity = req.params.entity as string;
     const id = req.params.id as string;
-    const cfg = ENTITY_MAP[entity];
-    if (!cfg) { res.status(400).json({ error: 'Entidade inválida' }); return; }
-
-    const row = db.prepare(`SELECT * FROM ${cfg.table} WHERE ${cfg.idField} = ?`).get(id) as any;
-    if (!row) { res.status(404).json({ error: 'Item não encontrado' }); return; }
-
-    res.json(row);
-  } catch (err) {
-    console.error('[Trash] Erro ao buscar detalhes:', err);
-    res.status(500).json({ error: 'Erro ao buscar detalhes' });
-  }
-});
-
-// POST /api/trash/:entity/:id/restore
-router.post('/:entity/:id/restore', authMiddleware, (req, res) => {
-  try {
-    const entity = req.params.entity as string;
-    const id = req.params.id as string;
-    const cfg = ENTITY_MAP[entity];
-    if (!cfg) { res.status(400).json({ error: 'Entidade inválida' }); return; }
 
     if (entity === 'usuarios') {
-      db.prepare(`UPDATE ${cfg.table} SET is_active = 1, deleted_at = NULL WHERE ${cfg.idField} = ?`).run(id);
+      await prisma.user.update({ where: { id }, data: { isActive: 1, deletedAt: null } });
+    } else if (entity === 'pessoas') {
+      await prisma.person.update({ where: { id }, data: { archivedAt: null, deletedAt: null } });
+    } else if (entity === 'imoveis') {
+      await prisma.property.update({ where: { id }, data: { deletedAt: null } });
+    } else if (entity === 'dossies') {
+      await prisma.dossier.update({ where: { id }, data: { archivedAt: null, deletedAt: null } });
     } else {
-      db.prepare(`UPDATE ${cfg.table} SET archived_at = NULL, deleted_at = NULL WHERE ${cfg.idField} = ?`).run(id);
+      res.status(400).json({ error: 'Entidade inválida' });
+      return;
     }
 
     res.json({ success: true });
@@ -128,20 +83,22 @@ router.post('/:entity/:id/restore', authMiddleware, (req, res) => {
   }
 });
 
-// DELETE /api/trash/:entity/:id — exclusão permanente
-router.delete('/:entity/:id', authMiddleware, (req, res) => {
+router.delete('/:entity/:id', authMiddleware, async (req, res) => {
   try {
     const entity = req.params.entity as string;
     const id = req.params.id as string;
-    const cfg = ENTITY_MAP[entity];
-    if (!cfg) { res.status(400).json({ error: 'Entidade inválida' }); return; }
 
     if (entity === 'dossies') {
-      db.prepare('DELETE FROM certificates WHERE dossier_id = ?').run(id);
-      db.prepare('DELETE FROM activities WHERE dossier_ref = ?').run(id);
+      await prisma.certificate.deleteMany({ where: { dossierId: id } });
+      await prisma.activity.deleteMany({ where: { dossierRef: id } });
     }
 
-    db.prepare(`DELETE FROM ${cfg.table} WHERE ${cfg.idField} = ?`).run(id);
+    if (entity === 'usuarios') await prisma.user.delete({ where: { id } });
+    else if (entity === 'pessoas') await prisma.person.delete({ where: { id } });
+    else if (entity === 'imoveis') await prisma.property.delete({ where: { id } });
+    else if (entity === 'dossies') await prisma.dossier.delete({ where: { id } });
+    else { res.status(400).json({ error: 'Entidade inválida' }); return; }
+
     res.json({ success: true });
   } catch (err) {
     console.error('[Trash] Erro ao excluir permanentemente:', err);

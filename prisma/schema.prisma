@@ -1,0 +1,383 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                     String   @id @default(uuid())
+  name                   String
+  email                  String   @unique
+  passwordHash           String   @map("password_hash")
+  phone                  String?
+  uf                     String   @default("")
+  emailConfirmed         Int      @default(0) @map("email_confirmed")
+  confirmationToken      String?  @map("confirmation_token")
+  resetToken             String?  @map("reset_token")
+  resetTokenExpires      String?  @map("reset_token_expires")
+  role                   String   @default("EMPLOYEE")
+  departmentId           String?  @map("department_id")
+  positionId             String?  @map("position_id")
+  contractType           String   @default("CLT") @map("contract_type")
+  weeklyHours            Int      @default(40) @map("weekly_hours")
+  workSchedule           String   @default("Seg-Sex") @map("work_schedule")
+  hireDate               String?  @map("hire_date")
+  isActive               Int      @default(1) @map("is_active")
+  emailVerified          Int      @default(0) @map("email_verified")
+  lastAccessAt           String?  @map("last_access_at")
+  companyId              String?  @map("company_id")
+  avatar                 String?
+  registrationNumber     String?  @map("registration_number")
+  employeeCode           String?  @map("employee_code")
+  birthDate              String?  @map("birth_date")
+  city                   String?
+  address                String?
+  passwordChangeRequired Int      @default(0) @map("password_change_required")
+  deletedAt              String?  @map("deleted_at")
+  createdAt              String   @default("") @map("created_at")
+
+  company        Company?         @relation(fields: [companyId], references: [id])
+  department     Department?      @relation(fields: [departmentId], references: [id])
+  position       Position?        @relation(fields: [positionId], references: [id])
+  justifications Justification[]
+  timeRecords    TimeRecord[]
+  userPermissions UserPermission[]
+  teamActivities TeamActivity[]
+  auditLogs      AuditLog[]
+}
+
+model Person {
+  id               String   @id @default(uuid())
+  name             String
+  cpf              String?  @unique
+  cnpj             String?
+  email            String?
+  phone            String?
+  cellPhone        String?  @map("cell_phone")
+  rg               String?
+  birthDate        String?  @map("birth_date")
+  motherName       String?  @map("mother_name")
+  fatherName       String?  @map("father_name")
+  maritalStatus    String   @default("") @map("marital_status")
+  nationality      String   @default("Brasileiro(a)")
+  zipCode          String?  @map("zip_code")
+  city             String?
+  state            String?
+  address          String?
+  observation      String?
+  isPreCadastro    Int      @default(0) @map("is_pre_cadastro")
+  archivedAt       String?  @map("archived_at")
+  deletedAt        String?  @map("deleted_at")
+  createdAt        String   @default("") @map("created_at")
+
+  dossierParticipants DossierParticipant[]
+  propertyOwners      PropertyOwner[]
+  personRelationsFrom PersonRelationship[] @relation("PersonFrom")
+  personRelationsTo   PersonRelationship[] @relation("PersonTo")
+  certificates        Certificate[]
+  dossiers            Dossier[]           @relation("DossierPerson")
+  ownedProperties     Property[]          @relation("PropertyOwnerRel")
+}
+
+model Property {
+  id           String   @id @default(uuid())
+  identifier   String
+  registration String   @default("")
+  type         String   @default("Apartamento")
+  address      String
+  ownerId      String?  @map("owner_id")
+  notaryOffice String   @default("") @map("notary_office")
+  cartorio     String   @default("")
+  status       String   @default("Regular")
+  neighborhood String   @default("")
+  city         String   @default("")
+  state        String   @default("")
+  zipCode      String   @default("") @map("zip_code")
+  area         String   @default("")
+  landArea     String   @default("") @map("land_area")
+  description  String   @default("")
+  deletedAt    String?  @map("deleted_at")
+  createdAt    String   @default("") @map("created_at")
+  updatedAt    String   @default("") @map("updated_at")
+
+  owner        Person?   @relation("PropertyOwnerRel", fields: [ownerId], references: [id])
+  dossiers     Dossier[]
+  owners       PropertyOwner[]
+  timeline     PropertyTimeline[]
+}
+
+model Dossier {
+  id              String   @id @default(uuid())
+  identifier      String   @unique
+  personId        String?  @map("person_id")
+  propertyId      String?  @map("property_id")
+  status          String   @default("Em andamento")
+  priority        String   @default("Regular")
+  createdBy       String?  @map("created_by")
+  observation     String   @default("")
+  transactionType String   @default("venda") @map("transaction_type")
+  archivedAt      String?  @map("archived_at")
+  deletedAt       String?  @map("deleted_at")
+  createdAt       String   @default("") @map("created_at")
+  updatedAt       String   @default("") @map("updated_at")
+
+  person       Person?              @relation("DossierPerson", fields: [personId], references: [id])
+  property     Property?            @relation(fields: [propertyId], references: [id])
+  participants DossierParticipant[]
+  certificates Certificate[]
+  activities   Activity[]
+}
+
+model Certificate {
+  id           String   @id @default(uuid())
+  dossierId    String?  @map("dossier_id")
+  personId     String?  @map("person_id")
+  name         String
+  organ        String
+  status       String   @default("Pendente")
+  protocol     String?
+  obtainedAt   String?  @map("obtained_at")
+  documentPath String?  @map("document_path")
+  certType     String   @default("") @map("cert_type")
+  createdAt    String   @default("") @map("created_at")
+
+  dossier Dossier? @relation(fields: [dossierId], references: [id])
+  person  Person?  @relation(fields: [personId], references: [id])
+}
+
+model DossierParticipant {
+  dossierId String @map("dossier_id")
+  personId  String @map("person_id")
+  role      String @default("proprietario")
+
+  dossier Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id])
+
+  @@id([dossierId, personId])
+  @@map("dossier_participants")
+}
+
+model Company {
+  id               String   @id @default(uuid())
+  name             String
+  cnpj             String?
+  logoUrl          String?  @map("logo_url")
+  plan             String   @default("trial")
+  licenseStatus    String   @default("active") @map("license_status")
+  licenseExpiresAt String?  @map("license_expires_at")
+  createdAt        String   @default("") @map("created_at")
+
+  users    User[]
+  settings CompanySetting[]
+}
+
+model CompanySetting {
+  companyId String @map("company_id")
+  key       String
+  value     String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, key])
+  @@map("company_settings")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt String   @default("") @map("created_at")
+
+  users     User[]
+  positions Position[]
+}
+
+model Position {
+  id           String   @id @default(uuid())
+  name         String
+  departmentId String?  @map("department_id")
+  createdAt    String   @default("") @map("created_at")
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  users      User[]
+}
+
+model Justification {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  reason      String
+  description String?
+  status      String   @default("PENDING")
+  rhResponse  String?  @map("rh_response")
+  startDate   String   @map("start_date")
+  endDate     String   @map("end_date")
+  createdAt   String   @default("") @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model TimeRecord {
+  id           String   @id @default(uuid())
+  userId       String?  @map("user_id")
+  date         String
+  clockIn      String?  @map("clock_in")
+  clockOut     String?  @map("clock_out")
+  breakStart   String?  @map("break_start")
+  breakEnd     String?  @map("break_end")
+  totalMinutes Int?     @map("total_minutes")
+  reviewStatus String   @default("PENDING") @map("review_status")
+  notes        String?
+  createdAt    String   @default("") @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model UserPermission {
+  userId     String @map("user_id")
+  permission String
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([userId, permission])
+  @@map("user_permissions")
+}
+
+model TeamActivity {
+  id             String   @id @default(uuid())
+  userId         String?  @map("user_id")
+  userName       String   @map("user_name")
+  action         String
+  description    String?
+  entityType     String?  @map("entity_type")
+  entityId       String?  @map("entity_id")
+  targetUserId   String?  @map("target_user_id")
+  targetUserName String?  @map("target_user_name")
+  timestamp      String   @default("")
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model PropertyOwner {
+  id            String @id @default(uuid())
+  propertyId    String @map("property_id")
+  personId      String @map("person_id")
+  participation Float  @default(0)
+  createdAt     String @default("") @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  person   Person   @relation(fields: [personId], references: [id])
+
+  @@unique([propertyId, personId])
+  @@map("property_owners")
+}
+
+model PropertyTimeline {
+  id          String   @id @default(uuid())
+  propertyId  String   @map("property_id")
+  action      String
+  description String?
+  createdAt   String   @default("") @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_timeline")
+}
+
+model PersonRelationship {
+  id               String   @id @default(uuid())
+  personId         String   @map("person_id")
+  relatedPersonId  String   @map("related_person_id")
+  relationshipType String   @default("parental") @map("relationship_type")
+  createdAt        String   @default("") @map("created_at")
+
+  person         Person @relation("PersonFrom", fields: [personId], references: [id])
+  relatedPerson  Person @relation("PersonTo", fields: [relatedPersonId], references: [id])
+
+  @@unique([personId, relatedPersonId])
+  @@map("person_relationships")
+}
+
+model Activity {
+  id         String   @id @default(uuid())
+  userName   String   @map("user_name")
+  action     String
+  reference  String?
+  dossierRef String?  @map("dossier_ref")
+  createdAt  String   @default("") @map("created_at")
+
+  dossier Dossier? @relation(fields: [dossierRef], references: [id])
+
+  @@map("activities")
+}
+
+model Organ {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  status          String   @default("online")
+  lastSync        String?  @map("last_sync")
+  avgResponseTime String   @default("—") @map("avg_response_time")
+  lastQuery       String?  @map("last_query")
+  tokenExpiry     String?  @map("token_expiry")
+  tokenUpdatedAt  String?  @map("token_updated_at")
+  updatedAt       String   @default("") @map("updated_at")
+
+  @@map("organs")
+}
+
+model CertificateTemplate {
+  id                String  @id @default(uuid())
+  key               String  @unique
+  label             String
+  category          String  @default("pessoal")
+  siteUrl           String  @default("") @map("site_url")
+  ordem             Int     @default(0)
+  requiresOrgao     String  @default("") @map("requires_orgao")
+  requiresCartorio  Int     @default(0) @map("requires_cartorio")
+  requiresInscricao Int     @default(0) @map("requires_inscricao")
+  type              String  @default("pessoa_fisica")
+  intervalMs        Int     @default(0) @map("interval_ms")
+  createdAt         String  @default("") @map("created_at")
+
+  @@map("certificate_templates")
+}
+
+model Setting {
+  key       String @id
+  value     String
+  updatedAt String @default("") @map("updated_at")
+
+  @@map("settings")
+}
+
+model SupportTicket {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  category  String   @default("Problema técnico")
+  message   String
+  protocol  String   @unique
+  status    String   @default("Aberto")
+  createdAt String   @default("") @map("created_at")
+  updatedAt String?  @map("updated_at")
+
+  @@map("support_tickets")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  userName  String?  @map("user_name")
+  action    String
+  module    String
+  detail    String?
+  ipAddress String   @default("") @map("ip_address")
+  result    String   @default("success")
+  createdAt String   @default("") @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_log")
+}

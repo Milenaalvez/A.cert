@@ -1,113 +1,116 @@
 import { Router } from 'express';
-import db from '../database.js';
+import prisma, { queryRaw, queryRawOne } from '../lib/prisma.js';
 
 const router = Router();
 
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   try {
-    const dossiersAndamento = db.prepare(
+    const dossiersAndamento = await queryRawOne(
       "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Em andamento'"
-    ).get() as { count: number };
+    ) as { count: number };
 
     const semanasPassada = new Date();
     semanasPassada.setDate(semanasPassada.getDate() - 7);
 
-    const pendenciasCriticas = db.prepare(
+    const pendenciasCriticas = await queryRawOne(
       "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Pendente'"
-    ).get() as { count: number };
+    ) as { count: number };
 
-    const pendenciasSemanaPassada = db.prepare(
-      "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Pendente' AND created_at < ?"
-    ).get(semanasPassada.toISOString()) as { count: number };
+    const pendenciasSemanaPassada = await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Pendente' AND created_at < $1",
+      semanasPassada.toISOString()
+    ) as { count: number };
 
-    const certidoesEmitidas = db.prepare(
+    const certidoesEmitidas = await queryRawOne(
       "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida'"
-    ).get() as { count: number };
+    ) as { count: number };
 
     const inicioMes = new Date();
     inicioMes.setDate(1);
     inicioMes.setHours(0, 0, 0, 0);
 
-    const certidoesEmitidasMes = db.prepare(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= ?"
-    ).get(inicioMes.toISOString()) as { count: number };
+    const certidoesEmitidasMes = await queryRawOne(
+      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= $1",
+      inicioMes.toISOString()
+    ) as { count: number };
 
-    const certidoesEmitidasMesAnterior = db.prepare(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= ? AND obtained_at < ?"
-    ).get(
+    const certidoesEmitidasMesAnterior = await queryRawOne(
+      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= $1 AND obtained_at < $2",
       new Date(inicioMes.getTime() - 30 * 86400000).toISOString(),
       inicioMes.toISOString()
     ) as { count: number };
 
-    const totalCertidoes = db.prepare(
+    const totalCertidoes = await queryRawOne(
       'SELECT COUNT(*) as count FROM certificates'
-    ).get() as { count: number };
+    ) as { count: number };
 
-    const totalCertidoesAnterior = db.prepare(
-      'SELECT COUNT(*) as count FROM certificates WHERE created_at < ?'
-    ).get(inicioMes.toISOString()) as { count: number };
+    const totalCertidoesAnterior = await queryRawOne(
+      'SELECT COUNT(*) as count FROM certificates WHERE created_at < $1',
+      inicioMes.toISOString()
+    ) as { count: number };
 
     const taxaConclusaoAtual = totalCertidoes.count > 0
       ? (certidoesEmitidas.count / totalCertidoes.count) * 100
       : 0;
 
     const taxaConclusaoAnterior = totalCertidoesAnterior.count > 0
-      ? (db.prepare(
-          "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND created_at < ?"
-        ).get(inicioMes.toISOString()) as { count: number }).count / totalCertidoesAnterior.count * 100
+      ? (await queryRawOne(
+          "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND created_at < $1",
+          inicioMes.toISOString()
+        ) as { count: number }).count / totalCertidoesAnterior.count * 100
       : 0;
 
-    const emissions = db.prepare(`
-      SELECT strftime('%m', obtained_at) as mes, COUNT(*) as total
+    const emissions = await queryRaw(`
+      SELECT TO_CHAR(obtained_at::timestamp, 'MM') as mes, COUNT(*) as total
       FROM certificates
-      WHERE status = 'Obtida' AND obtained_at >= date('now', '-6 months')
-      GROUP BY strftime('%m', obtained_at)
+      WHERE status = 'Obtida' AND obtained_at >= NOW() - INTERVAL '6 months'
+      GROUP BY TO_CHAR(obtained_at::timestamp, 'MM')
       ORDER BY mes
-    `).all() as { mes: string; total: number }[];
+    `) as { mes: string; total: number }[];
 
-    const distribution = db.prepare(`
+    const distribution = await queryRaw(`
       SELECT priority, COUNT(*) as total
       FROM dossiers
       GROUP BY priority
-    `).all() as { priority: string; total: number }[];
+    `) as { priority: string; total: number }[];
 
-    const totalDossiers = db.prepare(
+    const totalDossiers = await queryRawOne(
       'SELECT COUNT(*) as count FROM dossiers'
-    ).get() as { count: number };
+    ) as { count: number };
 
-    const certHoje = db.prepare(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND date(obtained_at) = date('now')"
-    ).get() as { count: number };
+    const certHoje = await queryRawOne(
+      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at::date = CURRENT_DATE"
+    ) as { count: number };
 
-    const tempoMedio = db.prepare(`
+    const tempoMedio = await queryRawOne(`
       SELECT COALESCE(AVG(
-        (julianday(COALESCE(obtained_at, datetime('now'))) - julianday(created_at)) * 24 * 60
+        EXTRACT(EPOCH FROM (COALESCE(obtained_at, NOW())::timestamp - created_at::timestamp)) / 60
       ), 0) as avg_minutes FROM certificates
-    `).get() as { avg_minutes: number };
+    `) as { avg_minutes: number };
 
     const taxaSucesso = totalCertidoes.count > 0
       ? (certidoesEmitidas.count / totalCertidoes.count) * 100
       : 0;
 
-    const priorities = db.prepare(`
+    const priorities = await queryRaw(`
       SELECT d.identifier, c.name as tipo, d.updated_at
       FROM dossiers d
       LEFT JOIN certificates c ON c.dossier_id = d.id
       WHERE d.status = 'Pendente'
       ORDER BY d.updated_at ASC
       LIMIT 5
-    `).all() as { identifier: string; tipo: string; updated_at: string }[];
+    `) as { identifier: string; tipo: string; updated_at: string }[];
 
-    const organs = db.prepare(
+    const organs = await queryRaw(
       'SELECT name, status FROM organs ORDER BY name'
-    ).all() as { name: string; status: string }[];
+    ) as { name: string; status: string }[];
 
-    const activities = db.prepare(`
+    const activities = await queryRaw(`
       SELECT user_name, action, reference, dossier_ref, created_at
       FROM activities
       ORDER BY created_at DESC
       LIMIT 6
-    `).all() as { user_name: string; action: string; reference: string | null; dossier_ref: string | null; created_at: string }[];
+    `) as { user_name: string; action: string; reference: string | null; dossier_ref: string | null; created_at: string }[];
 
     res.json({
       dossiersAndamento: dossiersAndamento.count,

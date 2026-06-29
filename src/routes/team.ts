@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
-import db from '../database.js';
+import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 
 /* ─── Helpers ─── */
 
@@ -20,30 +20,30 @@ interface UserRow {
   department_name: string | null; position_name: string | null;
 }
 
-function enrich(u: UserRow): Record<string, unknown> {
-  const todayRec = db.prepare(`
+async function enrich(u: UserRow): Promise<Record<string, unknown>> {
+  const todayRec = await queryRawOne(`
     SELECT clock_in, clock_out, break_start, break_end, total_minutes, review_status
-    FROM time_records WHERE user_id = ? AND date = ?
-  `).get(u.id, todayStr()) as any;
-  const monthTotal = db.prepare(`
+    FROM time_records WHERE user_id = $1 AND date = $2
+  `, u.id, todayStr());
+  const monthTotal = await queryRawOne(`
     SELECT COALESCE(SUM(total_minutes), 0) as total
-    FROM time_records WHERE user_id = ? AND date LIKE ? AND review_status = 'APPROVED'
-  `).get(u.id, `${todayStr().slice(0, 7)}%`) as any;
-  const pendingJust = db.prepare(`
+    FROM time_records WHERE user_id = $1 AND date LIKE $2 || '%' AND review_status = 'APPROVED'
+  `, u.id, todayStr().slice(0, 7));
+  const pendingJust = await queryRawOne(`
     SELECT id, reason, start_date, end_date FROM justifications
-    WHERE user_id = ? AND status = 'PENDING' LIMIT 1
-  `).get(u.id) as any;
+    WHERE user_id = $1 AND status = 'PENDING' LIMIT 1
+  `, u.id);
   const balance = (u.weekly_hours || 40) * 4.5 - ((monthTotal?.total || 0) / 60);
 
   // Per-user stats
-  const totalDossiers = db.prepare(`
-    SELECT COUNT(*) as c FROM dossiers WHERE created_by = ?
-  `).get(u.name) as any;
-  const completedDossiers = db.prepare(`
-    SELECT COUNT(*) as c FROM dossiers WHERE created_by = ? AND status = 'Concluído'
-  `).get(u.name) as any;
-  const totalPersons = db.prepare(`SELECT COUNT(*) as c FROM persons`).get() as any;
-  const totalProperties = db.prepare(`SELECT COUNT(*) as c FROM properties`).get() as any;
+  const totalDossiers = await queryRawOne(`
+    SELECT COUNT(*) as c FROM dossiers WHERE created_by = $1
+  `, u.name);
+  const completedDossiers = await queryRawOne(`
+    SELECT COUNT(*) as c FROM dossiers WHERE created_by = $1 AND status = 'Concluído'
+  `, u.name);
+  const totalPersons = await queryRawOne(`SELECT COUNT(*) as c FROM persons`);
+  const totalProperties = await queryRawOne(`SELECT COUNT(*) as c FROM properties`);
 
   return {
     id: u.id, name: u.name, email: u.email, role: u.role || 'EMPLOYEE',
@@ -86,17 +86,17 @@ function enrich(u: UserRow): Record<string, unknown> {
 export const teamRouter = Router();
 
 // GET /api/team/enriched
-teamRouter.get('/enriched', (_req, res) => {
+teamRouter.get('/enriched', async (_req, res) => {
   try {
-    const rows = db.prepare(`
+    const rows = await queryRaw(`
       SELECT u.*, d.name as department_name, p.name as position_name
       FROM users u
       LEFT JOIN departments d ON d.id = u.department_id
       LEFT JOIN positions p ON p.id = u.position_id
       WHERE u.deleted_at IS NULL
       ORDER BY u.name ASC
-    `).all() as UserRow[];
-    res.json(rows.map(enrich));
+    `);
+    res.json(await Promise.all(rows.map(enrich)));
   } catch (err) {
     console.error('[Team] Erro ao listar:', err);
     res.status(500).json({ error: 'Erro ao carregar equipe' });
@@ -104,22 +104,22 @@ teamRouter.get('/enriched', (_req, res) => {
 });
 
 // GET /api/team/metrics
-teamRouter.get('/metrics', (_req, res) => {
+teamRouter.get('/metrics', async (_req, res) => {
   try {
-    const total = db.prepare('SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL').get() as any;
-    const active = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_active = 1 AND deleted_at IS NULL').get() as any;
-    const inactive = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_active = 0 AND deleted_at IS NULL').get() as any;
-    const verified = db.prepare('SELECT COUNT(*) as c FROM users WHERE email_verified = 1 AND deleted_at IS NULL').get() as any;
-    const todayRecs = db.prepare(`
-      SELECT DISTINCT user_id FROM time_records WHERE date = ?
-    `).all(todayStr()) as { user_id: string }[];
-    const pendingJustsCount = db.prepare('SELECT COUNT(*) as c FROM justifications WHERE status = \'PENDING\'').get() as any;
-    const hiresThisMonth = db.prepare(`
-      SELECT COUNT(*) as c FROM users WHERE hire_date LIKE ? AND is_active = 1
-    `).get(`${todayStr().slice(0, 7)}%`) as any;
-    const lastMonthHires = db.prepare(`
-      SELECT COUNT(*) as c FROM users WHERE hire_date LIKE ? AND is_active = 1
-    `).get(`${new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7)}%`) as any;
+    const total = await queryRawOne('SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL');
+    const active = await queryRawOne('SELECT COUNT(*) as c FROM users WHERE is_active = 1 AND deleted_at IS NULL');
+    const inactive = await queryRawOne('SELECT COUNT(*) as c FROM users WHERE is_active = 0 AND deleted_at IS NULL');
+    const verified = await queryRawOne('SELECT COUNT(*) as c FROM users WHERE email_verified = 1 AND deleted_at IS NULL');
+    const todayRecs = await queryRaw(`
+      SELECT DISTINCT user_id FROM time_records WHERE date = $1
+    `, todayStr());
+    const pendingJustsCount = await queryRawOne('SELECT COUNT(*) as c FROM justifications WHERE status = \'PENDING\'');
+    const hiresThisMonth = await queryRawOne(`
+      SELECT COUNT(*) as c FROM users WHERE hire_date LIKE $1 || '%' AND is_active = 1
+    `, todayStr().slice(0, 7));
+    const lastMonthHires = await queryRawOne(`
+      SELECT COUNT(*) as c FROM users WHERE hire_date LIKE $1 || '%' AND is_active = 1
+    `, new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7));
 
     res.json({
       total: total.c, active: active.c, inactive: inactive.c, verified: verified.c,
@@ -138,11 +138,11 @@ teamRouter.get('/metrics', (_req, res) => {
 });
 
 // GET /api/team/activities
-teamRouter.get('/activities', (_req, res) => {
+teamRouter.get('/activities', async (_req, res) => {
   try {
-    const acts = db.prepare(`
+    const acts = await queryRaw(`
       SELECT * FROM team_activities ORDER BY timestamp DESC LIMIT 50
-    `).all() as any[];
+    `);
     res.json(acts.map((a: any) => ({
       id: a.id, action: a.action, description: a.description,
       entityType: a.entity_type, entityId: a.entity_id,
@@ -158,14 +158,14 @@ teamRouter.get('/activities', (_req, res) => {
 });
 
 // POST /api/team
-teamRouter.post('/', (req, res) => {
+teamRouter.post('/', async (req, res) => {
   try {
     const { name, email, role, departmentId, positionId, contractType, weeklyHours, workSchedule, hireDate, phone } = req.body;
     if (!name || !email) {
       res.status(400).json({ error: 'Nome e email são obrigatórios' });
       return;
     }
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+    const existing = await queryRawOne('SELECT id FROM users WHERE email = $1', email.toLowerCase().trim());
     if (existing) {
       res.status(409).json({ error: 'Email já cadastrado' });
       return;
@@ -173,17 +173,17 @@ teamRouter.post('/', (req, res) => {
     const id = randomUUID();
     const tempPassword = randomUUID().slice(0, 8);
     const password_hash = bcrypt.hashSync(tempPassword, 10);
-    const regNum = String((db.prepare('SELECT COUNT(*) as c FROM users').get() as any).c + 1001);
+    const regNum = String((await queryRawOne('SELECT COUNT(*) as c FROM users')).c + 1001);
 
-    db.prepare(`
+    await executeRaw(`
       INSERT INTO users (id, name, email, password_hash, role, department_id, position_id, contract_type, weekly_hours, work_schedule, hire_date, phone, registration_number, is_active, email_verified, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, datetime('now'))
-    `).run(id, name.trim(), email.toLowerCase().trim(), password_hash, role || 'EMPLOYEE', departmentId || null, positionId || null, contractType || 'CLT', weeklyHours || 40, workSchedule || 'Seg-Sex', hireDate || null, phone || null, regNum);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 1, 0, NOW())
+    `, id, name.trim(), email.toLowerCase().trim(), password_hash, role || 'EMPLOYEE', departmentId || null, positionId || null, contractType || 'CLT', weeklyHours || 40, workSchedule || 'Seg-Sex', hireDate || null, phone || null, regNum);
 
-    db.prepare(`
+    await executeRaw(`
       INSERT INTO team_activities (id, user_id, user_name, action, description, entity_type, entity_id, timestamp)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).run(randomUUID(), id, name.trim(), 'CREATE_USER', `Criou o colaborador ${name.trim()}`, 'user', id);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    `, randomUUID(), id, name.trim(), 'CREATE_USER', `Criou o colaborador ${name.trim()}`, 'user', id);
 
     res.status(201).json({
       tempPassword,
@@ -196,13 +196,13 @@ teamRouter.post('/', (req, res) => {
 });
 
 // PUT /api/team/:id
-teamRouter.put('/:id', (req, res) => {
+teamRouter.put('/:id', async (req, res) => {
   try {
     const { name, role, departmentId, positionId, contractType, weeklyHours, workSchedule, phone } = req.body;
-    db.prepare(`
-      UPDATE users SET name = COALESCE(?, name), role = COALESCE(?, role), department_id = COALESCE(?, department_id), position_id = COALESCE(?, position_id), contract_type = COALESCE(?, contract_type), weekly_hours = COALESCE(?, weekly_hours), work_schedule = COALESCE(?, work_schedule), phone = COALESCE(?, phone)
-      WHERE id = ?
-    `).run(name || null, role || null, departmentId || null, positionId || null, contractType || null, weeklyHours != null ? weeklyHours : null, workSchedule || null, phone || null, req.params.id);
+    await executeRaw(`
+      UPDATE users SET name = COALESCE($1, name), role = COALESCE($2, role), department_id = COALESCE($3, department_id), position_id = COALESCE($4, position_id), contract_type = COALESCE($5, contract_type), weekly_hours = COALESCE($6, weekly_hours), work_schedule = COALESCE($7, work_schedule), phone = COALESCE($8, phone)
+      WHERE id = $9
+    `, name || null, role || null, departmentId || null, positionId || null, contractType || null, weeklyHours != null ? weeklyHours : null, workSchedule || null, phone || null, req.params.id);
 
     res.json({ success: true });
   } catch (err) {
@@ -212,11 +212,11 @@ teamRouter.put('/:id', (req, res) => {
 });
 
 // PUT /api/team/:id/role
-teamRouter.put('/:id/role', (req, res) => {
+teamRouter.put('/:id/role', async (req, res) => {
   try {
     const { role } = req.body;
     if (!role) { res.status(400).json({ error: 'Role é obrigatório' }); return; }
-    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, req.params.id);
+    await executeRaw('UPDATE users SET role = $1 WHERE id = $2', role, req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[Team] Erro ao alterar cargo:', err);
@@ -225,9 +225,9 @@ teamRouter.put('/:id/role', (req, res) => {
 });
 
 // POST /api/team/:id/resend-verification
-teamRouter.post('/:id/resend-verification', (req, res) => {
+teamRouter.post('/:id/resend-verification', async (req, res) => {
   try {
-    const user = db.prepare('SELECT id, name, email, email_verified FROM users WHERE id = ?').get(req.params.id) as any;
+    const user = await queryRawOne('SELECT id, name, email, email_verified FROM users WHERE id = $1', req.params.id);
     if (!user) { res.status(404).json({ error: 'Usuário não encontrado' }); return; }
     if (user.email_verified) { res.status(400).json({ error: 'Email já verificado' }); return; }
     // In a real app, send email here
@@ -239,10 +239,10 @@ teamRouter.post('/:id/resend-verification', (req, res) => {
 });
 
 // PATCH /api/team/:id/status
-teamRouter.patch('/:id/status', (req, res) => {
+teamRouter.patch('/:id/status', async (req, res) => {
   try {
     const { active } = req.body;
-    db.prepare('UPDATE users SET is_active = ? WHERE id = ?').run(active ? 1 : 0, req.params.id);
+    await executeRaw('UPDATE users SET is_active = $1 WHERE id = $2', active ? 1 : 0, req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[Team] Erro ao alterar status:', err);
@@ -251,13 +251,13 @@ teamRouter.patch('/:id/status', (req, res) => {
 });
 
 // POST /api/team/:id/reset-password
-teamRouter.post('/:id/reset-password', (req, res) => {
+teamRouter.post('/:id/reset-password', async (req, res) => {
   try {
-    const user = db.prepare('SELECT id, name FROM users WHERE id = ?').get(req.params.id) as any;
+    const user = await queryRawOne('SELECT id, name FROM users WHERE id = $1', req.params.id);
     if (!user) { res.status(404).json({ error: 'Usuário não encontrado' }); return; }
     const tempPassword = randomUUID().slice(0, 8);
     const password_hash = bcrypt.hashSync(tempPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, user.id);
+    await executeRaw('UPDATE users SET password_hash = $1 WHERE id = $2', password_hash, user.id);
     res.json({ tempPassword });
   } catch (err) {
     console.error('[Team] Erro ao resetar senha:', err);
@@ -266,9 +266,9 @@ teamRouter.post('/:id/reset-password', (req, res) => {
 });
 
 // DELETE /api/team/:id (soft-delete: move para lixeira)
-teamRouter.delete('/:id', (req, res) => {
+teamRouter.delete('/:id', async (req, res) => {
   try {
-    db.prepare('UPDATE users SET is_active = 0, deleted_at = datetime(\'now\') WHERE id = ?').run(req.params.id);
+    await executeRaw('UPDATE users SET is_active = 0, deleted_at = NOW() WHERE id = $1', req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[Team] Erro ao excluir:', err);
@@ -277,10 +277,10 @@ teamRouter.delete('/:id', (req, res) => {
 });
 
 // GET /api/team/:id/permissions
-teamRouter.get('/:id/permissions', (req, res) => {
+teamRouter.get('/:id/permissions', async (req, res) => {
   try {
-    const perms = db.prepare('SELECT permission FROM user_permissions WHERE user_id = ?').all(req.params.id) as { permission: string }[];
-    const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.params.id) as any;
+    const perms = await queryRaw('SELECT permission FROM user_permissions WHERE user_id = $1', req.params.id) as { permission: string }[];
+    const user = await queryRawOne('SELECT role FROM users WHERE id = $1', req.params.id);
     res.json({ permissions: perms.map(p => p.permission), role: user?.role || 'EMPLOYEE' });
   } catch (err) {
     console.error('[Team] Erro ao carregar permissões:', err);
@@ -289,17 +289,14 @@ teamRouter.get('/:id/permissions', (req, res) => {
 });
 
 // PUT /api/team/:id/permissions
-teamRouter.put('/:id/permissions', (req, res) => {
+teamRouter.put('/:id/permissions', async (req, res) => {
   try {
     const { permissions } = req.body;
     if (!Array.isArray(permissions)) { res.status(400).json({ error: 'permissions deve ser um array' }); return; }
-    const del = db.prepare('DELETE FROM user_permissions WHERE user_id = ?');
-    const ins = db.prepare('INSERT OR IGNORE INTO user_permissions (user_id, permission) VALUES (?, ?)');
-    const transaction = db.transaction(() => {
-      del.run(req.params.id);
-      for (const p of permissions) ins.run(req.params.id, p);
-    });
-    transaction();
+    await executeRaw('DELETE FROM user_permissions WHERE user_id = $1', req.params.id);
+    for (const p of permissions) {
+      await executeRaw('INSERT OR IGNORE INTO user_permissions (user_id, permission) VALUES ($1, $2)', req.params.id, p);
+    }
     res.json({ success: true, permissions });
   } catch (err) {
     console.error('[Team] Erro ao salvar permissões:', err);
@@ -313,15 +310,15 @@ teamRouter.put('/:id/permissions', (req, res) => {
 export const justificationsRouter = Router();
 
 // GET /api/justifications
-justificationsRouter.get('/', (_req, res) => {
+justificationsRouter.get('/', async (_req, res) => {
   try {
-    const rows = db.prepare(`
+    const rows = await queryRaw(`
       SELECT j.*, u.name as user_name, u.email as user_email, u.avatar as user_avatar, d.name as user_department
       FROM justifications j
       LEFT JOIN users u ON u.id = j.user_id
       LEFT JOIN departments d ON d.id = u.department_id
       ORDER BY j.created_at DESC
-    `).all() as any[];
+    `);
     res.json(rows.map((j: any) => ({
       id: j.id, reason: j.reason, description: j.description,
       status: j.status, rhResponse: j.rh_response,
@@ -336,9 +333,9 @@ justificationsRouter.get('/', (_req, res) => {
 });
 
 // POST /api/justifications/:id/approve
-justificationsRouter.post('/:id/approve', (req, res) => {
+justificationsRouter.post('/:id/approve', async (req, res) => {
   try {
-    db.prepare('UPDATE justifications SET status = \'APPROVED\' WHERE id = ?').run(req.params.id);
+    await executeRaw('UPDATE justifications SET status = \'APPROVED\' WHERE id = $1', req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[Just] Erro ao aprovar:', err);
@@ -347,10 +344,10 @@ justificationsRouter.post('/:id/approve', (req, res) => {
 });
 
 // POST /api/justifications/:id/reject
-justificationsRouter.post('/:id/reject', (req, res) => {
+justificationsRouter.post('/:id/reject', async (req, res) => {
   try {
     const { reason } = req.body;
-    db.prepare('UPDATE justifications SET status = \'REJECTED\', rh_response = ? WHERE id = ?').run(reason || null, req.params.id);
+    await executeRaw('UPDATE justifications SET status = \'REJECTED\', rh_response = $1 WHERE id = $2', reason || null, req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[Just] Erro ao recusar:', err);
@@ -364,9 +361,9 @@ justificationsRouter.post('/:id/reject', (req, res) => {
 export const timeRecordsRouter = Router();
 
 // GET /api/time-records/pending-reviews
-timeRecordsRouter.get('/pending-reviews', (_req, res) => {
+timeRecordsRouter.get('/pending-reviews', async (_req, res) => {
   try {
-    const rows = db.prepare(`
+    const rows = await queryRaw(`
       SELECT tr.*, u.name as user_name, u.email as user_email, u.avatar as user_avatar, u.role as user_role, d.name as user_department, p.name as user_position
       FROM time_records tr
       LEFT JOIN users u ON u.id = tr.user_id
@@ -374,7 +371,7 @@ timeRecordsRouter.get('/pending-reviews', (_req, res) => {
       LEFT JOIN positions p ON p.id = u.position_id
       WHERE tr.review_status = 'PENDING'
       ORDER BY tr.date DESC, tr.clock_in ASC
-    `).all() as any[];
+    `);
     res.json(rows.map((r: any) => ({
       id: r.id, clockIn: r.clock_in, clockOut: r.clock_out, date: r.date,
       breakStart: r.break_start, breakEnd: r.break_end,
@@ -388,9 +385,9 @@ timeRecordsRouter.get('/pending-reviews', (_req, res) => {
 });
 
 // POST /api/time-records/:id/approve
-timeRecordsRouter.post('/:id/approve', (req, res) => {
+timeRecordsRouter.post('/:id/approve', async (req, res) => {
   try {
-    db.prepare('UPDATE time_records SET review_status = \'APPROVED\', notes = ? WHERE id = ?').run(req.body.note || null, req.params.id);
+    await executeRaw('UPDATE time_records SET review_status = \'APPROVED\', notes = $1 WHERE id = $2', req.body.note || null, req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[TR] Erro ao aprovar:', err);
@@ -399,9 +396,9 @@ timeRecordsRouter.post('/:id/approve', (req, res) => {
 });
 
 // POST /api/time-records/:id/reject
-timeRecordsRouter.post('/:id/reject', (req, res) => {
+timeRecordsRouter.post('/:id/reject', async (req, res) => {
   try {
-    db.prepare('UPDATE time_records SET review_status = \'REJECTED\', notes = ? WHERE id = ?').run(req.body.note || null, req.params.id);
+    await executeRaw('UPDATE time_records SET review_status = \'REJECTED\', notes = $1 WHERE id = $2', req.body.note || null, req.params.id);
     res.json({ success: true });
   } catch (err) {
     console.error('[TR] Erro ao recusar:', err);
@@ -410,11 +407,11 @@ timeRecordsRouter.post('/:id/reject', (req, res) => {
 });
 
 // GET /api/team/audit-logs
-teamRouter.get('/audit-logs', (_req, res) => {
+teamRouter.get('/audit-logs', async (_req, res) => {
   try {
-    const rows = db.prepare(`
+    const rows = await queryRaw(`
       SELECT * FROM audit_log ORDER BY created_at DESC LIMIT 200
-    `).all() as any[];
+    `);
     res.json(rows);
   } catch (err) {
     console.error('[Team] Erro nos audit logs:', err);
@@ -423,17 +420,17 @@ teamRouter.get('/audit-logs', (_req, res) => {
 });
 
 // GET /api/team/user-dossiers/:userId
-teamRouter.get('/user-dossiers/:userId', (req, res) => {
+teamRouter.get('/user-dossiers/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as any;
+    const user = await queryRawOne('SELECT name FROM users WHERE id = $1', userId);
     if (!user) { res.status(404).json({ error: 'Usuário não encontrado' }); return; }
-    const dossiers = db.prepare(`
+    const dossiers = await queryRaw(`
       SELECT id, identifier, status, priority, created_at, updated_at,
         (SELECT COUNT(*) FROM certificates WHERE dossier_id = dossiers.id) as certificateCount,
         (SELECT COUNT(*) FROM certificates WHERE dossier_id = dossiers.id AND status = 'Obtida') as certificatesObtidas
-      FROM dossiers WHERE created_by = ? ORDER BY updated_at DESC LIMIT 50
-    `).all(user.name);
+      FROM dossiers WHERE created_by = $1 ORDER BY updated_at DESC LIMIT 50
+    `, user.name);
     res.json(dossiers);
   } catch (err) {
     console.error('[Team] Erro nos dossiers do usuário:', err);
@@ -442,17 +439,17 @@ teamRouter.get('/user-dossiers/:userId', (req, res) => {
 });
 
 // GET /api/team/user-activities/:userId
-teamRouter.get('/user-activities/:userId', (req, res) => {
+teamRouter.get('/user-activities/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as any;
+    const user = await queryRawOne('SELECT name FROM users WHERE id = $1', userId);
     if (!user) { res.status(404).json({ error: 'Usuário não encontrado' }); return; }
-    const auditLogs = db.prepare(`
-      SELECT * FROM audit_log WHERE user_name = ? ORDER BY created_at DESC LIMIT 100
-    `).all(user.name);
-    const teamActivities = db.prepare(`
-      SELECT * FROM team_activities WHERE user_name = ? ORDER BY timestamp DESC LIMIT 100
-    `).all(user.name);
+    const auditLogs = await queryRaw(`
+      SELECT * FROM audit_log WHERE user_name = $1 ORDER BY created_at DESC LIMIT 100
+    `, user.name);
+    const teamActivities = await queryRaw(`
+      SELECT * FROM team_activities WHERE user_name = $1 ORDER BY timestamp DESC LIMIT 100
+    `, user.name);
     res.json({ auditLogs, teamActivities });
   } catch (err) {
     console.error('[Team] Erro nas atividades do usuário:', err);
@@ -466,9 +463,9 @@ teamRouter.get('/user-activities/:userId', (req, res) => {
 export const referenceRouter = Router();
 
 // GET /api/reference/departments
-referenceRouter.get('/departments', (_req, res) => {
+referenceRouter.get('/departments', async (_req, res) => {
   try {
-    res.json(db.prepare('SELECT * FROM departments ORDER BY name').all());
+    res.json(await queryRaw('SELECT * FROM departments ORDER BY name'));
   } catch (err) {
     console.error('[Ref] Erro nos departamentos:', err);
     res.status(500).json({ error: 'Erro ao carregar departamentos' });
@@ -476,13 +473,13 @@ referenceRouter.get('/departments', (_req, res) => {
 });
 
 // GET /api/reference/positions?departmentId=...
-referenceRouter.get('/positions', (req, res) => {
+referenceRouter.get('/positions', async (req, res) => {
   try {
     const deptId = req.query.departmentId as string;
     if (deptId) {
-      res.json(db.prepare('SELECT * FROM positions WHERE department_id = ? ORDER BY name').all(deptId));
+      res.json(await queryRaw('SELECT * FROM positions WHERE department_id = $1 ORDER BY name', deptId));
     } else {
-      res.json(db.prepare('SELECT * FROM positions ORDER BY name').all());
+      res.json(await queryRaw('SELECT * FROM positions ORDER BY name'));
     }
   } catch (err) {
     console.error('[Ref] Erro nos cargos:', err);

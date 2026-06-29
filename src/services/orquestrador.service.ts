@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from '../connectors/index.js';
 import { criarConectores } from '../connectors/index.js';
 import { CaptchaManager } from './captcha-manager.service.js';
-import db from '../database.js';
+import prisma, { executeRaw } from '../lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
 
@@ -49,9 +49,10 @@ async function persistirResultado(
   if (resultado.status !== 'success') return;
 
   try {
-    db.prepare(
-      'INSERT OR IGNORE INTO dossier_participants (dossier_id, person_id, role) VALUES (?, ?, ?)'
-    ).run(dossierId, personId, 'proprietario');
+    await executeRaw(
+      'INSERT OR IGNORE INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3)',
+      dossierId, personId, 'proprietario'
+    );
 
     const certId = randomUUID();
     const certName = nomeCertidao(resultado.orgao);
@@ -62,11 +63,12 @@ async function persistirResultado(
       docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento);
     }
 
-    db.prepare(
-      'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(certId, dossierId, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now);
+    await executeRaw(
+      'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      certId, dossierId, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
+    );
 
-    db.prepare('UPDATE dossiers SET updated_at = ? WHERE id = ?').run(now, dossierId);
+    await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, dossierId);
 
     LOG(`Certificado salvo: ${certName} (${resultado.orgao}) → pessoa ${personId}`);
   } catch (err) {
