@@ -16,13 +16,14 @@ A partir da versão 1.1, o fluxo de dossiês foi reestruturado com suporte a **m
 
 | Camada | Tecnologia |
 |---|---|
-| **Backend** | Node.js, Express 5, TypeScript, better-sqlite3 |
+| **Backend** | Node.js, Express 5, TypeScript, Prisma ORM, PostgreSQL (pg) |
 | **Frontend (Dashboard)** | Next.js 15, React 19, Tailwind CSS 4 |
 | **Frontend (Público)** | HTML5, CSS3, JavaScript Vanilla |
 | **Desktop** | Electron (NSIS installer) — congelado |
 | **Browser Automation** | Puppeteer + puppeteer-extra (Stealth Plugin) |
 | **PDF** | pdf-lib (dossiês), Puppeteer page.pdf() (captura) |
 | **Auth** | JWT (jsonwebtoken), bcryptjs |
+| **Database** | PostgreSQL (pg) + Prisma Client para type-safe, raw SQL via pg Pool para queries complexas |
 | **Email** | Nodemailer (SMTP) |
 | **CAPTCHA** | svg-captcha (registro), hCaptcha/reCAPTCHA (órgãos) |
 | **Extensão Chrome** | Manifest V3 |
@@ -35,7 +36,7 @@ A partir da versão 1.1, o fluxo de dossiês foi reestruturado com suporte a **m
 A.CERT/
 ├── src/                          # Backend TypeScript
 │   ├── server.ts                 # Entry point Express (porta 3001)
-│   ├── database.ts               # Schema SQLite (21 tabelas) + seed
+│   ├── database.ts               # Schema SQLite (21 tabelas) + seed — REMOVIDO (v1.2)
 │   ├── connectors/               # Conectores por órgão (7 agências)
 │   │   ├── receita-federal.connector.ts
 │   │   ├── trf1.connector.ts     # TRF 1ª Região (Cível + Criminal)
@@ -149,7 +150,9 @@ A.CERT/
 
 ## Banco de Dados
 
-SQLite (better-sqlite3, modo WAL) com **21 tabelas**:
+**PostgreSQL** com **Prisma ORM** (21 tabelas). Queries type-safe via Prisma Client, queries analíticas complexas via raw SQL com pool `pg`.
+
+### Tabelas principais
 
 - `users`, `persons`, `properties`, `dossiers`, `certificates`
 - `dossier_participants` — vincula pessoas aos dossiês com papel (proprietario, comprador, vendedor, locador, locatario)
@@ -169,6 +172,11 @@ SQLite (better-sqlite3, modo WAL) com **21 tabelas**:
 cd A.CERT
 npm install
 
+# Configurar o banco (precisa de PostgreSQL rodando)
+# Editar DATABASE_URL no .env
+npx prisma migrate dev    # Cria as tabelas
+npm run prisma:seed        # Popula dados de exemplo
+
 # Modo desenvolvimento (backend + frontend em paralelo)
 npm run dev
 
@@ -184,10 +192,12 @@ npm run build
 ## Variáveis de Ambiente
 
 ```env
+DATABASE_URL=postgresql://acert:senha@localhost:5432/acert?schema=public
 PORT=3001
 PUPPETEER_HEADLESS=true
 CONNECTOR_TIMEOUT_MS=60000
-CAPTCHA_API_KEY=     # 2captcha (opcional)
+JWT_SECRET=acert-dev-secret-change-in-production
+FRONTEND_URL=http://localhost:3000
 ```
 
 ---

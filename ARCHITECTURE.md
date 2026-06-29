@@ -1,4 +1,4 @@
-# Arquitetura — A.CERT v1.1
+# Arquitetura — A.CERT v1.2
 
 Documentação técnica completa da stack, fluxos de dados e decisões arquiteturais.
 
@@ -6,7 +6,9 @@ Documentação técnica completa da stack, fluxos de dados e decisões arquitetu
 
 ## Visão Geral
 
-A A.CERT é uma plataforma SaaS que automatiza a emissão de certidões imobiliárias em 7 órgãos públicos brasileiros. O sistema opera como uma aplicação web com backend Express + banco SQLite e frontend Next.js 15.
+A A.CERT é uma plataforma SaaS que automatiza a emissão de certidões imobiliárias em 7 órgãos públicos brasileiros. O sistema opera como uma aplicação web com backend Express + banco PostgreSQL (Prisma ORM) e frontend Next.js 15.
+
+**v1.2 (Jun/2026):** Migrei o banco de dados de SQLite para PostgreSQL com Prisma ORM, mantendo compatibilidade total com a API existente.
 
 ### Diagrama de Alto Nível
 
@@ -36,7 +38,7 @@ Cliente (Navegador)
 |---|---|---|
 | **Runtime** | Node.js 22 + TypeScript 5 | Tipagem forte, compatibilidade com Puppeteer |
 | **Servidor** | Express 5 | Leve, maduro, ampla compatibilidade |
-| **Banco** | SQLite (better-sqlite3) | Zero-config, embutido, ideal para apps desktop/on-premise |
+| **Banco** | PostgreSQL (pg) + Prisma ORM | Type-safe via Prisma Client, raw SQL via pool pg para queries complexas |
 | **Browser** | Puppeteer + Stealth Plugin | Automação realista, evasão de detecção anti-bot |
 | **PDF** | pdf-lib | Manipulação programática de PDFs (merge, embed) |
 | **Auth** | JWT + bcryptjs | Stateless, seguro, simples de implementar |
@@ -313,7 +315,7 @@ Padrão comum:
 
 ## Decisões Arquiteturais
 
-1. **SQLite em vez de PostgreSQL**: Escolhido para simplificar deployment (zero-config). Adequado para uso on-premise e app desktop. Migração futura para PostgreSQL se escala exigir.
+1. **PostgreSQL em vez de SQLite**: Escolhido para deploy em produção na Hostinger KVM2. O Prisma ORM fornece type-safety nas operações CRUD, enquanto o pool `pg` mantém flexibilidade para queries analíticas complexas.
 
 2. **Puppeteer com Stealth**: Necessário porque órgãos públicos usam detecção anti-bot agressiva (Cloudflare, DataDome).
 
