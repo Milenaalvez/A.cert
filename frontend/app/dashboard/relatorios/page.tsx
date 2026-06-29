@@ -34,7 +34,7 @@ interface ReportData {
   metadata: { generatedAt: string; totalRecords: number; dataSource: string };
 }
 
-const apiBase = "http://localhost:3001";
+const apiBase = "";
 function getInitials(n: string) { return n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(); }
 function diffPct(curr: number, prev: number): string { if (prev === 0) return curr > 0 ? "+100%" : "0%"; const d = Math.round((curr - prev) / prev * 100); return (d >= 0 ? "+" : "") + d + "%"; }
 
@@ -379,7 +379,7 @@ export default function RelatoriosPage() {
             <tbody>
               {d.dossierDetails.map((s, i) => (
                 <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
-                  <td className="py-2.5 pl-2 flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: STATUS_COLORS[s.label] || "#6B7280" }} /><span className="text-[13px] font-medium text-primary">{s.label}</span></td>
+                  <td className="py-2.5 pl-2 flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: STATUS_COLORS[s.label] || "var(--text-secondary)" }} /><span className="text-[13px] font-medium text-primary">{s.label}</span></td>
                   <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{s.total}</td>
                   <td className="py-2.5 text-center">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>

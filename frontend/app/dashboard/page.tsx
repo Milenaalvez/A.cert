@@ -183,7 +183,7 @@ export default function DashboardPage() {
     const newPriority = priorityStar(dossier.priority) ? "Regular" : "Preferencial";
     const token = localStorage.getItem("acert_token");
     try {
-      const r = await fetch(`http://localhost:3001/api/dossiers/${dossier.id}`, {
+      const r = await fetch(`/api/dossiers/${dossier.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -212,7 +212,7 @@ export default function DashboardPage() {
   const fetchDashboard = useCallback(async () => {
     const token = localStorage.getItem("acert_token");
     try {
-      const r = await fetch("http://localhost:3001/api/dashboard", {
+      const r = await fetch("/api/dashboard", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!r.ok) throw new Error("Falha ao carregar dashboard");
@@ -239,7 +239,7 @@ export default function DashboardPage() {
     params.set("page", String(dossierPage));
     params.set("limit", "15");
     try {
-      const r = await fetch(`http://localhost:3001/api/dossiers?${params}`, {
+      const r = await fetch(`/api/dossiers?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!r.ok) throw new Error("Falha ao carregar dossiês");
@@ -410,8 +410,8 @@ export default function DashboardPage() {
                       onClick={() => setShowPeriodMenu(!showPeriodMenu)}
                       className="flex items-center gap-1.5 h-8 px-3 -mb-px rounded-[6px] text-[12px] font-medium transition-colors border border-transparent hover:border-[var(--border-default)]"
                     >
-                      <Calendar size={14} strokeWidth={1.5} className={isDark ? "text-white" : "text-muted"} />
-                      <span className={isDark ? "text-white" : "text-body"}>{PERIOD_LABELS[dossierPeriod]}</span>
+                      <Calendar size={14} strokeWidth={1.5} className={isDark ? "text-primary" : "text-muted"} />
+                      <span className={isDark ? "text-primary" : "text-body"}>{PERIOD_LABELS[dossierPeriod]}</span>
                     </button>
                     {showPeriodMenu && (
                       <>
@@ -626,7 +626,7 @@ export default function DashboardPage() {
                 data={data.distribution.map((d) => ({
                   label: priorityLabels[d.label] || d.label,
                   value: d.total,
-                  color: donutColors[d.label] || "#6B7280",
+                  color: donutColors[d.label] || "var(--text-secondary)",
                 }))}
                 total={donutTotal}
               />

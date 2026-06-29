@@ -2,38 +2,32 @@ import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
-import { wait } from '../utils/retry-manager.service.js';
+import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[ONR] ${msg}`);
+const DEBUG = process.env.DEBUG;
 
 const BASE_URL = 'https://registradores.onr.org.br';
-const LOGIN_EMAIL = 'vendas@blocoimob.com.br';
-const LOGIN_SENHA = 'Bloco100%';
+const LOGIN_EMAIL = process.env.ONR_EMAIL || 'vendas@blocoimob.com.br';
+const LOGIN_SENHA = process.env.ONR_PASSWORD || 'Bloco100%';
 
 async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
   const info = await page.evaluate(() => {
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input')).map(el => ({
-      id: el.id,
-      name: el.name,
-      type: el.type,
-      placeholder: el.placeholder,
-      className: el.className.slice(0, 50),
+      id: el.id, name: el.name, type: el.type, placeholder: el.placeholder, className: el.className.slice(0, 50),
     }));
     const labels = Array.from(document.querySelectorAll('label')).map(el => ({
-      htmlFor: el.htmlFor,
-      text: (el.textContent || '').trim().slice(0, 80),
+      htmlFor: el.htmlFor, text: (el.textContent || '').trim().slice(0, 80),
     }));
     const buttons = Array.from(document.querySelectorAll('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]')).map(el => {
       const text = (el as HTMLElement).textContent?.trim() || (el as HTMLInputElement).value || '';
       return { tag: el.tagName, text: text.slice(0, 60), type: (el as HTMLInputElement).type || '', class: el.className.slice(0, 40) };
     });
     const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select')).map(el => ({
-      id: el.id,
-      name: el.name,
-      options: Array.from(el.options).map(o => ({ text: o.text.trim(), value: o.value })),
+      id: el.id, name: el.name, options: Array.from(el.options).map(o => ({ text: o.text.trim(), value: o.value })),
     }));
     const allText: string[] = [];
     document.querySelectorAll('h1, h2, h3, h4, h5, p, span, td, a, strong, .title, .texto, .mensagem, .panel-heading, .card-title').forEach(el => {
@@ -42,7 +36,6 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
     });
     return { inputs, labels, buttons, selects, allText: allText.slice(0, 50) };
   });
-
   LOG(`Inputs (${info.inputs.length}):`);
   for (const i of info.inputs) LOG(`  id="${i.id}" name="${i.name}" type="${i.type}" placeholder="${i.placeholder}" class="${i.className}"`);
   LOG(`Labels (${info.labels.length}):`);
@@ -51,19 +44,6 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
   for (const b of info.buttons) LOG(`  <${b.tag}> "${b.text}" type="${b.type}" class="${b.class}"`);
   if (info.selects.length > 0) LOG(`Selects: ${JSON.stringify(info.selects)}`);
   LOG(`Textos: ${info.allText.join(' | ')}`);
-}
-
-async function clicarBotaoPorTexto(page: import('puppeteer').Page, texto: string): Promise<boolean> {
-  return page.evaluate((txt) => {
-    const txtNorm = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const botoes = document.querySelectorAll('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]');
-    for (const b of botoes) {
-      const content = (b as HTMLElement).textContent?.trim() || (b as HTMLInputElement).value || '';
-      const norm = content.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (norm.includes(txtNorm)) { (b as HTMLElement).click(); return true; }
-    }
-    return false;
-  }, texto);
 }
 
 async function clicarLinkPorTexto(page: import('puppeteer').Page, texto: string): Promise<boolean> {
@@ -99,18 +79,11 @@ async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto
   }, lblNorm);
 
   if (!sel) return false;
-  const el = await page.$(sel);
-  if (!el) return false;
-
-  await el.click();
-  await wait(100);
-  await page.keyboard.type(valor, { delay: 8 });
-  LOG(`Input "${labelTexto}" via ${sel}`);
-  return true;
+  return preencherInputRapido(page, sel, valor);
 }
 
 async function preencherInputFallback(page: import('puppeteer').Page, busca: string, valor: string): Promise<boolean> {
-  const result = await page.evaluate((b, v) => {
+  const sel = await page.evaluate((b) => {
     const lb = b.toLowerCase();
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input:not([type="hidden"])'));
     for (const inp of inputs) {
@@ -118,21 +91,13 @@ async function preencherInputFallback(page: import('puppeteer').Page, busca: str
       const name = (inp.name || '').toLowerCase();
       const ph = (inp.placeholder || '').toLowerCase();
       if (id.includes(lb) || name.includes(lb) || ph.includes(lb)) {
-        const proto = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-        const setter = proto?.set;
-        if (setter) {
-          setter.call(inp, v);
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          inp.value = v;
-        }
-        return inp.id || inp.name || 'unknown';
+        return inp.id ? `#${CSS.escape(inp.id)}` : inp.name ? `[name="${inp.name}"]` : 'input';
       }
     }
     return null;
-  }, busca, valor);
-  return result !== null;
+  }, busca);
+  if (!sel) return false;
+  return preencherInputRapido(page, sel, valor);
 }
 
 async function selecionarSelectPorTexto(page: import('puppeteer').Page, busca: string, valorTexto: string): Promise<boolean> {
@@ -161,10 +126,13 @@ async function selecionarSelectPorTexto(page: import('puppeteer').Page, busca: s
 export class ONRConnector implements IConnector {
   readonly nome = 'Certidão de Ônus (ONR)';
 
+  readonly #throttle = criarRateLimit(3000);
+
   async consultar(
     dados: DadosProprietario,
     captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta ONR');
@@ -180,7 +148,7 @@ export class ONRConnector implements IConnector {
       await wait(3000);
 
       LOG('--- Diagnostico pagina inicial ---');
-      await diagnosticarFormulario(page);
+      if (DEBUG) await diagnosticarFormulario(page);
       await injectFillHelper(page);
 
       // Try to find login form - may be on the homepage or a /login page
@@ -218,17 +186,11 @@ export class ONRConnector implements IConnector {
         LOG(`Login click: ${loginOk}`);
 
         if (!loginOk) {
-          const genOk = await page.evaluate(() => {
-            const botoes = document.querySelectorAll('button, input[type="submit"]');
-            for (const b of botoes) {
-              if ((b as HTMLElement).offsetParent !== null) { (b as HTMLElement).click(); return 'generic'; }
-            }
-            return null;
-          });
-          LOG(`Login generico: ${genOk}`);
+          LOG('Nenhum botao de login encontrado, tentando continuar...');
         }
 
-        await wait(4000);
+        try { await page.waitForNetworkIdle({ idleTime: 1000, timeout: 10000 }); } catch {}
+        await wait(1000);
 
         // Check for CAPTCHA after login
         const captchaLogin = await detectarCaptcha(page);
@@ -243,9 +205,10 @@ export class ONRConnector implements IConnector {
             });
             await Promise.race([
               waitPromise,
-              new Promise((_, reject) => {
-                const check = () => { if (pageClosed) reject(new Error('Pagina fechada')); else page.once('close', check); };
-                page.once('close', check);
+              new Promise<void>((resolve) => {
+                const check = () => { if (pageClosed) resolve(); };
+                page.on('close', check);
+                setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
               }),
             ]);
             LOG('CAPTCHA do login resolvido');
@@ -257,7 +220,7 @@ export class ONRConnector implements IConnector {
         try {
           await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle2', timeout: 15000 });
           await wait(2000);
-          await diagnosticarFormulario(page);
+          if (DEBUG) await diagnosticarFormulario(page);
 
           const emailOk = await preencherInputPorLabel(page, 'Email', LOGIN_EMAIL)
             || await preencherInputPorLabel(page, 'E-mail', LOGIN_EMAIL)
@@ -274,7 +237,8 @@ export class ONRConnector implements IConnector {
           await clicarBotaoPorTexto(page, 'entrar')
             || await clicarBotaoPorTexto(page, 'login')
             || await clicarBotaoPorTexto(page, 'acessar');
-          await wait(4000);
+          try { await page.waitForNetworkIdle({ idleTime: 1000, timeout: 10000 }); } catch {}
+          await wait(1000);
         } catch {
           LOG('Falha ao acessar pagina de login');
         }
@@ -351,12 +315,10 @@ export class ONRConnector implements IConnector {
           });
           await Promise.race([
             waitPromise,
-            new Promise((_, reject) => {
-              const check = () => {
-                if (pageClosed) reject(new Error('Pagina fechada'));
-                else page.once('close', check);
-              };
-              page.once('close', check);
+            new Promise<void>((resolve) => {
+              const check = () => { if (pageClosed) resolve(); };
+              page.on('close', check);
+              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
             }),
           ]);
           LOG('CAPTCHA resolvido');
@@ -370,11 +332,15 @@ export class ONRConnector implements IConnector {
       if (pageClosed) throw new Error('Pagina fechada');
 
       // Take PDF of the current state
-      await wait(2000);
       const protocolo = `ONR-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      LOG('PDF capturado');
+      const pdfBuffer = await tentarBaixarPDF(page);
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
+      }
+      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
 
+      await this.#throttle();
       await page.close();
       return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };
     } catch (error) {

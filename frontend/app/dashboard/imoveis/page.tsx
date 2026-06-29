@@ -31,7 +31,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
   Galpão: { bg: "var(--badge-purple-bg)", color: "#7C3AED" },
   Condomínio: { bg: "var(--badge-red-bg)", color: "#E11D48" },
   Chácara: { bg: "var(--badge-amber-bg)", color: "#CA8A04" },
-  Outros: { bg: "var(--bg-muted)", color: "#6B7280" },
+  Outros: { bg: "var(--bg-muted)", color: "var(--text-secondary)" },
 };
 
 const ALL_PROPERTY_TYPES = ["Apartamento", "Casa", "Sala Comercial", "Terreno", "Galpão", "Condomínio", "Chácara", "Outros"];
@@ -173,7 +173,7 @@ async function fetchPropertyDetails(ids: string[]): Promise<Map<string, any>> {
   const token = localStorage.getItem("acert_token");
   for (const id of ids) {
     try {
-      const r = await fetch(`http://localhost:3001/api/properties/${id}`, {
+      const r = await fetch(`/api/properties/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (r.ok) { const d = await r.json(); map.set(id, d.property || d); }
@@ -191,6 +191,7 @@ export default function ImoveisPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [quickViewId, setQuickViewId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: "archive" | "delete"; id: string; name: string } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -215,7 +216,7 @@ export default function ImoveisPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch("http://localhost:3001/api/properties");
+      const r = await fetch("/api/properties");
       setData(await r.json());
     } catch {} finally { setLoading(false); }
   }, []);
@@ -259,13 +260,13 @@ export default function ImoveisPage() {
 
   const handleArchive = async () => {
     if (!confirmAction) return;
-    await fetch(`http://localhost:3001/api/properties/${confirmAction.id}/archive`, { method: "POST" });
+    await fetch(`/api/properties/${confirmAction.id}/archive`, { method: "POST" });
     setConfirmAction(null);
     fetchData();
   };
   const handleDelete = async () => {
     if (!confirmAction) return;
-    await fetch(`http://localhost:3001/api/properties/${confirmAction.id}`, { method: "DELETE" });
+    await fetch(`/api/properties/${confirmAction.id}`, { method: "DELETE" });
     setConfirmAction(null);
     fetchData();
   };
@@ -293,8 +294,7 @@ export default function ImoveisPage() {
                 <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                 <input type="text" placeholder="Buscar por matrícula, endereço ou proprietário..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }} style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", paddingLeft: "42px", paddingRight: "16px", width: "360px", outline: "none" }} />
               </div>
-              <button onClick={() => setShowNovoImovel(true)}
-                className="flex items-center gap-2 h-10 px-7 rounded-[8px] bg-[#FF7A00] text-white text-[13px] font-semibold hover:bg-[#E06900] transition-colors"><Plus size={16} strokeWidth={2.5} />Novo Imóvel</button>
+              <button onClick={() => setShowNovoImovel(true)} style={{ display: "flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={16} strokeWidth={2.5} />Novo Imóvel</button>
             </div>
           </div>
         </div>
@@ -506,18 +506,18 @@ export default function ImoveisPage() {
                       </button>
                     </td>
                     <td style={{ padding: "12px 12px 12px 4px", textAlign: "center", borderRadius: "0 8px 8px 0", position: "relative" }}>
-                      <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === p.id ? null : p.id); }}
+                      <button onClick={(e) => { e.stopPropagation(); const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenuPos({ top: rect.bottom + 4, left: rect.right - 190 }); setMenuOpenId(menuOpenId === p.id ? null : p.id); }}
                         style={{ width: "32px", height: "32px", borderRadius: "6px", border: "none", background: menuOpenId === p.id ? "var(--bg-muted)" : "transparent", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <MoreVertical size={15} strokeWidth={1.5} />
                       </button>
                       {menuOpenId === p.id && (
-                        <div style={{ position: "absolute", top: "100%", right: "0", zIndex: 40, marginTop: "4px", background: "var(--bg-surface)", borderRadius: "10px", border: "1px solid var(--border-default)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)", minWidth: "190px", overflow: "hidden" }}>
+                        <div style={{ position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 40, background: "var(--bg-surface)", borderRadius: "10px", border: "1px solid var(--border-default)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)", minWidth: "190px", overflow: "hidden" }}>
                           <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setQuickViewId(p.id); }} style={menuItemStyle}><Edit3 size={14} strokeWidth={1.5} /> Editar imóvel</button>
                           <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); router.push(`/dashboard/dossies?property=${p.id}`); }} style={menuItemStyle}><FolderOpen size={14} strokeWidth={1.5} /> Dossiês vinculados</button>
                           <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); router.push(`/dashboard/certidoes?property=${p.id}`); }} style={menuItemStyle}><ScrollText size={14} strokeWidth={1.5} /> Ver certidões</button>
                           <div style={{ height: "1px", background: "var(--border-light)", margin: "4px 0" }} />
                           <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "archive", id: p.id, name: p.identifier }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }}><Archive size={14} strokeWidth={1.5} /> Arquivar</button>
-                          <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "delete", id: p.id, name: p.identifier }); }} style={{ ...menuItemStyle, color: "#DC2626" }}><Trash2 size={14} strokeWidth={1.5} /> Deletar</button>
+                          <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "delete", id: p.id, name: p.identifier }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }}><Trash2 size={14} strokeWidth={1.5} /> Mover p/ lixeira</button>
                         </div>
                       )}
                     </td>
@@ -565,10 +565,10 @@ export default function ImoveisPage() {
 
       {/* Confirm */}
       {confirmAction && (
-        <ConfirmModal open={true} title={confirmAction.type === "archive" ? "Arquivar imóvel" : "Deletar imóvel"}
-          message={confirmAction.type === "archive" ? `Deseja arquivar "${confirmAction.name}"?` : `Tem certeza que deseja deletar "${confirmAction.name}"?`}
-          confirmLabel={confirmAction.type === "archive" ? "Arquivar" : "Deletar"}
-          variant={confirmAction.type === "delete" ? "danger" : "default"}
+        <ConfirmModal open={true} title={confirmAction.type === "archive" ? "Arquivar imóvel" : "Mover para lixeira"}
+          message={confirmAction.type === "archive" ? `Deseja arquivar "${confirmAction.name}"? Ele ficará disponível na Lixeira para restauração.` : `Deseja mover "${confirmAction.name}" para a Lixeira? Você poderá restaurar ou excluir permanentemente depois.`}
+          confirmLabel={confirmAction.type === "archive" ? "Arquivar" : "Mover para lixeira"}
+          variant={confirmAction.type === "delete" ? "warning" : "default"}
           onConfirm={confirmAction.type === "archive" ? handleArchive : handleDelete}
           onCancel={() => setConfirmAction(null)} onClose={() => setConfirmAction(null)} />
       )}

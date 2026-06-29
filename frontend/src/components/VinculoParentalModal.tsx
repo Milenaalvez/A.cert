@@ -42,7 +42,7 @@ export default function VinculoParentalModal({ personId, personName, onClose }: 
   const fetchRelationships = useCallback(async () => {
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch(`http://localhost:3001/api/people/${personId}/relationships`, {
+      const r = await fetch(`/api/people/${personId}/relationships`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const d = await r.json();
@@ -57,7 +57,7 @@ export default function VinculoParentalModal({ personId, personName, onClose }: 
     setSearching(true);
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch(`http://localhost:3001/api/people?q=${encodeURIComponent(search.trim())}&limit=10`, {
+      const r = await fetch(`/api/people?q=${encodeURIComponent(search.trim())}&limit=10`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const d = await r.json();
@@ -75,7 +75,7 @@ export default function VinculoParentalModal({ personId, personName, onClose }: 
     setAdding(true); setError("");
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch(`http://localhost:3001/api/people/${personId}/relationships`, {
+      const r = await fetch(`/api/people/${personId}/relationships`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ related_person_id: relatedId, relationship_type: "parental" }),
@@ -90,7 +90,7 @@ export default function VinculoParentalModal({ personId, personName, onClose }: 
   const unlinkPerson = async (relId: string) => {
     try {
       const token = localStorage.getItem("acert_token");
-      await fetch(`http://localhost:3001/api/people/${personId}/relationships/${relId}`, {
+      await fetch(`/api/people/${personId}/relationships/${relId}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

@@ -17,7 +17,7 @@ const PROPERTY_TYPES = [
   { value: "Galpão", icon: Warehouse, color: "#7C3AED" },
   { value: "Condomínio", icon: Castle, color: "#E11D48" },
   { value: "Chácara", icon: Trees, color: "#CA8A04" },
-  { value: "Outros", icon: Home, color: "#6B7280" },
+  { value: "Outros", icon: Home, color: "var(--text-secondary)" },
 ];
 
 function maskCEP(v: string): string {
@@ -92,7 +92,7 @@ export function NovoImovelModal({ onClose, onCreated }: Props) {
         notaryOffice: form.notaryOffice.trim() || null,
       };
 
-      const r = await fetch("http://localhost:3001/api/properties", {
+      const r = await fetch("/api/properties", {
         method: "POST", headers, body: JSON.stringify(body),
       });
       const data = await r.json();

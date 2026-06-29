@@ -1,320 +1,230 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
-  LifeBuoy, Search, ChevronDown, ChevronUp,
-  CheckCircle2, XCircle, AlertTriangle, Clock, Send,
-  FileText, Download, HelpCircle, Shield, MessageSquare,
+  LifeBuoy, BookOpen, HelpCircle, FileText, Video,
+  Monitor, Globe, Server, Database, Clock, Copy, CheckCheck,
+  Activity, Wifi, Terminal, RefreshCw, HardDrive, ExternalLink,
+  AlertTriangle, CheckCircle2, XCircle, Search,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { PageHeader } from "@/components/PageHeader";
 
-/* ── Types ─────────────────────────────────────────── */
-interface FAQItem {
-  q: string;
-  a: string;
-  category: string;
-}
+const apiBase = "";
 
-interface OrganStatus {
-  name: string;
-  status: string;
-  responseTime?: string;
-}
-
-/* ── FAQ Data ──────────────────────────────────────── */
-const FAQ_DATA: FAQItem[] = [
-  { category: "Dossiês", q: "Como criar um dossiê?", a: "Acesse Dossiês pelo menu lateral, clique em \"Novo Dossiê\" e preencha os dados do proprietário e imóvel. O sistema associará automaticamente as certidões conforme forem emitidas." },
-  { category: "Dossiês", q: "Como concluir um dossiê?", a: "Quando todas as certidões estiverem emitidas, abra o dossiê e clique em \"Concluir\". O sistema gerará o PDF consolidado automaticamente." },
-  { category: "Dossiês", q: "Como arquivar um dossiê?", a: "Abra o dossiê, clique nos três pontos (⋮) e selecione \"Arquivar\". Dossiês arquivados ficam ocultos da lista principal mas podem ser acessados pelo filtro." },
-  { category: "Pessoas", q: "Como cadastrar uma pessoa?", a: "Acesse Pessoas pelo menu lateral, clique em \"Nova Pessoa\" e preencha CPF, nome, data de nascimento e filiação. O CPF é validado automaticamente." },
-  { category: "Pessoas", q: "Como vincular imóveis a uma pessoa?", a: "Na página de detalhes da pessoa, vá até a seção \"Imóveis\" e clique em \"Vincular Imóvel\". Selecione o imóvel desejado e a participação percentual." },
-  { category: "Imóveis", q: "Como cadastrar um imóvel?", a: "Acesse Imóveis pelo menu lateral, clique em \"Novo Imóvel\", preencha endereço, tipo, metragem e cartório. A inscrição imobiliária é validada conforme o formato do DF." },
-  { category: "Imóveis", q: "Como alterar a categoria de um imóvel?", a: "Abra os detalhes do imóvel, clique em \"Editar\" e altere o campo \"Tipo\". As mudanças são registradas na linha do tempo do imóvel." },
-  { category: "Certidões", q: "Como emitir certidões?", a: "Acesse Certidões, selecione uma pessoa cadastrada e marque os órgãos desejados. O sistema abrirá os portais automaticamente via automação. Resolva os CAPTCHAs quando solicitado." },
-  { category: "Certidões", q: "Como baixar os PDFs das certidões?", a: "Após a emissão, cada certidão aparece com um botão de download. Você também pode gerar o dossiê completo em PDF com todas as certidões consolidadas." },
-  { category: "Certidões", q: "Como adicionar certidões ao dossiê?", a: "As certidões emitidas são automaticamente vinculadas ao dossiê ativo da pessoa. Caso precise adicionar manualmente, use a opção \"Ingerir Certidão\" na página do dossiê." },
-  { category: "Usuários", q: "Como redefinir a senha de um usuário?", a: "Acesse Usuários, encontre o colaborador, clique nos três pontos (⋮) e selecione \"Resetar Senha\". Uma senha temporária será gerada." },
-  { category: "Usuários", q: "Como alterar permissões de acesso?", a: "Na página de detalhes do usuário, vá até a seção \"Permissões\" e utilize os switches para conceder ou revogar acessos por módulo." },
+const HELP_CARDS = [
+  { icon: BookOpen, title: "Guias e Manuais", desc: "Aprenda a utilizar os principais recursos do sistema através de tutoriais passo a passo.", color: "#FF7A00" },
+  { icon: HelpCircle, title: "Perguntas Frequentes", desc: "Respostas rápidas para as dúvidas mais comuns dos usuários.", color: "#3B82F6" },
+  { icon: FileText, title: "Documentação do Sistema", desc: "Manual técnico da plataforma, integrações e funcionalidades.", color: "#059669" },
+  { icon: Video, title: "Vídeos Tutoriais", desc: "Vídeos explicando processos operacionais dentro do sistema.", color: "#7C3AED" },
 ];
 
-/* ── Categories ────────────────────────────────────── */
-const CATEGORIES = ["Todas", "Dossiês", "Pessoas", "Imóveis", "Certidões", "Usuários"];
-
-const DOCUMENTATION = [
-  { title: "Manual de Dossiês", desc: "Criação, gestão e conclusão de dossiês", icon: FileText },
-  { title: "Manual de Certidões", desc: "Emissão e consolidação de certidões", icon: Shield },
-  { title: "Manual de Imóveis", desc: "Cadastro e gestão de propriedades", icon: FileText },
-  { title: "Manual de Usuários", desc: "Permissões e administração de equipe", icon: HelpCircle },
+const QUICK_SOLUTIONS = [
+  { icon: Activity, label: "Diagnóstico do Sistema", desc: "Executa verificações básicas do sistema.", color: "#FF7A00" },
+  { icon: Wifi, label: "Status das Integrações", desc: "Exibe situação atual dos órgãos conectados.", color: "#3B82F6" },
+  { icon: Terminal, label: "Logs do Sistema", desc: "Permite visualizar registros e erros.", color: "#059669" },
+  { icon: RefreshCw, label: "Atualizações do Sistema", desc: "Histórico de versões e melhorias.", color: "#7C3AED" },
+  { icon: Globe, label: "Ambiente do Sistema", desc: "Informações técnicas utilizadas pelo A.CERT.", color: "#D97706" },
+  { icon: HardDrive, label: "Backup do Sistema", desc: "Permite criar backup manual e visualizar últimos backups.", color: "#DC2626" },
 ];
 
-/* ── Helper ────────────────────────────────────────── */
-const apiBase = "http://localhost:3001";
+const FAQ_DATA = [
+  { q: "Como criar um dossiê?", a: "Acesse Dossiês pelo menu lateral, clique em \"Novo Dossiê\" e preencha os dados do proprietário e imóvel." },
+  { q: "Como emitir certidões?", a: "Acesse Certidões, selecione uma pessoa cadastrada e marque os órgãos desejados. Resolva os CAPTCHAs quando solicitado." },
+  { q: "Como cadastrar uma pessoa?", a: "Acesse Pessoas, clique em \"Nova Pessoa\" e preencha os dados. O CPF é validado automaticamente." },
+  { q: "Como baixar os PDFs das certidões?", a: "Após a emissão, cada certidão aparece com um botão de download. Você também pode gerar o dossiê completo em PDF." },
+  { q: "Como redefinir a senha de um usuário?", a: "Acesse Usuários, encontre o colaborador, clique nos três pontos e selecione \"Resetar Senha\"." },
+  { q: "Como alterar permissões de acesso?", a: "Na página de detalhes do usuário, vá até a seção \"Permissões\" e utilize os switches para conceder ou revogar acessos." },
+];
 
-/* ── Component ─────────────────────────────────────── */
+const IMPORTANT_INFO = [
+  { title: "Segurança", desc: "Mantenha credenciais protegidas e realize backups periódicos." },
+  { title: "Boas Práticas", desc: "Utilize cadastros completos para aumentar a taxa de sucesso das emissões." },
+  { title: "Integrações", desc: "Verifique regularmente o status dos órgãos integrados." },
+];
+
+function formatDate(d: string) {
+  if (!d) return "—";
+  return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Icon size={14} className="text-secondary shrink-0" />
+      <div className="flex items-center justify-between w-full min-w-0">
+        <span className="text-[12px] text-secondary">{label}</span>
+        <span className="text-[13px] text-primary font-medium">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+const statusIcon = (status: string) => {
+  if (status === "online") return { icon: CheckCircle2, color: "#059669", label: "Online" };
+  if (status === "offline") return { icon: XCircle, color: "#DC2626", label: "Offline" };
+  return { icon: AlertTriangle, color: "#D97706", label: "Instável" };
+};
+
+const card = "bg-surface p-6";
+const btnBase = "flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold cursor-pointer transition-all duration-150";
+const btnOutline = `${btnBase} bg-transparent text-muted border border-default hover:border-[#FF7A00] hover:text-[#FF7A00]`;
+
 export default function SuportePage() {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Todas");
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
-  const [organStatus, setOrganStatus] = useState<OrganStatus[]>([]);
-
-  const [formName, setFormName] = useState("");
-  const [formEmail, setFormEmail] = useState("");
-  const [formSubject, setFormSubject] = useState("");
-  const [formCategory, setFormCategory] = useState("Problema técnico");
-  const [formMessage, setFormMessage] = useState("");
-  const [formSending, setFormSending] = useState(false);
-  const [formSent, setFormSent] = useState(false);
-  const [formProtocol, setFormProtocol] = useState("");
-  const [formError, setFormError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [organs, setOrgans] = useState<any[]>([]);
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("acert_token");
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    fetch(`${apiBase}/api/dashboard`, { headers })
-      .then(r => r.json())
-      .then(d => {
-        if (d?.organs) setOrganStatus(d.organs.map((o: any) => ({
-          name: o.name,
-          status: o.status || "online",
-          responseTime: o.avgResponseTime ? `${o.avgResponseTime}ms` : undefined,
-        })));
-      })
-      .catch(() => {});
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch(`${apiBase}/api/settings/system-info`, { headers })
+      .then(r => r.json()).then(setSystemInfo).catch(() => {});
+    fetch(`${apiBase}/api/settings/organs`, { headers })
+      .then(r => r.json()).then(setOrgans).catch(() => {});
   }, []);
 
-  const filteredFAQ = FAQ_DATA.filter(f => {
-    const matchCat = activeCategory === "Todas" || f.category === activeCategory;
-    if (!search.trim()) return matchCat;
-    const s = search.toLowerCase();
-    return matchCat && (f.q.toLowerCase().includes(s) || f.a.toLowerCase().includes(s));
-  });
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!formName || !formEmail || !formSubject || !formMessage || formSending) return;
-    setFormSending(true);
-    setFormError("");
-    try {
-      const r = await fetch(`${apiBase}/api/support/ticket`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formName, email: formEmail, subject: formSubject, category: formCategory, message: formMessage }),
-      });
-      const d = await r.json();
-      if (d.success) {
-        setFormSent(true);
-        setFormProtocol(d.protocol);
-      } else {
-        setFormError(d.error || "Erro ao enviar");
-      }
-    } catch {
-      setFormError("Erro de conexão. Tente novamente.");
-    } finally {
-      setFormSending(false);
-    }
+  async function copyInfo() {
+    if (!systemInfo) return;
+    const text = `A.CERT ${systemInfo.version}
+Ambiente: ${systemInfo.environment}
+Atualização: ${systemInfo.lastUpdate}
+Servidor: ${systemInfo.server}
+Banco: ${systemInfo.database}
+Uptime: ${systemInfo.uptime}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
-
-  const statusIcon = (s: string) => {
-    if (s === "online") return <CheckCircle2 size={14} color="#10B981" />;
-    if (s === "unstable") return <AlertTriangle size={14} color="#F59E0B" />;
-    if (s === "maintenance") return <Clock size={14} color="#3B82F6" />;
-    return <XCircle size={14} color="#EF4444" />;
-  };
-  const statusLabel = (s: string) => {
-    if (s === "online") return "Operacional";
-    if (s === "unstable") return "Instabilidade";
-    if (s === "maintenance") return "Manutenção";
-    return "Indisponível";
-  };
-  const statusColor = (s: string) => {
-    if (s === "online") return "#10B981";
-    if (s === "unstable") return "#F59E0B";
-    if (s === "maintenance") return "#3B82F6";
-    return "#EF4444";
-  };
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ marginTop: 24 }}>
-            <PageHeader
-              title="Suporte"
-              subtitle="Central de ajuda, documentação e contato com a equipe responsável pelo sistema."
-            />
+        <div style={{ marginTop: 24, marginBottom: 28 }}>
+          <div className="flex items-start justify-between gap-8">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Suporte</h1>
+              <p className="text-[14px] text-secondary leading-relaxed">Central de ajuda, documentação e recursos para utilização do sistema A.CERT.</p>
+            </div>
           </div>
         </div>
 
-        {/* FAQ Search */}
-        <div className="relative mb-8">
-          <Search size={18} className="absolute left-[14px] top-[13px] text-muted" />
-          <input
-            placeholder="Como podemos ajudar? Ex: Como emitir uma certidão?"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setExpandedFAQ(null); }}
-            className="w-full h-[46px] rounded-[10px] border border-default bg-surface pl-[42px] pr-[14px] text-[14px] text-primary outline-none placeholder:text-muted"
-            onFocus={e => e.currentTarget.style.borderColor = "#FF7A00"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--border-default)"}
-          />
-        </div>
-
-        {/* FAQ Categories */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {CATEGORIES.map(cat => {
-            const active = activeCategory === cat;
+        {/* Central de Ajuda */}
+        <div className="flex gap-6 mb-8">
+          {HELP_CARDS.map((card, i) => {
+            const Icon = card.icon;
             return (
-              <button
-                key={cat}
-                onClick={() => { setActiveCategory(cat); setExpandedFAQ(null); }}
-                className={`px-4 py-1.5 rounded-[20px] border text-[13px] font-medium cursor-pointer transition-colors ${
-                  active ? "border-[#FF7A00] bg-accent/8 text-[#FF7A00]" : "border-default bg-surface text-secondary hover:border-hover"
-                }`}
-              >
-                {cat}
-              </button>
+              <div key={i} className={`${card} flex-1 flex flex-col`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 flex items-center justify-center" style={{ background: `${card.color}15` }}>
+                    <Icon size={20} strokeWidth={1.5} color={card.color} />
+                  </div>
+                  <h3 className="text-[15px] font-semibold text-primary">{card.title}</h3>
+                </div>
+                <p className="text-[13px] text-muted leading-relaxed flex-1 mb-4">{card.desc}</p>
+                <button className={btnOutline} style={{ alignSelf: "flex-start" }}>
+                  <ExternalLink size={13} />
+                  {["Acessar Guias", "Ver FAQ", "Abrir Documentação", "Assistir Vídeos"][i]}
+                </button>
+              </div>
             );
           })}
+
+          {/* Sidebar - Info Sistema */}
+          <div className={card} style={{ width: "280px", minWidth: "280px" }}>
+            <h3 className="text-[14px] font-semibold text-primary mb-4">Informações do Sistema</h3>
+            <div className="flex flex-col gap-3">
+              <InfoRow icon={Monitor} label="Versão" value={systemInfo?.version || "—"} />
+              <InfoRow icon={Globe} label="Ambiente" value={systemInfo?.environment || "—"} />
+              <InfoRow icon={Clock} label="Atualização" value={systemInfo?.lastUpdate || "—"} />
+              <InfoRow icon={Server} label="Servidor" value={systemInfo?.server || "—"} />
+              <InfoRow icon={Database} label="Banco" value={systemInfo?.database || "—"} />
+              <InfoRow icon={Activity} label="Uptime" value={systemInfo?.uptime || "—"} />
+            </div>
+            <button onClick={copyInfo} className={`${btnOutline} w-full mt-4`}>
+              {copied ? <CheckCheck size={14} color="#059669" /> : <Copy size={14} />}
+              {copied ? "Copiado!" : "Copiar Informações"}
+            </button>
+          </div>
         </div>
 
-        {/* FAQ List */}
-        <div className="mb-10">
-          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Perguntas Frequentes</h3>
-          <div className="flex flex-col gap-2">
-            {filteredFAQ.length === 0 && (
-              <p className="text-muted text-[14px] text-center py-6">Nenhum resultado encontrado para &quot;{search}&quot;.</p>
-            )}
-            {filteredFAQ.map((faq, i) => (
-              <div
-                key={i}
-                className="rounded-[10px] bg-surface overflow-hidden cursor-pointer"
-                onClick={() => setExpandedFAQ(expandedFAQ === i ? null : i)}
-              >
-                <div className="flex items-center justify-between px-[18px] py-3.5">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[12px] text-[#FF7A00] font-semibold uppercase tracking-[0.5px]">{faq.category}</span>
-                    <p className="text-[14px] font-medium text-primary mt-1">{faq.q}</p>
+        {/* Soluções Rápidas */}
+        <div className="mb-8">
+          <h2 className="text-[17px] font-bold text-primary mb-5">Soluções Rápidas</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {QUICK_SOLUTIONS.map((sol, i) => {
+              const Icon = sol.icon;
+              return (
+                <button key={i} className={`${card} flex items-center gap-4 text-left cursor-pointer hover:border-[#FF7A00] transition-colors`}>
+                  <div className="w-12 h-12 flex items-center justify-center shrink-0" style={{ background: `${sol.color}12` }}>
+                    <Icon size={22} strokeWidth={1.5} color={sol.color} />
                   </div>
-                  {expandedFAQ === i ? <ChevronUp size={18} className="text-muted shrink-0 ml-3" /> : <ChevronDown size={18} className="text-muted shrink-0 ml-3" />}
-                </div>
-                {expandedFAQ === i && (
-                  <div className="px-[18px] pb-4">
-                    <p className="text-[14px] text-secondary leading-relaxed border-t border-default pt-3">{faq.a}</p>
+                  <div className="min-w-0">
+                    <h4 className="text-[14px] font-semibold text-primary">{sol.label}</h4>
+                    <p className="text-[12px] text-muted mt-0.5">{sol.desc}</p>
                   </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Status das Integrações */}
+        {organs.length > 0 && (
+          <div className={`${card} mb-8`}>
+            <h3 className="text-[14px] font-semibold text-primary mb-4">Status das Integrações</h3>
+            <div className="flex flex-wrap gap-4">
+              {organs.map((o: any) => {
+                const si = statusIcon(o.status);
+                const Icon = si.icon;
+                return (
+                  <div key={o.id} className="flex items-center gap-3 px-4 py-3" style={{ minWidth: "160px" }}>
+                    <Icon size={16} color={si.color} />
+                    <div>
+                      <p className="text-[13px] font-medium text-primary">{o.name}</p>
+                      <p className="text-[11px]" style={{ color: si.color }}>{si.label}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* FAQ */}
+        <div className={`${card} mb-8`}>
+          <h3 className="text-[14px] font-semibold text-primary mb-4">Perguntas Frequentes</h3>
+          <div className="flex flex-col">
+            {FAQ_DATA.map((faq, i) => (
+              <div key={i} className="border-b border-default last:border-0">
+                <button
+                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                  className="flex items-center justify-between w-full py-4 text-left hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-[14px] font-medium text-primary">{faq.q}</span>
+                  <span className={`text-secondary text-lg transition-transform ${faqOpen === i ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+                {faqOpen === i && (
+                  <p className="text-[13px] text-muted pb-4 leading-relaxed pr-8">{faq.a}</p>
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* System Status */}
-        <div className="mb-10">
-          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Status do Sistema</h3>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
-            {(organStatus.length > 0 ? organStatus : [
-              { name: "TJDFT", status: "online" },
-              { name: "TRF1", status: "online" },
-              { name: "TRT", status: "online" },
-              { name: "SEFAZ-DF", status: "unstable" },
-              { name: "Receita Federal", status: "online" },
-            ]).map((org, i) => (
-              <div key={i} className="rounded-[10px] bg-surface p-4 flex items-center gap-2.5">
-                {statusIcon(org.status)}
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-semibold text-primary">{org.name}</div>
-                  <div className="text-[12px] font-medium" style={{ color: statusColor(org.status) }}>{statusLabel(org.status)}</div>
-                </div>
+        {/* Informações Importantes */}
+        <div className={card}>
+          <h3 className="text-[14px] font-semibold text-primary mb-4">Informações Importantes</h3>
+          <div className="grid grid-cols-3 gap-6">
+            {IMPORTANT_INFO.map((info, i) => (
+              <div key={i}>
+                <h4 className="text-[13px] font-semibold text-[#FF7A00] mb-2">{info.title}</h4>
+                <p className="text-[13px] text-muted leading-relaxed">{info.desc}</p>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Documentation */}
-        <div className="mb-10">
-          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Documentação</h3>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5">
-            {DOCUMENTATION.map((doc, i) => {
-              const Icon = doc.icon;
-              return (
-                <div key={i} className="rounded-[10px] bg-surface p-4 flex gap-3 items-start">
-                  <div className="w-[38px] h-[38px] rounded-lg bg-accent/8 flex items-center justify-center shrink-0">
-                    <Icon size={18} color="#FF7A00" strokeWidth={1.5} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-primary mb-0.5">{doc.title}</div>
-                    <div className="text-[12px] text-muted mb-2">{doc.desc}</div>
-                    <button className="inline-flex items-center gap-1 bg-transparent border-none text-[#FF7A00] text-[12px] font-medium cursor-pointer p-0">
-                      <Download size={12} /> Baixar PDF
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Contact Form */}
-        <div>
-          <h3 className="text-[15px] font-semibold text-primary mb-3.5">Fale Conosco</h3>
-          {formSent ? (
-            <div className="border border-[#10B981] rounded-[10px] bg-[rgba(16,185,129,0.06)] p-6 text-center">
-              <CheckCircle2 size={40} color="#10B981" className="mb-3 mx-auto" />
-              <h3 className="text-[16px] font-bold text-primary mb-1">Solicitação enviada!</h3>
-              <p className="text-[14px] text-secondary mb-3">Protocolo: <strong className="text-[#FF7A00] font-mono">{formProtocol}</strong></p>
-              <button
-                onClick={() => { setFormSent(false); setFormName(""); setFormEmail(""); setFormSubject(""); setFormMessage(""); setFormProtocol(""); }}
-                className="px-5 py-2 rounded-lg border border-[#FF7A00] bg-transparent text-[#FF7A00] text-[13px] font-semibold cursor-pointer hover:bg-accent/8 transition-colors"
-              >
-                Nova solicitação
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="rounded-[12px] bg-surface p-6 flex flex-col gap-3.5">
-              <div className="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label className="text-[12px] font-semibold text-secondary block mb-1">Nome</label>
-                  <input required value={formName} onChange={e => setFormName(e.target.value)} placeholder="Seu nome completo" className="w-full h-10 rounded-lg border border-default bg-surface px-3 text-[13px] text-primary outline-none placeholder:text-muted" />
-                </div>
-                <div>
-                  <label className="text-[12px] font-semibold text-secondary block mb-1">Email</label>
-                  <input required type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="seu@email.com" className="w-full h-10 rounded-lg border border-default bg-surface px-3 text-[13px] text-primary outline-none placeholder:text-muted" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label className="text-[12px] font-semibold text-secondary block mb-1">Assunto</label>
-                  <input required value={formSubject} onChange={e => setFormSubject(e.target.value)} placeholder="Descreva o assunto" className="w-full h-10 rounded-lg border border-default bg-surface px-3 text-[13px] text-primary outline-none placeholder:text-muted" />
-                </div>
-                <div>
-                  <label className="text-[12px] font-semibold text-secondary block mb-1">Categoria</label>
-                  <select value={formCategory} onChange={e => setFormCategory(e.target.value)} className="w-full h-10 rounded-lg border border-default bg-surface px-2.5 text-[13px] text-primary outline-none cursor-pointer">
-                    <option>Problema técnico</option>
-                    <option>Sugestão</option>
-                    <option>Financeiro</option>
-                    <option>Integração</option>
-                    <option>Outro</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-[12px] font-semibold text-secondary block mb-1">Mensagem</label>
-                <textarea required value={formMessage} onChange={e => setFormMessage(e.target.value)} rows={4} placeholder="Descreva sua dúvida ou problema em detalhes..." className="w-full rounded-lg border border-default bg-surface px-3 py-2.5 text-[13px] text-primary outline-none resize-y font-[inherit] placeholder:text-muted" />
-              </div>
-              {formError && <p className="text-[12px] text-[#EF4444] m-0">{formError}</p>}
-              <button
-                type="submit"
-                disabled={formSending}
-                className={`self-end inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border-none text-white text-[13px] font-semibold transition-colors ${
-                  formSending ? "bg-[rgba(255,122,0,0.5)] cursor-not-allowed" : "bg-[#FF7A00] cursor-pointer hover:bg-[#E06900]"
-                }`}
-              >
-                {formSending ? "Enviando..." : <><Send size={14} /> Enviar</>}
-              </button>
-            </form>
-          )}
         </div>
       </div>
     </DashboardLayout>

@@ -21,7 +21,7 @@ export function PropertyQuickView({ propertyId, onClose }: { propertyId: string;
     (async () => {
       try {
         const token = localStorage.getItem("acert_token");
-        const r = await fetch(`http://localhost:3001/api/properties/${propertyId}`, {
+        const r = await fetch(`/api/properties/${propertyId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (r.ok) {

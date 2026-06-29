@@ -35,14 +35,16 @@ router.get('/', (req, res) => {
         p.id, p.name, p.cpf, p.cnpj, p.email, p.phone, p.cell_phone,
         p.city, p.state, p.created_at, p.is_pre_cadastro, p.archived_at,
         (
-          SELECT COUNT(*) FROM dossiers d WHERE d.person_id = p.id
+          SELECT COUNT(*) FROM dossier_participants dp WHERE dp.person_id = p.id
         ) as dossier_count,
         (
           SELECT COUNT(*) FROM properties prop WHERE prop.owner_id = p.id
         ) as property_count,
         (
           SELECT COALESCE(MAX(d.updated_at), p.created_at)
-          FROM dossiers d WHERE d.person_id = p.id
+          FROM dossier_participants dp
+          JOIN dossiers d ON d.id = dp.dossier_id
+          WHERE dp.person_id = p.id
         ) as last_update
       FROM persons p
       ${whereClause}
@@ -58,7 +60,7 @@ router.get('/', (req, res) => {
     const stats = db.prepare(`
       SELECT
         (SELECT COUNT(*) FROM persons WHERE archived_at IS NULL) as total,
-        (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND EXISTS (SELECT 1 FROM dossiers d WHERE d.person_id = p.id)) as vinculadas
+        (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND EXISTS (SELECT 1 FROM dossier_participants dp WHERE dp.person_id = p.id)) as vinculadas
     `).get() as { total: number; vinculadas: number };
 
     const result = people.map(p => {
@@ -95,6 +97,14 @@ router.get('/', (req, res) => {
         WHERE person_id = ? OR related_person_id = ?
       `).get(p.id, p.id) as { count: number };
 
+      const dossiersVinculados = db.prepare(`
+        SELECT d.id, d.identifier, dp.role
+        FROM dossier_participants dp
+        JOIN dossiers d ON d.id = dp.dossier_id
+        WHERE dp.person_id = ?
+        ORDER BY d.created_at DESC
+      `).all(p.id) as { id: string; identifier: string; role: string }[];
+
       return {
         id: p.id,
         name: p.name,
@@ -117,6 +127,11 @@ router.get('/', (req, res) => {
         certsPendentes: certStats.pendentes,
         relationshipCount: relationshipCount.count,
         updatedAt: p.last_update,
+        dossiersVinculados: dossiersVinculados.map(d => ({
+          id: d.id,
+          identifier: d.identifier,
+          role: d.role,
+        })),
       };
     });
 
@@ -484,12 +499,11 @@ router.delete('/:id', (req, res) => {
       res.status(404).json({ error: 'Pessoa não encontrada' });
       return;
     }
-    db.prepare('DELETE FROM person_relationships WHERE person_id = ? OR related_person_id = ?').run(id, id);
-    db.prepare('DELETE FROM persons WHERE id = ?').run(id);
+    db.prepare('UPDATE persons SET deleted_at = datetime(\'now\') WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (error) {
     console.error('[People Delete] Erro:', error);
-    res.status(500).json({ error: 'Erro ao deletar pessoa' });
+    res.status(500).json({ error: 'Erro ao mover pessoa para lixeira' });
   }
 });
 

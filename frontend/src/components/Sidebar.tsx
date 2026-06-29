@@ -136,6 +136,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
         { label: "Usuários", icon: UserCog, page: "usuarios" },
         { label: "Configurações", icon: Settings, page: "configuracoes" },
         { label: "Suporte", icon: LifeBuoy, page: "suporte" },
+        { label: "Lixeira", icon: Trash2, page: "trash" },
       ],
     },
   ], [])
@@ -337,14 +338,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                                 <Star size={16} strokeWidth={1.5} className="shrink-0 text-[#FFB800]/60 group-hover:text-[#FFB800]" />
                                 <span>Prioridades</span>
                               </button>
-                              <button
-                                onClick={() => onNavigate("dossies")}
-                                className="group flex items-center gap-3 w-full h-10 text-[13px] text-[#F0F3FA]/60 hover:text-white hover:bg-white/[0.04] transition-colors"
-                                style={{ paddingLeft: "50px", paddingRight: "18px" }}
-                              >
-                                <Trash2 size={16} strokeWidth={1.5} className="shrink-0 text-[#F0F3FA]/40 group-hover:text-[#F0F3FA]/70" />
-                                <span>Lixeira</span>
-                              </button>
+
                             </div>
                           )}
                         </div>

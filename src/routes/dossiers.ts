@@ -1,15 +1,32 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import db from '../database.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { gerarDossiePDFFromDB } from '../services/dossie.service.js';
 
 const router = Router();
 
+function validarCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10) rem = 0;
+  if (rem !== parseInt(digits[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10) rem = 0;
+  return rem === parseInt(digits[10]);
+}
+
 router.post('/', authMiddleware, (req, res) => {
   try {
-    const { person_id, property_id, status, priority, created_by, observation } = req.body;
+    const { transaction_type, status, priority, created_by, observation, property, participants } = req.body;
 
-    if (!person_id || !created_by) {
-      res.status(400).json({ error: 'Cliente e responsável são obrigatórios.' });
+    if (!participants || !Array.isArray(participants) || participants.length === 0) {
+      res.status(400).json({ error: 'Pelo menos um participante é obrigatório.' });
       return;
     }
 
@@ -19,21 +36,76 @@ router.post('/', authMiddleware, (req, res) => {
     ).get(`${year}-%`) as { count: number };
     const next = String((count.count || 0) + 1).padStart(3, '0');
     const identifier = `${year}-${next}`;
+    const dossierId = `doss_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-    const id = `doss_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    let propertyId: string | null = null;
+    if (property && property.identifier) {
+      propertyId = randomUUID();
+      db.prepare(`
+        INSERT INTO properties (id, identifier, registration, type, address, neighborhood, city, state, zip_code, cartorio, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(
+        propertyId,
+        property.identifier,
+        property.registration || '',
+        'Outros',
+        property.address || '',
+        property.neighborhood || '',
+        property.city || '',
+        property.state || '',
+        property.zipCode || '',
+        property.cartorio || '',
+        'Regular'
+      );
+    }
 
     db.prepare(`
-      INSERT INTO dossiers (id, identifier, person_id, property_id, status, priority, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO dossiers (id, identifier, person_id, property_id, status, priority, created_by, observation, transaction_type, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).run(
-      id,
+      dossierId,
       identifier,
-      person_id,
-      property_id || null,
+      null,
+      propertyId,
       status || 'Em andamento',
       priority || 'Regular',
-      created_by
+      created_by || 'Sistema',
+      observation || '',
+      transaction_type || 'venda'
     );
+
+    for (const p of participants) {
+      let personId = p.id;
+      const cpfDigits = (p.cpf || '').replace(/\D/g, '');
+
+      if (!personId || personId.startsWith('pre_')) {
+        if (cpfDigits.length === 11) {
+          const existing = db.prepare('SELECT id FROM persons WHERE cpf = ?').get(cpfDigits) as { id: string } | undefined;
+          if (existing) {
+            personId = existing.id;
+          }
+        }
+        if (!personId || personId.startsWith('pre_')) {
+          personId = randomUUID();
+          db.prepare(`
+            INSERT INTO persons (id, name, cpf, created_at)
+            VALUES (?, ?, ?, datetime('now'))
+          `).run(personId, p.name.trim(), cpfDigits || null);
+        }
+      }
+
+      db.prepare(`
+        INSERT OR IGNORE INTO dossier_participants (dossier_id, person_id, role)
+        VALUES (?, ?, ?)
+      `).run(dossierId, personId, p.role || 'proprietario');
+
+      if (propertyId) {
+        db.prepare(`
+          INSERT OR IGNORE INTO property_owners (id, property_id, person_id, participation)
+          VALUES (?, ?, ?, ?)
+        `).run(randomUUID(), propertyId, personId, 0);
+      }
+    }
 
     const userRow = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user!.userId) as { name: string } | undefined;
     const userName = userRow?.name || req.user!.email;
@@ -44,12 +116,12 @@ router.post('/', authMiddleware, (req, res) => {
     `).run(
       `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       userName,
-      'criou o dossiê',
+      participants.length > 1 ? `criou o dossiê com ${participants.length} participantes` : 'criou o dossiê',
       identifier,
-      id
+      dossierId
     );
 
-    res.json({ id, identifier, status: status || 'Em andamento' });
+    res.json({ id: dossierId, identifier, status: status || 'Em andamento' });
   } catch (error) {
     console.error('[Dossiers] Erro ao criar:', error);
     res.status(500).json({ error: 'Erro ao criar dossiê' });
@@ -281,10 +353,12 @@ router.get('/:id', (_req, res) => {
     const { id } = _req.params;
     const dossier = db.prepare(`
       SELECT d.id, d.identifier, d.status, d.priority, d.created_by, d.created_at, d.updated_at, d.observation,
+             d.transaction_type,
              p.id as person_id, p.name as person_name, p.cpf as person_cpf, p.rg as person_rg,
              p.mother_name as person_mother_name, p.father_name as person_father_name, p.email as person_email,
              prop.identifier as property_identifier, prop.type as property_type, prop.address as property_address,
-             prop.registration as property_registration
+             prop.registration as property_registration,
+             prop.cartorio as property_cartorio
       FROM dossiers d
       LEFT JOIN persons p ON p.id = d.person_id
       LEFT JOIN properties prop ON prop.id = d.property_id
@@ -318,6 +392,24 @@ router.get('/:id', (_req, res) => {
       FROM activities a WHERE a.dossier_ref = ? ORDER BY a.created_at DESC LIMIT 20
     `).all(id) as any[];
 
+    const personProperties = dossier.person_id ? db.prepare(`
+      SELECT p.id, p.identifier, p.registration, p.type, p.address, p.neighborhood, p.city, p.status
+      FROM properties p
+      JOIN property_owners po ON po.property_id = p.id
+      WHERE po.person_id = ? AND (p.deleted_at IS NULL OR p.deleted_at = '')
+      ORDER BY p.created_at DESC
+    `).all(dossier.person_id) as any[] : [];
+
+    const participants = db.prepare(`
+      SELECT dp.role, p.id, p.name, p.cpf, p.rg, p.birth_date, p.mother_name, p.father_name, p.email,
+             (SELECT COUNT(*) FROM certificates c WHERE c.dossier_id = ? AND c.person_id = p.id) as cert_total,
+             (SELECT COUNT(*) FROM certificates c WHERE c.dossier_id = ? AND c.person_id = p.id AND c.status = 'Obtida') as cert_obtidas
+      FROM dossier_participants dp
+      JOIN persons p ON p.id = dp.person_id
+      WHERE dp.dossier_id = ?
+      ORDER BY dp.role = 'proprietario' DESC, p.name ASC
+    `).all(id, id, id) as any[];
+
     res.json({
       id: dossier.id,
       identifier: dossier.identifier,
@@ -325,6 +417,7 @@ router.get('/:id', (_req, res) => {
       priority: dossier.priority,
       responsible: dossier.created_by || 'Não atribuído',
       observation: dossier.observation || '',
+      transactionType: dossier.transaction_type || 'venda',
       createdAt: dossier.created_at,
       updatedAt: dossier.updated_at,
       person: dossier.person_id ? {
@@ -341,7 +434,22 @@ router.get('/:id', (_req, res) => {
         type: dossier.property_type,
         address: dossier.property_address,
         registration: dossier.property_registration,
+        cartorio: dossier.property_cartorio,
       } : null,
+      personProperties,
+      participants: participants.map(p => ({
+        id: p.id,
+        name: p.name,
+        cpf: p.cpf,
+        rg: p.rg,
+        birthDate: p.birth_date,
+        motherName: p.mother_name,
+        fatherName: p.father_name,
+        email: p.email,
+        role: p.role,
+        certTotal: p.cert_total,
+        certObtidas: p.cert_obtidas,
+      })),
       certificateCount: certStats.total,
       certificatesObtidas: certStats.obtidas,
       certificatesPendentes: certStats.pendentes,
@@ -352,6 +460,73 @@ router.get('/:id', (_req, res) => {
   } catch (error) {
     console.error('[Dossier] Erro ao carregar:', error);
     res.status(500).json({ error: 'Erro ao carregar dossiê' });
+  }
+});
+
+router.post('/merge', authMiddleware, (req, res) => {
+  try {
+    const { person_ids } = req.body;
+    if (!person_ids || person_ids.length < 2) {
+      res.status(400).json({ error: 'É necessário informar pelo menos 2 pessoas' });
+      return;
+    }
+
+    const [primaryId, ...secondaryIds] = person_ids;
+
+    const primaryDossier = db.prepare(`
+      SELECT id, identifier, observation FROM dossiers WHERE person_id = ? ORDER BY created_at DESC LIMIT 1
+    `).get(primaryId) as { id: string; identifier: string; observation: string | null } | undefined;
+
+    if (!primaryDossier) {
+      res.status(400).json({ error: 'Dossiê não encontrado para a pessoa principal' });
+      return;
+    }
+
+    const mergedObservations: string[] = [];
+    if (primaryDossier.observation) mergedObservations.push(primaryDossier.observation);
+
+    for (const secId of secondaryIds) {
+      const secDossier = db.prepare(`
+        SELECT id, observation FROM dossiers WHERE person_id = ? ORDER BY created_at DESC LIMIT 1
+      `).get(secId) as { id: string; observation: string | null } | undefined;
+
+      if (!secDossier) continue;
+
+      if (secDossier.observation) mergedObservations.push(secDossier.observation);
+
+      // Move certificates from secondary to primary
+      db.prepare('UPDATE certificates SET dossier_id = ? WHERE dossier_id = ?')
+        .run(primaryDossier.id, secDossier.id);
+
+      // Delete secondary dossier
+      db.prepare('DELETE FROM dossiers WHERE id = ?').run(secDossier.id);
+    }
+
+    const newObservation = mergedObservations.length > 0
+      ? mergedObservations.join(' | ')
+      : 'Dossiê conjunto';
+
+    db.prepare('UPDATE dossiers SET observation = ?, updated_at = datetime(\'now\') WHERE id = ?')
+      .run(newObservation, primaryDossier.id);
+
+    const userRow = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user!.userId) as { name: string } | undefined;
+    const userName = userRow?.name || req.user!.email;
+
+    db.prepare(`
+      INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userName,
+      'criou dossiê conjunto',
+      primaryDossier.identifier,
+      primaryDossier.id
+    );
+
+    res.json({ success: true, primary_dossier_id: primaryDossier.id, identifier: primaryDossier.identifier });
+  } catch (error) {
+    console.error('[Dossiers Merge] Erro:', error);
+    res.status(500).json({ error: 'Erro ao mesclar dossiês' });
   }
 });
 
@@ -455,6 +630,188 @@ router.put('/:id', authMiddleware, (req, res) => {
   } catch (error) {
     console.error('[Dossiers] Erro ao atualizar:', error);
     res.status(500).json({ error: 'Erro ao atualizar dossiê' });
+  }
+});
+
+router.delete('/:id', authMiddleware, (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = db.prepare('SELECT id FROM dossiers WHERE id = ?').get(id);
+    if (!existing) {
+      res.status(404).json({ error: 'Dossiê não encontrado' });
+      return;
+    }
+    db.prepare('UPDATE dossiers SET deleted_at = datetime(\'now\') WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Dossiers Delete] Erro:', error);
+    res.status(500).json({ error: 'Erro ao mover dossiê para lixeira' });
+  }
+});
+
+router.post('/:id/generate', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const dossier = db.prepare(`
+      SELECT d.id, d.identifier, d.status, d.priority, d.created_by, d.created_at, d.updated_at, d.observation,
+             d.transaction_type,
+             p.id as person_id, p.name as person_name, p.cpf as person_cpf, p.rg as person_rg,
+             p.mother_name as person_mother_name, p.father_name as person_father_name, p.email as person_email,
+             prop.identifier as property_identifier, prop.type as property_type, prop.address as property_address,
+             prop.registration as property_registration, prop.cartorio as property_cartorio
+      FROM dossiers d
+      LEFT JOIN persons p ON p.id = d.person_id
+      LEFT JOIN properties prop ON prop.id = d.property_id
+      WHERE d.id = ?
+    `).get(id) as any;
+
+    if (!dossier) {
+      res.status(404).json({ error: 'Dossiê não encontrado' });
+      return;
+    }
+
+    const certStats = db.prepare(`
+      SELECT COUNT(*) as total,
+        COALESCE(SUM(CASE WHEN status = 'Obtida' THEN 1 ELSE 0 END), 0) as obtidas,
+        COALESCE(SUM(CASE WHEN status = 'Pendente' THEN 1 ELSE 0 END), 0) as pendentes
+      FROM certificates WHERE dossier_id = ?
+    `).get(id) as { total: number; obtidas: number; pendentes: number };
+
+    const certificates = db.prepare(`
+      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.person_id, c.document_path
+      FROM certificates c WHERE c.dossier_id = ? ORDER BY c.created_at DESC
+    `).all(id) as any[];
+
+    const personComplete = dossier.person_cpf && dossier.person_cpf.length > 0;
+    const allCertsObtained = certStats.obtidas >= 9;
+    const derivedStatus = allCertsObtained && personComplete ? 'Concluído' : 'Pendente';
+
+    const participants = db.prepare(`
+      SELECT dp.role, p.id, p.name, p.cpf,
+             (SELECT COUNT(*) FROM certificates c WHERE c.dossier_id = ? AND c.person_id = p.id) as cert_total,
+             (SELECT COUNT(*) FROM certificates c WHERE c.dossier_id = ? AND c.person_id = p.id AND c.status = 'Obtida') as cert_obtidas
+      FROM dossier_participants dp
+      JOIN persons p ON p.id = dp.person_id
+      WHERE dp.dossier_id = ?
+      ORDER BY dp.role = 'proprietario' DESC, p.name ASC
+    `).all(id, id, id) as any[];
+
+    const payload = {
+      identifier: dossier.identifier,
+      status: derivedStatus,
+      priority: dossier.priority || 'Regular',
+      responsible: dossier.created_by || 'Não atribuído',
+      transactionType: dossier.transaction_type || 'venda',
+      observation: dossier.observation || '',
+      createdAt: dossier.created_at,
+      updatedAt: dossier.updated_at,
+      person: dossier.person_id ? {
+        id: dossier.person_id,
+        name: dossier.person_name,
+        cpf: dossier.person_cpf,
+        rg: dossier.person_rg,
+        mother_name: dossier.person_mother_name || '',
+        father_name: dossier.person_father_name || '',
+        email: dossier.person_email || '',
+      } : null,
+      property: dossier.property_identifier ? {
+        identifier: dossier.property_identifier,
+        type: dossier.property_type,
+        address: dossier.property_address,
+        registration: dossier.property_registration,
+        cartorio: dossier.property_cartorio,
+      } : null,
+      certificateCount: certStats.total,
+      certificatesObtidas: certStats.obtidas,
+      certificatesPendentes: certStats.pendentes,
+      progress: certStats.total > 0 ? Math.round((certStats.obtidas / certStats.total) * 100) : 0,
+      certificates,
+      participants: participants.map(p => ({
+        id: p.id, name: p.name, cpf: p.cpf, role: p.role,
+        certTotal: p.cert_total, certObtidas: p.cert_obtidas,
+      })),
+    };
+
+    const pdfBuffer = await gerarDossiePDFFromDB(payload);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="dossie_${dossier.identifier.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf"`);
+    res.send(Buffer.from(pdfBuffer));
+  } catch (error) {
+    console.error('[Dossiers Generate] Erro:', error);
+    res.status(500).json({ error: 'Erro ao gerar dossiê' });
+  }
+});
+
+router.put('/:id/link-property', authMiddleware, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { property_id } = req.body;
+
+    if (!property_id) {
+      res.status(400).json({ error: 'property_id é obrigatório' });
+      return;
+    }
+
+    const dossier = db.prepare('SELECT id, identifier, person_id FROM dossiers WHERE id = ?').get(id) as any;
+    if (!dossier) {
+      res.status(404).json({ error: 'Dossiê não encontrado' });
+      return;
+    }
+
+    const property = db.prepare('SELECT id, identifier FROM properties WHERE id = ?').get(property_id) as any;
+    if (!property) {
+      res.status(404).json({ error: 'Imóvel não encontrado' });
+      return;
+    }
+
+    db.prepare('UPDATE dossiers SET property_id = ?, updated_at = datetime(\'now\') WHERE id = ?').run(property_id, id);
+
+    const userName = (req as any).user?.name || 'Sistema';
+    db.prepare(`
+      INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userName,
+      `Vinculou o imóvel ${property.identifier} ao dossiê`,
+      dossier.identifier,
+      id
+    );
+
+    res.json({ success: true, property_id });
+  } catch (error) {
+    console.error('[Dossiers Link Property] Erro:', error);
+    res.status(500).json({ error: 'Erro ao vincular imóvel' });
+  }
+});
+
+router.delete('/:id/link-property', authMiddleware, (req, res) => {
+  try {
+    const { id } = req.params;
+    const dossier = db.prepare('SELECT id, identifier FROM dossiers WHERE id = ?').get(id) as any;
+    if (!dossier) {
+      res.status(404).json({ error: 'Dossiê não encontrado' });
+      return;
+    }
+
+    db.prepare('UPDATE dossiers SET property_id = NULL, updated_at = datetime(\'now\') WHERE id = ?').run(id);
+
+    const userName = (req as any).user?.name || 'Sistema';
+    db.prepare(`
+      INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userName,
+      'Removeu o vínculo do imóvel do dossiê',
+      dossier.identifier,
+      id
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Dossiers Unlink Property] Erro:', error);
+    res.status(500).json({ error: 'Erro ao desvincular imóvel' });
   }
 });
 

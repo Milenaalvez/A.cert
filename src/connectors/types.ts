@@ -1,11 +1,13 @@
 export interface DadosProprietario {
   personId?: string;
+  dossierId?: string;
   nome: string;
   cpf: string;
   dataNascimento: string;
   nomeMae: string;
   nomePai?: string;
   email: string;
+  certKeys?: string[];
 }
 
 export interface ConnectorResult {

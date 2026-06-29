@@ -2,12 +2,13 @@ import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
-import { wait } from '../utils/retry-manager.service.js';
+import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[RF] ${msg}`);
+const DEBUG = process.env.DEBUG;
 
 async function diagnosticarInputs(page: import('puppeteer').Page): Promise<void> {
   const inputs = await page.evaluate(() => {
@@ -39,10 +40,13 @@ async function diagnosticarInputs(page: import('puppeteer').Page): Promise<void>
 export class ReceitaFederalConnector implements IConnector {
   readonly nome = 'Receita Federal';
 
+  readonly #throttle = criarRateLimit(3000);
+
   async consultar(
     dados: DadosProprietario,
     captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta');
@@ -55,7 +59,7 @@ export class ReceitaFederalConnector implements IConnector {
       await page.goto('https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cpf', { waitUntil: 'networkidle2', timeout: 30000 });
       await wait(4000);
 
-      await diagnosticarInputs(page);
+      if (DEBUG) await diagnosticarInputs(page);
       await injectFillHelper(page);
 
       const cpfDigits = dados.cpf.replace(/\D/g, '');
@@ -79,9 +83,8 @@ export class ReceitaFederalConnector implements IConnector {
       if (cpfSel) {
         const el = await page.$(cpfSel);
         if (el) {
-          await el.click();
-          await new Promise(r => setTimeout(r, 100));
-          await page.keyboard.type(cpfDigits, { delay: 10 });
+          await el.focus();
+          await page.keyboard.type(cpfDigits, { delay: 0 });
           LOG(`CPF preenchido via: ${cpfSel}`);
         }
       } else {
@@ -110,9 +113,8 @@ export class ReceitaFederalConnector implements IConnector {
       if (dataSel) {
         const el = await page.$(dataSel);
         if (el) {
-          await el.click();
-          await new Promise(r => setTimeout(r, 100));
-          await page.keyboard.type(dataFormatada, { delay: 6 });
+          await el.focus();
+          await page.keyboard.type(dataFormatada, { delay: 0 });
           LOG(`Data preenchida: ${dataFormatada}`);
         }
       } else {
@@ -195,27 +197,31 @@ export class ReceitaFederalConnector implements IConnector {
           });
           await Promise.race([
             waitPromise,
-            new Promise((_, reject) => {
-              const check = () => {
-                if (pageClosed) reject(new Error('Pagina fechada'));
-                else page.once('close', check);
-              };
-              page.once('close', check);
+            new Promise<void>((resolve) => {
+              const check = () => { if (pageClosed) resolve(); };
+              page.on('close', check);
+              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
             }),
           ]);
           LOG('CAPTCHA resolvido');
           await wait(3000);
+        } else {
+          await page.close();
+          return { status: 'captcha_required', orgao: this.nome, dataConsulta, error: 'CAPTCHA presente' };
         }
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
 
-      await wait(3000);
-
       const protocolo = `RF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      LOG('PDF capturado');
+      const pdfBuffer = await tentarBaixarPDF(page);
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
+      }
+      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
 
+      await this.#throttle();
       await page.close();
       return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };
     } catch (error) {

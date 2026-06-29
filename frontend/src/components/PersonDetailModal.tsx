@@ -80,7 +80,7 @@ const CATEGORY_ICONS: Record<string, { icon: any; bg: string; color: string }> =
   Galpão: { icon: Warehouse, bg: "var(--badge-purple-bg)", color: "#7C3AED" },
   Condomínio: { icon: Castle, bg: "var(--badge-red-bg)", color: "#E11D48" },
   Chácara: { icon: Trees, bg: "var(--badge-amber-bg)", color: "#CA8A04" },
-  Outros: { icon: Home, bg: "var(--bg-muted)", color: "#6B7280" },
+  Outros: { icon: Home, bg: "var(--bg-muted)", color: "var(--text-secondary)" },
 };
 
 const DOSSIER_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -126,7 +126,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
   useEffect(() => {
     if (activeTab === "imoveis" && !propertiesLoaded) {
       const token = localStorage.getItem("acert_token");
-      fetch(`http://localhost:3001/api/people/${personId}/properties`, {
+      fetch(`/api/people/${personId}/properties`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
         .then((r) => r.json())
@@ -166,7 +166,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
 
   useEffect(() => {
     const token = localStorage.getItem("acert_token");
-    fetch(`http://localhost:3001/api/people/${personId}/detail`, {
+    fetch(`/api/people/${personId}/detail`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => r.json())
@@ -181,7 +181,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
     setSaving(true);
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch(`http://localhost:3001/api/people/${personId}`, {
+      const r = await fetch(`/api/people/${personId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -191,7 +191,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
       });
       if (!r.ok) throw new Error("Erro ao salvar");
       setEditing(false);
-      const detail = await fetch(`http://localhost:3001/api/people/${personId}/detail`, {
+      const detail = await fetch(`/api/people/${personId}/detail`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then((res) => res.json());
       setData(detail);
@@ -205,7 +205,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
   const handleArchive = async () => {
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch(`http://localhost:3001/api/people/${personId}/archive`, {
+      const r = await fetch(`/api/people/${personId}/archive`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -254,7 +254,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
   ];
 
   function getDocumentationStatus(): { label: string; bg: string; text: string } {
-    if (stats.totalCertificates === 0) return { label: "Sem análise", bg: "#F3F4F6", text: "#6B7280" };
+    if (stats.totalCertificates === 0) return { label: "Sem análise", bg: "#F3F4F6", text: "var(--text-secondary)" };
     if (stats.pendentes === 0) return { label: "Completa", bg: "#ECFDF5", text: "#059669" };
     if (stats.obtidas > 0) return { label: "Parcial", bg: "#FFFBEB", text: "#D97706" };
     return { label: "Pendente", bg: "#FEF2F2", text: "#DC2626" };
@@ -462,9 +462,9 @@ export function PersonDetailModal({ personId, onClose }: Props) {
                 ) : (
                   <div className="flex flex-col" style={{ gap: "8px" }}>
                     {properties.map((prop: any) => {
-                      const iconMeta = CATEGORY_ICONS[prop.type] || { icon: Home, bg: "var(--bg-muted)", color: "#6B7280" };
+                      const iconMeta = CATEGORY_ICONS[prop.type] || { icon: Home, bg: "var(--bg-muted)", color: "var(--text-secondary)" };
                       const Icon = iconMeta.icon;
-                      const statusStyle = DOSSIER_STATUS_COLORS[prop.status === "Regular" ? "Concluído" : prop.status === "Pendente" ? "Pendente" : "Em andamento"] || { bg: "#F3F4F6", text: "#6B7280" };
+                      const statusStyle = DOSSIER_STATUS_COLORS[prop.status === "Regular" ? "Concluído" : prop.status === "Pendente" ? "Pendente" : "Em andamento"] || { bg: "#F3F4F6", text: "var(--text-secondary)" };
                       return (
                         <div
                           key={prop.id}
@@ -517,7 +517,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
                       </thead>
                       <tbody>
                         {dossiers.map((d) => {
-                          const sc = DOSSIER_STATUS_COLORS[d.status] || { bg: "#F3F4F6", text: "#6B7280" };
+                          const sc = DOSSIER_STATUS_COLORS[d.status] || { bg: "#F3F4F6", text: "var(--text-secondary)" };
                           return (
                             <tr key={d.id} style={{ borderTop: "1px solid var(--border-light)" }}>
                               <td className="text-[13px] font-medium" style={{ color: "var(--text-primary)", padding: "12px 16px" }}>{d.identifier}</td>
@@ -647,7 +647,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
                 {dossiers.map((d, i) => (
                   <div key={d.id} className="flex" style={{ gap: "12px" }}>
                     <div className="flex flex-col items-center shrink-0" style={{ width: "20px" }}>
-                      <div className="w-2 h-2 rounded-full" style={{ background: "#6B7280", marginTop: "6px" }} />
+                      <div className="w-2 h-2 rounded-full" style={{ background: "var(--text-secondary)", marginTop: "6px" }} />
                       {i < dossiers.length - 1 && <div className="w-px flex-1" style={{ background: "var(--border-light)", marginTop: "4px" }} />}
                     </div>
                     <div className="pb-4">
@@ -671,7 +671,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
               <FooterButton icon="📝" label={editing ? "Editando..." : "Editar dados"} onClick={() => { if (editing) setConfirmCancel(true); else setEditing(true); }} />
               <FooterButton icon="📂" label="Abrir dossiês" onClick={() => { router.push(`/dashboard/dossies?search=${encodeURIComponent(person.name)}`); }} />
               <FooterButton icon="📄" label="Ver documentos" onClick={() => setActiveTab("documentos")} />
-              <FooterButton icon="🗑️" label="Arquivar pessoa" color="#DC2626" onClick={() => setConfirmArchive(true)} />
+              <FooterButton icon="🗑️" label="Mover para lixeira" color="#DC2626" onClick={() => setConfirmArchive(true)} />
             </div>
             <button
               onClick={onClose}
@@ -708,16 +708,16 @@ export function PersonDetailModal({ personId, onClose }: Props) {
         onClose={() => setConfirmCancel(false)}
       />
       <ConfirmModal
-        open={confirmArchive}
-        title="Arquivar pessoa"
-        message="Tem certeza que deseja arquivar esta pessoa? Ela será oculta da listagem principal."
-        confirmLabel="Sim, arquivar"
-        cancelLabel="Não, voltar"
-        variant="danger"
-        onConfirm={() => { setConfirmArchive(false); handleArchive(); }}
-        onCancel={() => setConfirmArchive(false)}
-        onClose={() => setConfirmArchive(false)}
-      />
+          open={confirmArchive}
+          title="Mover para lixeira"
+          message="Deseja mover esta pessoa para a Lixeira? Você poderá restaurar ou excluir permanentemente depois."
+          confirmLabel="Mover para lixeira"
+          cancelLabel="Não, voltar"
+          variant="warning"
+          onConfirm={() => { setConfirmArchive(false); handleArchive(); }}
+          onCancel={() => setConfirmArchive(false)}
+          onClose={() => setConfirmArchive(false)}
+        />
     </>
   );
 }

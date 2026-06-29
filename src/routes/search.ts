@@ -13,11 +13,12 @@ router.get('/', (req, res) => {
   const s = `%${q}%`;
 
   const dossiers = db.prepare(`
-    SELECT d.id, d.identifier as label, 'dossier' as type
+    SELECT d.id, d.identifier as label, 'dossier' as type,
+      (SELECT COUNT(*) FROM dossier_participants WHERE dossier_id = d.id) as participant_count
     FROM dossiers d
     WHERE d.identifier LIKE ?
     LIMIT 5
-  `).all(s) as { id: string; label: string; type: string }[];
+  `).all(s) as { id: string; label: string; type: string; participant_count: number }[];
 
   const persons = db.prepare(`
     SELECT id, name as label, 'person' as type

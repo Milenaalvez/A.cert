@@ -182,8 +182,8 @@ export async function gerarDossiePDF(job: ConsultaJob): Promise<Buffer> {
         const certDoc = await PDFDocument.load(res.documento);
         const certPages = await doc.copyPages(certDoc, certDoc.getPageIndices());
         certPages.forEach(p => doc.addPage(p));
-      } catch {
-        // PDF embedding failed — the note above explains the document was captured
+      } catch (e) {
+        console.log(`[DossiePDF] Falha ao embedar PDF ${res.orgao}:`, e);
       }
     }
 
@@ -273,6 +273,360 @@ export async function gerarDossiePDF(job: ConsultaJob): Promise<Buffer> {
 
   const total = doc.getPageCount();
   addFooter(page, total, total);
+
+  const pdfBytes = await doc.save();
+  return Buffer.from(pdfBytes);
+}
+
+export async function gerarDossiePDFFromDB(data: {
+  identifier: string; status: string; priority: string; responsible: string;
+  transactionType?: string;
+  observation: string; createdAt: string; updatedAt: string;
+  person: { id: string; name: string; cpf: string | null; rg: string | null; mother_name?: string; father_name?: string; email?: string } | null;
+  property: { identifier: string; type: string; address: string; registration: string | null; cartorio?: string } | null;
+  certificateCount: number; certificatesObtidas: number; certificatesPendentes: number; progress: number;
+  certificates: { id: string; name: string; organ: string; status: string; protocol: string | null; obtained_at: string | null; created_at: string; person_id?: string; document_path?: string }[];
+  participants?: { id: string; name: string; cpf: string | null; role: string; certTotal: number; certObtidas: number }[];
+}): Promise<Buffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const pageW = 595;
+  const pageH = 842;
+  const margin = 50;
+  const w = pageW - 2 * margin;
+
+  function addFooter(page: import('pdf-lib').PDFPage, num: number, total: number) {
+    const { height } = page.getSize();
+    page.drawLine({
+      start: { x: margin, y: 45 }, end: { x: pageW - margin, y: 45 },
+      thickness: 0.5, color: rgb(0.42, 0.45, 0.5),
+    });
+    page.drawText('A.CERT — Automação de Certidões Imobiliárias', {
+      x: margin, y: 32, size: 7, font, color: rgb(0.42, 0.45, 0.5),
+    });
+    page.drawText(`Página ${num} de ${total}`, {
+      x: pageW - margin - 50, y: 32, size: 7, font, color: rgb(0.42, 0.45, 0.5),
+    });
+  }
+
+  function drawSectionHeader(page: import('pdf-lib').PDFPage, title: string, y: number) {
+    page.drawText(title, { x: margin, y, size: 14, font: fontBold, color: rgb(0.91, 0.39, 0.10) });
+    const lineY = y - 4;
+    page.drawLine({ start: { x: margin, y: lineY }, end: { x: pageW - margin, y: lineY }, thickness: 0.5, color: rgb(0.91, 0.39, 0.10) });
+    return y - 18;
+  }
+
+  function drawField(page: import('pdf-lib').PDFPage, label: string, value: string, y: number) {
+    page.drawText(label, { x: margin, y, size: 8, font, color: rgb(0.42, 0.45, 0.5) });
+    page.drawText(value || '—', { x: margin + 120, y, size: 10, font: fontBold, color: rgb(0.10, 0.10, 0.18) });
+    return y - 16;
+  }
+
+  const transactionLabel = data.transactionType === 'locacao' ? 'Locação' : 'Compra e Venda';
+  const participantCount = data.participants?.length || 1;
+  const totalPagesCalc = (): number => {
+    let pages = 2;
+    if (data.property) pages += 1;
+    if (data.participants && data.participants.length > 0) {
+      data.participants.forEach(() => { pages += 1; });
+    }
+    if (data.certificates.length > 0) pages += Math.ceil(data.certificates.length / 12) + 2;
+    return pages;
+  };
+  const total = totalPagesCalc();
+  let pageNum = 0;
+
+  // ----- PAGE 1: Cover -----
+  let page = doc.addPage([pageW, pageH]);
+  const { height } = page.getSize();
+  pageNum++;
+
+  page.drawRectangle({
+    x: 0, y: height - 220, width: pageW, height: 220,
+    color: rgb(0.91, 0.39, 0.10),
+  });
+
+  page.drawText('A.CERT', {
+    x: margin, y: height - 80, size: 36, font: fontBold, color: rgb(1, 1, 1),
+  });
+  page.drawText('Automação de Certidões Imobiliárias', {
+    x: margin, y: height - 110, size: 12, font, color: rgb(1, 1, 1),
+  });
+  page.drawText('Dossiê Completos de Certidões', {
+    x: margin, y: height - 130, size: 11, font, color: rgb(1, 1, 1),
+  });
+  page.drawLine({
+    start: { x: margin, y: height - 140 }, end: { x: pageW - margin, y: height - 140 },
+    thickness: 0.5, color: rgb(1, 1, 1),
+  });
+  page.drawText(`Tipo: ${transactionLabel}`, {
+    x: margin, y: height - 160, size: 10, font, color: rgb(1, 1, 1),
+  });
+  page.drawText(`Nº do Dossiê: ${data.identifier}`, {
+    x: margin, y: height - 176, size: 10, font, color: rgb(1, 1, 1),
+  });
+  page.drawText(`Data de Emissão: ${new Date(data.createdAt).toLocaleDateString('pt-BR')}`, {
+    x: margin, y: height - 192, size: 10, font, color: rgb(1, 1, 1),
+  });
+  page.drawText(`Status: ${data.status}   |   ${participantCount} participante${participantCount > 1 ? 's' : ''}`, {
+    x: margin, y: height - 208, size: 10, font, color: rgb(1, 1, 1),
+  });
+
+  let y = height - 260;
+  page.drawText('SUMÁRIO', { x: margin, y, size: 13, font: fontBold, color: rgb(0.10, 0.10, 0.18) });
+  y -= 22;
+  page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness: 0.5, color: rgb(0.9, 0.88, 0.85) });
+  y -= 18;
+
+  let summaryItems = [
+    `1. Participantes (${participantCount})`,
+  ];
+  if (data.property) summaryItems.push('2. Informações do Imóvel');
+  summaryItems.push(`${data.property ? '3' : '2'}. Certidões (${data.certificateCount} ${data.certificateCount === 1 ? 'registro' : 'registros'})`);
+  summaryItems.push(`${data.property ? '4' : '3'}. Resumo e Estatísticas`);
+  summaryItems.forEach(item => {
+    page.drawText(item, { x: margin, y, size: 10, font, color: rgb(0.10, 0.10, 0.18) });
+    y -= 16;
+  });
+
+  addFooter(page, pageNum, total);
+
+  // ----- Participants pages -----
+  if (data.participants && data.participants.length > 0) {
+    for (const participant of data.participants) {
+      page = doc.addPage([pageW, pageH]);
+      pageNum++;
+      y = height - 50;
+
+      const roleLabel: Record<string, string> = {
+        proprietario: 'Proprietário', comprador: 'Comprador', vendedor: 'Vendedor',
+        locador: 'Locador', locatario: 'Locatário',
+      };
+      y = drawSectionHeader(page, `PARTICIPANTE: ${participant.name.toUpperCase()}`, y);
+
+      const pFields = [
+        { label: 'Papel', value: roleLabel[participant.role] || participant.role },
+        { label: 'CPF', value: participant.cpf || '—' },
+        { label: 'Certidões Obtidas', value: `${participant.certObtidas} de ${participant.certTotal}` },
+      ];
+      pFields.forEach(f => { y = drawField(page, f.label, f.value, y); });
+
+      y -= 12;
+      page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness: 0.5, color: rgb(0.91, 0.39, 0.10) });
+      y -= 14;
+
+      const personCerts = data.certificates.filter(c => c.person_id === participant.id);
+      if (personCerts.length > 0) {
+        page.drawText('Certidões desta pessoa:', { x: margin, y, size: 10, font: fontBold, color: rgb(0.10, 0.10, 0.18) });
+        y -= 16;
+        personCerts.forEach(cert => {
+          const isObtida = cert.status === 'Obtida';
+          page.drawText(isObtida ? '✓' : '○', { x: margin, y, size: 9, font: fontBold, color: isObtida ? rgb(0.06, 0.73, 0.51) : rgb(0.6, 0.6, 0.6) });
+          page.drawText(`${cert.name} — ${cert.protocol || 'Sem protocolo'}`, { x: margin + 14, y, size: 9, font, color: rgb(0.10, 0.10, 0.18) });
+          y -= 14;
+        });
+      }
+
+      addFooter(page, pageNum, total);
+
+      // Embed actual cert PDFs for this person
+      for (const cert of personCerts) {
+        if (cert.status === 'Obtida' && cert.document_path) {
+          try {
+            const fs = await import('node:fs/promises');
+            const pdfBuffer = await fs.readFile(cert.document_path);
+            if (pdfBuffer.length > 500) {
+              const certDoc = await PDFDocument.load(pdfBuffer);
+              const certPages = await doc.copyPages(certDoc, certDoc.getPageIndices());
+              certPages.forEach(p => doc.addPage(p));
+            }
+          } catch (e) {
+            console.log(`[DossiePDF] Falha ao embedar PDF ${cert.name}:`, e);
+          }
+        }
+      }
+    }
+  } else if (data.person) {
+    // Fallback: show single person
+    page = doc.addPage([pageW, pageH]);
+    pageNum++;
+    y = height - 50;
+
+    y = drawSectionHeader(page, '1. DADOS DO CLIENTE', y);
+
+    const personFields = [
+      { label: 'Nome Completo', value: data.person.name || '—' },
+      { label: 'CPF', value: data.person.cpf || '—' },
+      { label: 'RG', value: data.person.rg || '—' },
+      { label: 'Nome da Mãe', value: data.person.mother_name || '—' },
+      { label: 'Nome do Pai', value: data.person.father_name || '—' },
+      { label: 'E-mail', value: data.person.email || '—' },
+    ];
+    personFields.forEach(f => { y = drawField(page, f.label, f.value, y); });
+
+    y -= 20;
+    page.drawRectangle({
+      x: margin, y: y - 4, width: w, height: 40,
+      color: rgb(0.97, 0.95, 0.92),
+    });
+    page.drawText('Dossiê vinculado ao titular acima', {
+      x: margin + 10, y: y + 20, size: 9, font: fontBold, color: rgb(0.10, 0.10, 0.18),
+    });
+    page.drawText(`Cadastrado em: ${new Date(data.createdAt).toLocaleDateString('pt-BR')}`, {
+      x: margin + 10, y: y + 8, size: 8, font, color: rgb(0.42, 0.45, 0.5),
+    });
+
+    addFooter(page, pageNum, total);
+  }
+
+  // ----- Property page -----
+  if (data.property) {
+    page = doc.addPage([pageW, pageH]);
+    pageNum++;
+    y = height - 50;
+
+    y = drawSectionHeader(page, 'INFORMAÇÕES DO IMÓVEL', y);
+
+    const propFields = [
+      { label: 'Identificador', value: data.property.identifier || '—' },
+      { label: 'Tipo', value: data.property.type || '—' },
+      { label: 'Matrícula', value: data.property.registration || 'Não informada' },
+      { label: 'Endereço', value: data.property.address || '—' },
+    ];
+    if (data.property.cartorio) {
+      propFields.push({ label: 'Cartório', value: data.property.cartorio });
+    }
+    propFields.forEach(f => { y = drawField(page, f.label, f.value, y); });
+
+    addFooter(page, pageNum, total);
+  }
+
+  // ----- Certificate summary page -----
+  if (data.certificates.length > 0) {
+    page = doc.addPage([pageW, pageH]);
+    pageNum++;
+    y = height - 50;
+
+    y = drawSectionHeader(page, `CERTIDÕES (${data.certificateCount} ${data.certificateCount === 1 ? 'registro' : 'registros'})`, y);
+
+    page.drawText('Resumo', { x: margin, y, size: 10, font: fontBold, color: rgb(0.10, 0.10, 0.18) });
+    y -= 16;
+    page.drawText(`Obtidas: ${data.certificatesObtidas}   |   Pendentes: ${data.certificatesPendentes}   |   Progresso: ${data.progress}%`, {
+      x: margin, y, size: 9, font, color: rgb(0.42, 0.45, 0.5),
+    });
+    y -= 20;
+
+    page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness: 0.3, color: rgb(0.9, 0.88, 0.85) });
+    y -= 14;
+
+    function truncateText(text: string, maxWidth: number, fontSize: number): string {
+      let w = 0;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const cw = ch >= 'A' && ch <= 'Z' || ch >= 'À' && ch <= 'Ú' ? 0.65 : ch >= 'a' && ch <= 'z' || ch >= 'à' && ch <= 'ú' ? 0.5 : ch >= '0' && ch <= '9' ? 0.55 : 0.3;
+        w += cw * fontSize;
+        if (w > maxWidth) return text.slice(0, Math.max(0, i - 3)) + '...';
+      }
+      return text;
+    }
+
+    const nameColW = 205, protColW = 95, statusColW = 65, dateColW = 75;
+    const nameColX = margin;
+    const protColX = nameColX + nameColW;
+    const statusColX = protColX + protColW;
+    const dateColX = statusColX + statusColW;
+
+    const headers = ['Certidão', 'Protocolo', 'Status', 'Data'];
+    headers.forEach((h, i) => {
+      const cx = [nameColX, protColX, statusColX, dateColX][i];
+      page.drawText(h, { x: cx, y, size: 8, font: fontBold, color: rgb(0.42, 0.45, 0.5) });
+    });
+    y -= 12;
+    page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness: 0.3, color: rgb(0.9, 0.88, 0.85) });
+    y -= 12;
+
+    data.certificates.forEach(cert => {
+      const isObtida = cert.status === 'Obtida';
+
+      page.drawText(truncateText(cert.name, nameColW - 6, 8), { x: nameColX, y, size: 8, font: fontBold, color: rgb(0.10, 0.10, 0.18) });
+      page.drawText(cert.protocol || '—', { x: protColX, y, size: 8, font, color: rgb(0.10, 0.10, 0.18) });
+      page.drawText(isObtida ? 'Obtida' : 'Pendente', { x: statusColX, y, size: 8, font, color: isObtida ? rgb(0.06, 0.73, 0.51) : rgb(0.6, 0.6, 0.6) });
+      page.drawText(cert.obtained_at ? new Date(cert.obtained_at).toLocaleDateString('pt-BR') : '—', { x: dateColX, y, size: 8, font, color: rgb(0.10, 0.10, 0.18) });
+
+      y -= 14;
+
+      if (y < 70) {
+        addFooter(page, pageNum, total);
+        page = doc.addPage([pageW, pageH]);
+        pageNum++;
+        y = height - 50;
+      }
+    });
+
+    addFooter(page, pageNum, total);
+  }
+
+  // ----- Final page: Summary -----
+  page = doc.addPage([pageW, pageH]);
+  pageNum++;
+  y = height - 50;
+
+  y = drawSectionHeader(page, '4. RESUMO E ESTATÍSTICAS', y);
+
+  const boxY = y - 10;
+  page.drawRectangle({
+    x: margin, y: boxY - 60, width: w, height: 70,
+    color: rgb(0.97, 0.95, 0.92),
+  });
+
+  page.drawText(String(data.certificatesObtidas), {
+    x: margin + 20, y: boxY - 10, size: 24, font: fontBold, color: rgb(0.91, 0.39, 0.10),
+  });
+  page.drawText('certidões emitidas', {
+    x: margin + 20, y: boxY - 28, size: 10, font, color: rgb(0.42, 0.45, 0.5),
+  });
+
+  page.drawText(String(data.certificatesPendentes), {
+    x: margin + w - 80, y: boxY - 10, size: 24, font: fontBold, color: rgb(0.91, 0.39, 0.10),
+  });
+  page.drawText('certidões pendentes', {
+    x: margin + w - 80, y: boxY - 28, size: 10, font, color: rgb(0.42, 0.45, 0.5),
+  });
+
+  y = boxY - 85;
+
+  page.drawText('Informações Gerais', {
+    x: margin, y, size: 11, font: fontBold, color: rgb(0.10, 0.10, 0.18),
+  });
+  y -= 18;
+  page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness: 0.3, color: rgb(0.9, 0.88, 0.85) });
+  y -= 14;
+
+  const summaryFields = [
+    { label: 'Nº do Dossiê', value: data.identifier },
+    { label: 'Status', value: data.status },
+    { label: 'Prioridade', value: data.priority || '—' },
+    { label: 'Responsável', value: data.responsible || '—' },
+    { label: 'Data de Criação', value: new Date(data.createdAt).toLocaleDateString('pt-BR') },
+    { label: 'Última Atualização', value: new Date(data.updatedAt).toLocaleDateString('pt-BR') },
+    { label: 'Total de Certidões', value: String(data.certificateCount) },
+  ];
+  summaryFields.forEach(f => { y = drawField(page, f.label, f.value, y); });
+
+  y -= 20;
+  page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness: 0.5, color: rgb(0.9, 0.88, 0.85) });
+  y -= 14;
+  page.drawText(`Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, {
+    x: margin, y, size: 8, font, color: rgb(0.6, 0.6, 0.6),
+  });
+  y -= 12;
+  page.drawText('A.CERT — Automação de Certidões Imobiliárias', {
+    x: margin, y, size: 8, font, color: rgb(0.6, 0.6, 0.6),
+  });
+
+  addFooter(page, pageNum, total);
 
   const pdfBytes = await doc.save();
   return Buffer.from(pdfBytes);

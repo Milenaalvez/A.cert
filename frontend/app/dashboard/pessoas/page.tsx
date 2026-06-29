@@ -202,7 +202,7 @@ async function fetchPersonDetails(ids: string[]): Promise<Map<string, any>> {
   const token = localStorage.getItem("acert_token");
   for (const id of ids) {
     try {
-      const r = await fetch(`http://localhost:3001/api/people/${id}/detail`, {
+      const r = await fetch(`/api/people/${id}/detail`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (r.ok) {
@@ -223,6 +223,7 @@ export default function PessoasPage() {
   const [tab, setTab] = useState<"todas" | "fisica" | "empresarial">("todas");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [detailId, setDetailId] = useState<string | null>(null);
   const [vinculoId, setVinculoId] = useState<string | null>(null);
   const [vinculoName, setVinculoName] = useState("");
@@ -238,7 +239,7 @@ export default function PessoasPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch("http://localhost:3001/api/people", {
+      const r = await fetch("/api/people", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const d: ApiResponse = await r.json();
@@ -306,7 +307,7 @@ export default function PessoasPage() {
     if (!confirmAction) return;
     try {
       const token = localStorage.getItem("acert_token");
-      await fetch(`http://localhost:3001/api/people/${confirmAction.id}/archive`, {
+      await fetch(`/api/people/${confirmAction.id}/archive`, {
         method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const tabKey = allPeople.find(p => p.id === confirmAction.id)?.type === "Pessoa Empresarial" ? "empresarial" : "fisica";
@@ -320,7 +321,7 @@ export default function PessoasPage() {
     if (!confirmAction) return;
     try {
       const token = localStorage.getItem("acert_token");
-      await fetch(`http://localhost:3001/api/people/${confirmAction.id}`, {
+      await fetch(`/api/people/${confirmAction.id}`, {
         method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const tabKey = allPeople.find(p => p.id === confirmAction.id)?.type === "Pessoa Empresarial" ? "empresarial" : "fisica";
@@ -370,8 +371,7 @@ export default function PessoasPage() {
                 <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                 <input type="text" placeholder="Buscar por nome, CPF, e-mail ou telefone..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }} style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", paddingLeft: "42px", paddingRight: "16px", width: "340px", outline: "none" }} />
               </div>
-              <button onClick={() => setShowNovaPessoa(true)}
-                className="flex items-center gap-2 h-10 px-7 rounded-[8px] bg-[#FF7A00] text-white text-[13px] font-semibold hover:bg-[#E06900] transition-colors"><Plus size={16} strokeWidth={2.5} />Nova Pessoa</button>
+              <button onClick={() => setShowNovaPessoa(true)} style={{ display: "flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={16} strokeWidth={2.5} />Nova Pessoa</button>
             </div>
           </div>
         </div>
@@ -548,7 +548,7 @@ export default function PessoasPage() {
                     </button>
                   </td>
                   <td style={{ padding: "12px 12px 12px 4px", textAlign: "center", borderRadius: "0 8px 8px 0", position: "relative" }}>
-                    <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === p.id ? null : p.id); }}
+                    <button onClick={(e) => { e.stopPropagation(); const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenuPos({ top: rect.bottom + 4, left: rect.right - 200 }); setMenuOpenId(menuOpenId === p.id ? null : p.id); }}
                       style={{ width: "32px", height: "32px", borderRadius: "6px", border: "none",
                         background: menuOpenId === p.id ? "var(--bg-muted)" : "transparent",
                         cursor: "pointer", color: "var(--text-muted)",
@@ -560,7 +560,7 @@ export default function PessoasPage() {
                     </button>
                     {menuOpenId === p.id && (
                       <div ref={menuRef} style={{
-                        position: "absolute", top: "100%", right: "0", zIndex: 40, marginTop: "4px",
+                        position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 40,
                         background: "var(--bg-surface)", borderRadius: "10px",
                         border: "1px solid var(--border-default)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
                         minWidth: "200px", overflow: "hidden",
@@ -571,7 +571,7 @@ export default function PessoasPage() {
                         <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setVinculoId(p.id); setVinculoName(p.name); }} style={menuItemStyle}><Link2 size={14} strokeWidth={1.5} /> Vínculo parental</button>
                         <div style={{ height: "1px", background: "var(--border-light)", margin: "4px 0" }} />
                         <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "archive", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }}><Archive size={14} strokeWidth={1.5} /> Arquivar</button>
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "delete", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "#DC2626" }}                       onMouseEnter={(e) => { e.currentTarget.style.background = "var(--badge-red-bg)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}><Trash2 size={14} strokeWidth={1.5} /> Deletar</button>
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "delete", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }}><Trash2 size={14} strokeWidth={1.5} /> Mover p/ lixeira</button>
                       </div>
                     )}
                   </td>
@@ -634,12 +634,12 @@ export default function PessoasPage() {
       {confirmAction && (
         <ConfirmModal
           open={true}
-          title={confirmAction.type === "archive" ? "Arquivar pessoa" : "Deletar pessoa"}
+          title={confirmAction.type === "archive" ? "Arquivar pessoa" : "Mover para lixeira"}
           message={confirmAction.type === "archive"
-            ? `Deseja arquivar "${confirmAction.name}"? Ela não aparecerá mais nas listagens.`
-            : `Tem certeza que deseja deletar "${confirmAction.name}"? Esta ação remove todos os vínculos e não pode ser desfeita.`}
-          confirmLabel={confirmAction.type === "archive" ? "Arquivar" : "Deletar"}
-          variant={confirmAction.type === "delete" ? "danger" : "default"}
+            ? `Deseja arquivar "${confirmAction.name}"? Ela ficará disponível na Lixeira para restauração.`
+            : `Deseja mover "${confirmAction.name}" para a Lixeira? Você poderá restaurar ou excluir permanentemente depois.`}
+          confirmLabel={confirmAction.type === "archive" ? "Arquivar" : "Mover para lixeira"}
+          variant={confirmAction.type === "delete" ? "warning" : "default"}
           onConfirm={confirmAction.type === "archive" ? handleArchive : handleDelete}
           onCancel={() => setConfirmAction(null)}
           onClose={() => setConfirmAction(null)}

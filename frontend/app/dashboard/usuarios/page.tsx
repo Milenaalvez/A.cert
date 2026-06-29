@@ -2,17 +2,17 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
-  Search, UserPlus, MoreHorizontal, UserCog,
-  CheckCircle2, XCircle, Clock, Circle, Shield, Key, Trash2, Edit,
+  Search, UserPlus, MoreVertical, Edit, Shield, Key,
+  CheckCircle2, XCircle, Circle, Eye, Users, Trash2,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import NovoUsuarioModal from "@/components/NovoUsuarioModal";
 import PermissoesModal from "@/components/PermissoesModal";
+import UserSidePanel from "@/components/UserSidePanel";
+import ConfirmModal from "@/components/ConfirmModal";
 import * as teamApi from "@/services/teamApi";
 
-/* ── Types ─────────────────────────────────────────── */
 interface EnrichedUser {
   id: string;
   name: string;
@@ -35,31 +35,47 @@ interface EnrichedUser {
   lastAccessAt?: string;
   todayStatus?: string;
   isOnline?: boolean;
+  birthDate?: string;
+  city?: string;
+  uf?: string;
+  stats?: {
+    dossiersCreated: number;
+    dossiersCompleted: number;
+    clientsRegistered: number;
+    propertiesLinked: number;
+  };
+  lastSession?: {
+    date: string | null;
+    ip: string;
+    device: string;
+    browser: string;
+    os: string;
+  };
 }
 
-/* ── Constants ─────────────────────────────────────── */
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Administrador",
-  RH: "RH",
+  VENDOR: "Vendedor",
   EMPLOYEE: "Colaborador",
   DEVELOPER: "Desenvolvedor",
+  SUPERVISOR: "Supervisor",
+  RH: "RH",
+  MANAGER: "Gerente",
 };
 
-const ROLE_STYLES: Record<string, { bg: string; text: string }> = {
-  ADMIN: { bg: "rgba(59,130,246,0.1)", text: "#3B82F6" },
-  RH: { bg: "rgba(16,185,129,0.1)", text: "#10B981" },
-  EMPLOYEE: { bg: "rgba(156,163,175,0.1)", text: "#6B7280" },
-  DEVELOPER: { bg: "rgba(139,92,246,0.1)", text: "#8B5CF6" },
+const FILTER_CONFIG = {
+  todos: { label: "Todos" },
+  admins: { label: "Administradores", role: "ADMIN" },
+  vendors: { label: "Vendedores", role: "VENDOR" },
+  employees: { label: "Colaboradores", role: "EMPLOYEE" },
+  developers: { label: "Desenvolvedores", role: "DEVELOPER" },
+  inactive: { label: "Inativos", inactive: true },
 };
 
-/* ── Helpers ───────────────────────────────────────── */
+type FilterKey = keyof typeof FILTER_CONFIG;
+
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function timeAgo(dateStr: string | undefined): string {
@@ -67,107 +83,112 @@ function timeAgo(dateStr: string | undefined): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return "Agora";
-  if (diff < 3600) return `Há ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) {
-    return `Hoje às ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-  }
-  if (diff < 172800) {
-    return `Ontem às ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-  }
+  if (diff < 60) return "Agora há pouco";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min atrás`;
+  if (diff < 86400) return `Hoje, ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  if (diff < 172800) return `Ontem, ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
   return new Date(dateStr).toLocaleDateString("pt-BR");
 }
 
-function statusDot(status: string | undefined, isActive: boolean | undefined) {
-  if (isActive === false) return { color: "#EF4444", label: "Desativado", Icon: XCircle };
-  if (status === "online") return { color: "#10B981", label: "Online", Icon: CheckCircle2 };
-  if (status === "away") return { color: "#F59E0B", label: "Ausente", Icon: Clock };
-  return { color: "#6B7280", label: "Offline", Icon: Circle };
-}
+const ACCESS_PROFILE_LABEL: Record<string, string> = {
+  ADMIN: "Administrador",
+  SUPERVISOR: "Supervisor",
+  VENDOR: "Vendedor",
+  EMPLOYEE: "Operacional",
+  DEVELOPER: "Desenvolvedor",
+  RH: "RH",
+};
 
-/* ── Component ─────────────────────────────────────── */
+const sectionBox = "border border-default bg-surface p-8";
+const btnBase = "flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold cursor-pointer transition-all duration-150";
+
 export default function UsuariosPage() {
-  const router = useRouter();
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState("todos");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("todos");
+  const [selectedUser, setSelectedUser] = useState<EnrichedUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editUser, setEditUser] = useState<EnrichedUser | null>(null);
   const [permOpen, setPermOpen] = useState(false);
   const [permUserId, setPermUserId] = useState("");
   const [permUserName, setPermUserName] = useState("");
   const [contextOpen, setContextOpen] = useState<string | null>(null);
+  const [contextPos, setContextPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [deleteConfirm, setDeleteConfirm] = useState<EnrichedUser | null>(null);
   const contextRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
       const data = await teamApi.enriched();
       setUsers(data || []);
-    } catch {
-    } finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   useEffect(() => {
     if (!contextOpen) return;
     const handler = (e: MouseEvent) => {
-      if (contextRef.current && !contextRef.current.contains(e.target as Node)) {
-        setContextOpen(null);
-      }
+      if (contextRef.current && !contextRef.current.contains(e.target as Node)) setContextOpen(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [contextOpen]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); searchRef.current?.focus(); }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
   const filtered = users.filter((u) => {
     const s = search.toLowerCase();
-    const matchSearch =
-      !s ||
-      u.name.toLowerCase().includes(s) ||
-      u.email.toLowerCase().includes(s) ||
-      (u.department || "").toLowerCase().includes(s);
+    const matchSearch = !s || u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s) || (u.phone || "").toLowerCase().includes(s);
     if (!matchSearch) return false;
-    if (activeFilter === "admins") return u.role === "ADMIN";
-    if (activeFilter === "rh") return u.role === "RH";
-    if (activeFilter === "employees") return u.role === "EMPLOYEE";
-    if (activeFilter === "developers") return u.role === "DEVELOPER";
-    if (activeFilter === "inactive") return u.isActive === false;
+    const cfg = FILTER_CONFIG[activeFilter];
+    if ("role" in cfg && cfg.role) return u.role === cfg.role;
+    if ("inactive" in cfg && cfg.inactive) return u.isActive === false;
     return true;
   });
 
   const counts = {
     todos: users.length,
-    admins: users.filter((u) => u.role === "ADMIN").length,
-    rh: users.filter((u) => u.role === "RH").length,
-    employees: users.filter((u) => u.role === "EMPLOYEE").length,
-    developers: users.filter((u) => u.role === "DEVELOPER").length,
-    inactive: users.filter((u) => u.isActive === false).length,
+    admins: users.filter(u => u.role === "ADMIN").length,
+    vendors: users.filter(u => u.role === "VENDOR").length,
+    employees: users.filter(u => u.role === "EMPLOYEE").length,
+    developers: users.filter(u => u.role === "DEVELOPER").length,
+    inactive: users.filter(u => u.isActive === false).length,
   };
 
-  const FILTERS = [
+  const FILTERS: { key: FilterKey; label: string; count: number }[] = [
     { key: "todos", label: "Todos", count: counts.todos },
     { key: "admins", label: "Administradores", count: counts.admins },
-    { key: "rh", label: "RH", count: counts.rh },
+    { key: "vendors", label: "Vendedores", count: counts.vendors },
     { key: "employees", label: "Colaboradores", count: counts.employees },
     { key: "developers", label: "Desenvolvedores", count: counts.developers },
     { key: "inactive", label: "Inativos", count: counts.inactive },
   ];
 
-  async function handleAction(action: string, user: EnrichedUser) {
+  async function handleAction(action: string, u: EnrichedUser) {
     setContextOpen(null);
     try {
       if (action === "toggle") {
-        await teamApi.updateStatus(user.id, !user.isActive);
+        await teamApi.updateStatus(u.id, !u.isActive);
       } else if (action === "reset") {
-        await teamApi.resetPassword(user.id);
+        await teamApi.resetPassword(u.id);
+      } else if (action === "edit") {
+        setEditUser(u);
+      } else if (action === "permissions") {
+        setPermUserId(u.id);
+        setPermUserName(u.name);
+        setPermOpen(true);
       } else if (action === "delete") {
-        if (!confirm(`Remover ${user.name}?`)) return;
-        await teamApi.remove(user.id);
+        setDeleteConfirm(u);
+        return;
       }
       fetchUsers();
     } catch (err: any) {
@@ -175,268 +196,247 @@ export default function UsuariosPage() {
     }
   }
 
-  const contextMenuItems = (u: EnrichedUser) => [
-    {
-      icon: UserCog,
-      label: "Visualizar",
-      action: () => router.push(`/dashboard/usuarios/${u.id}`),
-    },
-    {
-      icon: Edit,
-      label: "Editar",
-      action: () => router.push(`/dashboard/usuarios/${u.id}`),
-    },
-    {
-      icon: Shield,
-      label: "Alterar permissões",
-      action: () => {
-        setPermUserId(u.id);
-        setPermUserName(u.name);
-        setPermOpen(true);
-      },
-    },
-    { icon: Key, label: "Resetar senha", action: () => handleAction("reset", u) },
-    {
-      icon: u.isActive ? XCircle : CheckCircle2,
-      label: u.isActive ? "Desativar" : "Ativar",
-      action: () => handleAction("toggle", u),
-    },
-    { icon: Trash2, label: "Remover", action: () => handleAction("delete", u) },
-  ];
+  async function handleDeleteUser() {
+    if (!deleteConfirm) return;
+    try {
+      await teamApi.remove(deleteConfirm.id);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || "Erro ao excluir");
+    } finally { setDeleteConfirm(null); }
+  }
+
+  function handleToggleStatus(u: EnrichedUser) {
+    handleAction("toggle", u);
+    if (selectedUser?.id === u.id) setSelectedUser(null);
+  }
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
-
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
         {/* Header */}
-        <div style={{ marginTop: 24 }} className="flex items-start justify-between gap-8 mb-5">
+        <div className="flex items-start justify-between gap-8" style={{ marginTop: 40, marginBottom: 28 }}>
           <div className="flex flex-col gap-1.5 min-w-0">
             <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Usuários</h1>
-            <p className="text-[14px] text-secondary leading-relaxed">Gerencie acessos, permissões e atividades da equipe.</p>
+            <p className="text-[14px] text-muted leading-relaxed">Gerencie os colaboradores que possuem acesso ao sistema A.CERT.</p>
           </div>
-          <div className="flex items-center gap-3 shrink-0 pt-0.5">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="relative">
               <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Buscar usuário..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-[260px] h-[44px] rounded-[8px] border border-default text-[14px] text-primary bg-surface placeholder:text-muted outline-none transition-colors"
-                style={{ paddingLeft: "42px", paddingRight: "16px" }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
-              />
+              <input ref={searchRef} type="text" placeholder="Buscar por nome, e-mail ou telefone..." value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", paddingLeft: "42px", paddingRight: "16px", width: "340px", outline: "none" }} />
             </div>
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-2 h-10 px-6 rounded-[8px] bg-[#FF7A00] text-white text-[13px] font-semibold hover:bg-[#E06900] transition-colors"
-            >
-              <UserPlus size={16} strokeWidth={2.5} /> Novo Usuário
+            <button onClick={() => { setEditUser(null); setCreateOpen(true); }} style={{ display: "flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              <UserPlus size={16} strokeWidth={2.5} />Novo Usuário
             </button>
           </div>
         </div>
 
-        {/* Quick Filters */}
-        <div className="flex flex-wrap gap-2 mb-5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setActiveFilter(f.key)}
-              className={`px-4 py-1.5 rounded-[20px] text-[13px] font-medium transition-colors cursor-pointer border ${
-                activeFilter === f.key
-                  ? "border-[#FF7A00] text-[#FF7A00]"
-                  : "border-default text-secondary hover:text-primary"
-              }`}
-              style={{
-                background: activeFilter === f.key ? "var(--badge-orange-bg)" : "transparent",
-              }}
-            >
-              {f.label} ({f.count})
-            </button>
-          ))}
+        {/* Filters */}
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-14">
+            {FILTERS.map(f => {
+              const isActive = activeFilter === f.key;
+              return (
+                <button key={f.key} onClick={() => setActiveFilter(f.key)}
+                  className={`h-9 px-4 text-[13px] font-medium transition-colors -mb-px border-b-[3px] cursor-pointer ${
+                    isActive ? "border-[#FF7A00] text-primary" : "border-transparent text-secondary hover:text-primary"
+                  }`}>
+                  {f.label}{' '}
+                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 ${
+                    isActive ? "text-[#FF7A00]" : "text-secondary"
+                  }`}
+                    style={{ background: isActive ? "rgba(255,122,0,0.12)" : "var(--bg-elevated)" }}>{f.count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Table */}
-        <div           className="rounded-xl overflow-hidden"
-          style={{ background: "var(--bg-app)" }}>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-[1000px]">
-              <thead>
-                <tr
-                  className="border-b border-default"
-                  style={{ background: "var(--bg-elevated)" }}
-                >
-                  {[
-                    "Usuário",
-                    "Cargo",
-                    "Departamento",
-                    "Status",
-                    "Último acesso",
-                    "Carga horária",
-                    "Perfil de acesso",
-                    "Ações",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-3 text-[11px] font-bold text-muted uppercase tracking-[0.5px]"
-                    >
-                      {h}
-                    </th>
-                  ))}
+        <div className="mt-4 overflow-x-auto">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr className="text-[11px] font-semibold text-secondary uppercase tracking-wider">
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "240px" }}>Usuário</th>
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "140px" }}>Cargo</th>
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "100px" }}>Departamento</th>
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "100px" }}>Status</th>
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "100px" }}>Último acesso</th>
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "90px" }}>Carga horária</th>
+                <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--border-default)", minWidth: "100px" }}>Perfil</th>
+                <th style={{ width: "36px", padding: "10px 8px", borderBottom: "1px solid var(--border-default)" }}></th>
+                <th style={{ width: "36px", padding: "10px 8px", borderBottom: "1px solid var(--border-default)" }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: "48px 0", textAlign: "center" }}>
+                    <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Carregando...</span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="py-10 text-center text-[13px] text-muted">
-                      Carregando...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-10 text-center text-[13px] text-muted">
-                      Nenhum usuário encontrado.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((u) => {
-                    const st = statusDot(
-                      u.todayStatus || (u.isActive ? "offline" : undefined),
-                      u.isActive
-                    );
-                    const Icon = st.Icon;
-                    const roleStyle = ROLE_STYLES[u.role] || ROLE_STYLES.EMPLOYEE;
-                    return (
-                      <tr
-                        key={u.id}
-                        className="border-b border-default cursor-pointer transition-colors"
-                        style={{ background: "transparent" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                        onClick={() => router.push(`/dashboard/usuarios/${u.id}`)}
-                      >
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-[14px] font-bold text-primary shrink-0"
-                              style={{ background: "var(--bg-elevated)" }}
-                            >
-                              {getInitials(u.name)}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-[13px] font-semibold text-primary truncate">{u.name}</div>
-                              <div className="text-[12px] text-muted truncate">{u.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[12px] text-[11px] font-semibold whitespace-nowrap"
-                            style={{ background: roleStyle.bg, color: roleStyle.text }}
-                          >
-                            {ROLE_LABEL[u.role] || u.role}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className="text-[13px] text-secondary">
-                            {u.department || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-1.5">
-                            <Icon size={14} strokeWidth={2} style={{ color: st.color }} />
-                            <span className="text-[12px] font-medium" style={{ color: st.color }}>
-                              {st.label}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-[12px] text-secondary">
-                          {timeAgo(u.lastAccessAt)}
-                        </td>
-                        <td className="px-4 py-3.5 text-[13px] text-secondary">
-                          {u.weeklyHours || 40}h semanais
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className="text-[12px] font-medium"
-                            style={{
-                              color: u.role === "ADMIN" ? "#3B82F6" : "var(--text-secondary)",
-                            }}
-                          >
-                            {u.role === "ADMIN"
-                              ? "Administrador Total"
-                              : u.role === "RH"
-                                ? "Recursos Humanos"
-                                : u.role === "DEVELOPER"
-                                  ? "Desenvolvedor"
-                                  : "Operacional"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="relative" ref={contextOpen === u.id ? contextRef : undefined}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setContextOpen(contextOpen === u.id ? null : u.id);
-                              }}
-                              className="w-8 h-8 rounded-[6px] flex items-center justify-center text-muted hover:text-primary transition-colors"
-                              style={{ background: contextOpen === u.id ? "var(--bg-muted)" : "transparent" }}
-                              onMouseEnter={(e) => { if (contextOpen !== u.id) e.currentTarget.style.background = "var(--bg-muted)"; }}
-                              onMouseLeave={(e) => { if (contextOpen !== u.id) e.currentTarget.style.background = "transparent"; }}
-                            >
-                              <MoreHorizontal size={16} strokeWidth={1.5} />
-                            </button>
-                            {contextOpen === u.id && (
-                              <div
-                                className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-[10px] overflow-hidden border border-default"
-                                style={{
-                                  background: "var(--bg-surface)",
-                                  boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {contextMenuItems(u).map((item, i) => {
-                                  const isDanger = item.label === "Remover";
-                                  return (
-                                    <button
-                                      key={i}
-                                      onClick={() => item.action()}
-                                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-left transition-colors"
-                                      style={{ background: "transparent", border: "none", cursor: "pointer", color: isDanger ? "#DC2626" : "var(--text-primary)" }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.background = isDanger ? "var(--badge-red-bg)" : "var(--bg-muted)"; }}
-                                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                    >
-                                      <item.icon size={14} strokeWidth={1.5} style={{ color: isDanger ? "#DC2626" : "var(--text-muted)" }} />
-                                      {item.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: "48px 0", textAlign: "center" }}>
+                    <div className="flex flex-col items-center gap-3">
+                      <Users size={32} strokeWidth={1.5} color="var(--text-secondary)" />
+                      <span className="text-[15px] font-semibold text-muted">Nenhum usuário encontrado</span>
+                      <span className="text-[13px] text-secondary">Ajuste os filtros ou cadastre um novo usuário.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((u) => {
+                  const isInactive = u.isActive === false;
+                  const statusColor = isInactive ? "#EF4444" : u.isOnline ? "#22C55E" : "var(--text-secondary)";
+                  const statusLabel = isInactive ? "Inativo" : u.isOnline ? "Online" : "Offline";
+                  const StatusIcon = isInactive ? XCircle : u.isOnline ? CheckCircle2 : Circle;
+                  const accessProfile = ACCESS_PROFILE_LABEL[u.role] || "Operacional";
+                  const cargoDisplay = u.position || ROLE_LABEL[u.role] || u.role;
+
+                  return (
+                    <tr key={u.id} className="hover-bg-hover transition-colors">
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 flex items-center justify-center bg-[#FF7A00] overflow-hidden shrink-0">
+                            {u.avatar ? (
+                              <img src={u.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-white text-[11px] font-bold">{getInitials(u.name)}</span>
                             )}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          <div className="min-w-0">
+                            <span className="text-[14px] font-semibold text-primary block truncate">{u.name}</span>
+                            <span className="text-[11px] text-secondary">{u.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <span className="inline-block text-[12px] font-semibold text-[#FF7A00] px-2 py-1" style={{ background: "rgba(255,122,0,0.12)" }}>
+                          {cargoDisplay}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <span className="text-[13px] text-body">{u.department || "—"}</span>
+                      </td>
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <div className="flex items-center gap-2">
+                          <StatusIcon size={13} strokeWidth={2} color={statusColor} />
+                          <span className="text-[12px] font-medium" style={{ color: statusColor }}>{statusLabel}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <span className="text-[12px] text-secondary">{timeAgo(u.lastAccessAt)}</span>
+                      </td>
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <span className="text-[13px] text-body">{u.weeklyHours || 40}h</span>
+                      </td>
+                      <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                        <span className="text-[12px] font-medium text-secondary px-2 py-1" style={{ background: "var(--bg-elevated)" }}>{accessProfile}</span>
+                      </td>
+                      <td style={{ padding: "14px 8px", borderBottom: "1px solid var(--border-default)", textAlign: "center" }}>
+                        <button onClick={() => setSelectedUser(u)}
+                          className="w-8 h-8 flex items-center justify-center text-secondary hover:text-primary hover-bg-hover transition-colors cursor-pointer border-0"
+                          title="Visualizar perfil">
+                          <Eye size={15} strokeWidth={1.5} />
+                        </button>
+                      </td>
+                      <td style={{ padding: "14px 8px", borderBottom: "1px solid var(--border-default)", textAlign: "center" }}>
+                        <button onClick={(e) => { e.stopPropagation(); const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); setContextPos({ top: rect.bottom + 4, left: rect.right - 220 }); setContextOpen(contextOpen === u.id ? null : u.id); }}
+                          className="w-8 h-8 rounded-[8px] flex items-center justify-center text-secondary hover-bg-muted hover:text-primary transition-colors">
+                          <MoreVertical size={15} strokeWidth={1.5} />
+                        </button>
+                        {contextOpen === u.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setContextOpen(null)} />
+                            <div ref={contextRef}
+                              className="fixed z-20 rounded-[10px] bg-surface py-1.5 animate-in fade-in zoom-in-95 duration-150"
+                              style={{ width: "220px", top: contextPos.top, left: contextPos.left, border: "1px solid var(--border-light)", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
+                              onClick={(e) => e.stopPropagation()}>
+                              <button onClick={() => { setEditUser(u); setContextOpen(null); }}
+                                className="flex items-center gap-3 w-full h-9 text-[13px] text-body hover-bg-subtle transition-colors"
+                                style={{ paddingLeft: "20px", paddingRight: "20px" }}>
+                                <Edit size={14} strokeWidth={1.5} className="shrink-0 text-secondary" />
+                                <span>Editar usuário</span>
+                              </button>
+                              <button onClick={() => { setPermUserId(u.id); setPermUserName(u.name); setPermOpen(true); setContextOpen(null); }}
+                                className="flex items-center gap-3 w-full h-9 text-[13px] text-body hover-bg-subtle transition-colors"
+                                style={{ paddingLeft: "20px", paddingRight: "20px" }}>
+                                <Shield size={14} strokeWidth={1.5} className="shrink-0 text-secondary" />
+                                <span>Alterar permissões</span>
+                              </button>
+                              <button onClick={async () => { setContextOpen(null); try { await teamApi.resetPassword(u.id); fetchUsers(); } catch {} }}
+                                className="flex items-center gap-3 w-full h-9 text-[13px] text-body hover-bg-subtle transition-colors"
+                                style={{ paddingLeft: "20px", paddingRight: "20px" }}>
+                                <Key size={14} strokeWidth={1.5} className="shrink-0 text-secondary" />
+                                <span>Resetar senha</span>
+                              </button>
+                              <div className="h-px bg-light my-1.5" style={{ marginLeft: "20px", marginRight: "20px" }} />
+                              <button onClick={async () => { setContextOpen(null); try { await teamApi.updateStatus(u.id, !u.isActive); fetchUsers(); } catch {} }}
+                                className="flex items-center gap-3 w-full h-9 text-[13px] transition-colors"
+                                style={{ paddingLeft: "20px", paddingRight: "20px", color: u.isActive ? "#EF4444" : "var(--text-body)" }}>
+                                {u.isActive
+                                  ? <><XCircle size={14} strokeWidth={1.5} className="shrink-0" /><span>Desativar acesso</span></>
+                                  : <><CheckCircle2 size={14} strokeWidth={1.5} className="shrink-0" /><span>Ativar acesso</span></>}
+                              </button>
+                              <button onClick={() => { setDeleteConfirm(u); setContextOpen(null); }}
+                                className="flex items-center gap-3 w-full h-9 text-[13px] text-[#DC2626] hover:bg-[rgba(220,38,38,0.1)] transition-colors"
+                                style={{ paddingLeft: "20px", paddingRight: "20px" }}>
+                                <Trash2 size={14} strokeWidth={1.5} className="shrink-0" />
+                                <span>Mover para lixeira</span>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <NovoUsuarioModal
-          open={createOpen}
-          onClose={() => setCreateOpen(false)}
-          onCreated={fetchUsers}
-        />
-        <PermissoesModal
-          open={permOpen}
-          onClose={() => setPermOpen(false)}
-          userId={permUserId}
-          userName={permUserName}
-        />
+        <div className="mt-3">
+          <span className="text-[12px] text-secondary">Mostrando {filtered.length} de {users.length} usuários</span>
+        </div>
       </div>
+
+      {selectedUser && (
+        <UserSidePanel
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onEdit={(u) => { setSelectedUser(null); setEditUser(u); }}
+          onPermissions={(u) => { setSelectedUser(null); setPermUserId(u.id); setPermUserName(u.name); setPermOpen(true); }}
+          onToggleStatus={handleToggleStatus}
+        />
+      )}
+
+      <NovoUsuarioModal
+        open={createOpen || !!editUser}
+        onClose={() => { setCreateOpen(false); setEditUser(null); }}
+        onCreated={fetchUsers}
+        editUser={editUser}
+      />
+      <PermissoesModal
+        open={permOpen}
+        onClose={() => setPermOpen(false)}
+        userId={permUserId}
+        userName={permUserName}
+      />
+      <ConfirmModal
+        open={!!deleteConfirm}
+        title="Mover para lixeira"
+        message={`Deseja mover "${deleteConfirm?.name}" para a Lixeira? Você poderá restaurar ou excluir permanentemente depois.`}
+        variant="warning"
+        confirmLabel="Mover para lixeira"
+        cancelLabel="Cancelar"
+        onConfirm={handleDeleteUser}
+        onCancel={() => setDeleteConfirm(null)}
+        onClose={() => setDeleteConfirm(null)}
+      />
     </DashboardLayout>
   );
 }

@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
+import fs from 'node:fs';
+import multer from 'multer';
 import { fileURLToPath } from 'node:url';
 import { iniciarJob, getJob, getCaptchaManager } from './services/orquestrador.service.js';
 import { criarConectores } from './connectors/index.js';
@@ -18,6 +20,9 @@ import captchaRoutes from './routes/captcha.js';
 import propertiesRoutes from './routes/properties.js';
 import settingsRoutes from './routes/settings.js';
 import supportRoutes from './routes/support.js';
+import trashRoutes from './routes/trash.js';
+import companiesRoutes from './routes/companies.js';
+import db from './database.js';
 
 const LOG = (msg: string) => console.log(`[Server] ${msg}`);
 
@@ -44,10 +49,45 @@ app.use('/api/captcha', captchaRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/trash', trashRoutes);
+app.use('/api/companies', companiesRoutes);
+
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
+if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Apenas imagens são permitidas'));
+  },
+});
+
+app.post('/api/upload/avatar', upload.single('avatar'), (req, res) => {
+  const userId = req.body.userId;
+  if (!userId || !req.file) {
+    res.status(400).json({ error: 'userId e avatar são obrigatórios' });
+    return;
+  }
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarUrl, userId);
+  res.json({ avatarUrl });
+});
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
 app.use(express.static(publicPath));
+
+const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsPublicPath));
 
 const documentos = new Map<string, Uint8Array>();
 
@@ -72,7 +112,7 @@ function checkDocsLoop(jobId: string): void {
 
 app.post('/api/consultar', (req, res) => {
   try {
-    const { nome, cpf, dataNascimento, nomeMae, nomePai, email } = req.body;
+    const { nome, cpf, dataNascimento, nomeMae, nomePai, email, personId, dossierId, organs, certKeys } = req.body;
 
     if (!nome || !cpf || !dataNascimento || !nomeMae || !email) {
       res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos.' });
@@ -85,7 +125,7 @@ app.post('/api/consultar', (req, res) => {
       return;
     }
 
-    const job = iniciarJob({ nome, cpf: cpfDigits, dataNascimento, nomeMae, nomePai: nomePai || undefined, email });
+    const job = iniciarJob({ nome, cpf: cpfDigits, dataNascimento, nomeMae, nomePai: nomePai || undefined, email, personId, dossierId, certKeys }, organs);
     checkDocsLoop(job.id);
     res.json({ jobId: job.id });
   } catch (error) {

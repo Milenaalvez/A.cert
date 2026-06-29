@@ -2,7 +2,7 @@
 
 import { obterToken } from "@/lib/api";
 
-const BASE = "http://localhost:3001/api";
+const BASE = "/api";
 
 async function authHeaders(): Promise<Record<string, string>> {
   const token = obterToken();
@@ -168,6 +168,31 @@ export async function positions(departmentId: string) {
     headers: await authHeaders(),
   });
   return handleRes(r);
+}
+
+// ─── Avatar ───
+export async function userAuditLogs(userId: string) {
+  const r = await fetch(`${BASE}/team/user-activities/${userId}`, { headers: await authHeaders() });
+  return handleRes(r);
+}
+
+export async function userDossiers(userId: string) {
+  const r = await fetch(`${BASE}/team/user-dossiers/${userId}`, { headers: await authHeaders() });
+  return handleRes(r);
+}
+
+export async function uploadAvatar(userId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  formData.append('userId', userId);
+  const token = obterToken();
+  const r = await fetch(`${BASE}/upload/avatar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  const data = await handleRes(r);
+  return data.avatarUrl;
 }
 
 // ─── User info ───

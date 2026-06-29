@@ -2,12 +2,13 @@ import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
-import { wait } from '../utils/retry-manager.service.js';
+import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[TRT] ${msg}`);
+const DEBUG = process.env.DEBUG;
 
 async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
   const info = await page.evaluate(() => {
@@ -49,18 +50,7 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
   LOG(`Textos: ${info.allText.join(' | ')}`);
 }
 
-async function clicarBotaoPorTexto(page: import('puppeteer').Page, texto: string): Promise<boolean> {
-  return page.evaluate((txt) => {
-    const txtNorm = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const botoes = document.querySelectorAll('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]');
-    for (const b of botoes) {
-      const content = (b as HTMLElement).textContent?.trim() || (b as HTMLInputElement).value || '';
-      const norm = content.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (norm.includes(txtNorm)) { (b as HTMLElement).click(); return true; }
-    }
-    return false;
-  }, texto);
-}
+
 
 async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto: string, valor: string): Promise<boolean> {
   const lblNorm = labelTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -81,18 +71,11 @@ async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto
   }, lblNorm);
 
   if (!sel) return false;
-  const el = await page.$(sel);
-  if (!el) return false;
-
-  await el.click();
-  await wait(100);
-  await page.keyboard.type(valor, { delay: 8 });
-  LOG(`Input "${labelTexto}"="${valor}" via ${sel}`);
-  return true;
+  return preencherInputRapido(page, sel, valor);
 }
 
 async function preencherInputFallback(page: import('puppeteer').Page, busca: string, valor: string): Promise<boolean> {
-  const result = await page.evaluate((b, v) => {
+  const sel = await page.evaluate((b) => {
     const lb = b.toLowerCase();
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input'));
     for (const inp of inputs) {
@@ -100,21 +83,13 @@ async function preencherInputFallback(page: import('puppeteer').Page, busca: str
       const name = (inp.name || '').toLowerCase();
       const ph = (inp.placeholder || '').toLowerCase();
       if (id.includes(lb) || name.includes(lb) || ph.includes(lb)) {
-        const proto = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-        const setter = proto?.set;
-        if (setter) {
-          setter.call(inp, v);
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          inp.value = v;
-        }
-        return inp.id || inp.name || 'unknown';
+        return inp.id ? `#${CSS.escape(inp.id)}` : inp.name ? `[name="${inp.name}"]` : 'input';
       }
     }
     return null;
-  }, busca, valor);
-  return result !== null;
+  }, busca);
+  if (!sel) return false;
+  return preencherInputRapido(page, sel, valor);
 }
 
 export class TRTConnector implements IConnector {
@@ -124,6 +99,7 @@ export class TRTConnector implements IConnector {
     dados: DadosProprietario,
     captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta TRT10');
@@ -138,7 +114,7 @@ export class TRTConnector implements IConnector {
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       await wait(3000);
 
-      await diagnosticarFormulario(page);
+      if (DEBUG) await diagnosticarFormulario(page);
       await injectFillHelper(page);
 
       const cpfDigits = dados.cpf.replace(/\D/g, '');
@@ -184,22 +160,8 @@ export class TRTConnector implements IConnector {
       LOG(`Submit: ${submitOk}`);
 
       if (!submitOk) {
-        const genOk = await page.evaluate(() => {
-          const botoes = document.querySelectorAll('button, input[type="submit"], input[type="button"]');
-          for (const b of botoes) {
-            if ((b as HTMLElement).offsetParent !== null) { (b as HTMLElement).click(); return (b as HTMLElement).textContent?.trim() || 'generic'; }
-          }
-          const links = document.querySelectorAll('a');
-          for (const a of links) {
-            if (a.textContent?.trim().toLowerCase().includes('certid') && a.offsetParent !== null) { a.click(); return a.textContent?.trim() || 'link'; }
-          }
-          return null;
-        });
-        LOG(`Submit generico: ${genOk}`);
-        if (!genOk) {
-          await page.close();
-          return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
-        }
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
       }
 
       await wait(2000);
@@ -221,12 +183,10 @@ export class TRTConnector implements IConnector {
           });
           await Promise.race([
             waitPromise,
-            new Promise((_, reject) => {
-              const check = () => {
-                if (pageClosed) reject(new Error('Pagina fechada'));
-                else page.once('close', check);
-              };
-              page.once('close', check);
+            new Promise<void>((resolve) => {
+              const check = () => { if (pageClosed) resolve(); };
+              page.on('close', check);
+              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
             }),
           ]);
           LOG('CAPTCHA resolvido');
@@ -239,12 +199,15 @@ export class TRTConnector implements IConnector {
 
       if (pageClosed) throw new Error('Pagina fechada');
 
-      await wait(3000);
-
       const protocolo = `TRT-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      LOG('PDF capturado');
+      const pdfBuffer = await tentarBaixarPDF(page);
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
+      }
+      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
 
+      await this.#throttle();
       await page.close();
       return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };
     } catch (error) {
@@ -254,4 +217,6 @@ export class TRTConnector implements IConnector {
       return { status: 'error', orgao: this.nome, dataConsulta, error: `[TRT] ${msg}` };
     }
   }
+
+  readonly #throttle = criarRateLimit(3000);
 }

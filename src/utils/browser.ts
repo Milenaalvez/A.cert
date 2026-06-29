@@ -35,6 +35,27 @@ export async function createPage(): Promise<Page> {
 
   page.on('pageerror', (err) => console.log(`[PAGE CRASH] ${String(err)}`));
 
+  // Aceita cookies automaticamente em qualquer pagina
+  page.on('load', async () => {
+    try {
+      await page.evaluate(() => {
+        const textos = [
+          'aceitar', 'aceitar cookies', 'aceitar todos', 'ok', 'continuar',
+          'accept', 'accept all', 'concordo', 'entendi', 'fechar', 'x',
+        ];
+        const botoes = document.querySelectorAll<HTMLElement>(
+          'button, a, div[role="button"], span[role="button"]'
+        );
+        for (const b of botoes) {
+          const txt = (b.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          if (textos.some(t => txt.includes(t))) {
+            if (b.offsetParent !== null) { b.click(); return; }
+          }
+        }
+      });
+    } catch {}
+  });
+
   await page.setViewport({ width: 1366, height: 768 });
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'

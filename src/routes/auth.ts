@@ -258,8 +258,8 @@ router.post('/login', (req, res) => {
     }
 
     const user = db.prepare(
-      'SELECT id, name, email, password_hash, email_confirmed FROM users WHERE email = ?'
-    ).get(email.toLowerCase().trim()) as { id: string; name: string; email: string; password_hash: string; email_confirmed: number } | undefined;
+      'SELECT id, name, email, password_hash, email_confirmed, avatar, password_change_required FROM users WHERE email = ?'
+    ).get(email.toLowerCase().trim()) as { id: string; name: string; email: string; password_hash: string; email_confirmed: number; avatar: string | null; password_change_required: number } | undefined;
 
     if (!user) {
       res.status(401).json({ error: 'Email ou senha incorretos' });
@@ -277,11 +277,23 @@ router.post('/login', (req, res) => {
       return;
     }
 
+    db.prepare('UPDATE users SET last_access_at = datetime(\'now\') WHERE id = ?').run(user.id);
+
+    if (user.password_change_required) {
+      const changeToken = gerarToken({ userId: user.id, email: user.email });
+      res.json({
+        precisaTrocarSenha: true,
+        changeToken,
+        user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
+      });
+      return;
+    }
+
     const token = gerarToken({ userId: user.id, email: user.email });
 
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
     });
   } catch (error) {
     console.error('[Auth] Erro no login:', error);
@@ -289,11 +301,57 @@ router.post('/login', (req, res) => {
   }
 });
 
+router.post('/trocar-senha', authMiddleware, (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!newPassword) {
+      res.status(400).json({ error: 'Nova senha é obrigatória' });
+      return;
+    }
+
+    const senha = validarSenhaForte(newPassword);
+    if (!senha.valida) {
+      res.status(400).json({ error: `Senha deve conter: ${senha.erros.join(', ')}` });
+      return;
+    }
+
+    const user = db.prepare(
+      'SELECT password_hash, password_change_required FROM users WHERE id = ?'
+    ).get(req.user!.userId) as { password_hash: string; password_change_required: number } | undefined;
+
+    if (!user) {
+      res.status(404).json({ error: 'Usuário não encontrado' });
+      return;
+    }
+
+    if (!user.password_change_required && currentPassword) {
+      const senhaAtualValida = bcrypt.compareSync(currentPassword, user.password_hash);
+      if (!senhaAtualValida) {
+        res.status(401).json({ error: 'Senha atual incorreta' });
+        return;
+      }
+    }
+
+    const password_hash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE users SET password_hash = ?, password_change_required = 0 WHERE id = ?')
+      .run(password_hash, req.user!.userId);
+
+    const token = gerarToken({ userId: req.user!.userId, email: req.user!.email });
+
+    res.json({ success: true, token, message: 'Senha atualizada com sucesso!' });
+  } catch (error) {
+    console.error('[Auth] Erro ao trocar senha:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 router.get('/me', authMiddleware, (req, res) => {
   try {
     const user = db.prepare(
-      'SELECT id, name, email, phone, created_at FROM users WHERE id = ?'
-    ).get(req.user!.userId) as { id: string; name: string; email: string; phone: string | null; created_at: string } | undefined;
+      `SELECT id, name, email, phone, avatar, role, registration_number, created_at, last_access_at
+       FROM users WHERE id = ?`
+    ).get(req.user!.userId) as Record<string, unknown> | undefined;
 
     if (!user) {
       res.status(404).json({ error: 'Usuário não encontrado' });
@@ -303,6 +361,77 @@ router.get('/me', authMiddleware, (req, res) => {
     res.json({ user });
   } catch (error) {
     console.error('[Auth] Erro no me:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+router.put('/me', authMiddleware, (req, res) => {
+  try {
+    const { phone, avatar } = req.body;
+    const updates: string[] = [];
+    const params: unknown[] = [];
+
+    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
+    if (avatar !== undefined) { updates.push('avatar = ?'); params.push(avatar); }
+
+    if (updates.length === 0) {
+      res.status(400).json({ error: 'Nenhum campo para atualizar' });
+      return;
+    }
+
+    params.push(req.user!.userId);
+    db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    const user = db.prepare(
+      `SELECT id, name, email, phone, avatar, role, registration_number, created_at, last_access_at
+       FROM users WHERE id = ?`
+    ).get(req.user!.userId);
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('[Auth] Erro no put /me:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+const ROLES_LABEL: Record<string, string> = {
+  ADMIN: 'Administrador',
+  ANALYST: 'Analista Documental',
+  EMPLOYE: 'Corretor',
+};
+
+router.get('/me/stats', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user!.userId;
+
+    const dossiersEmAndamento = (db.prepare(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = ? AND status = 'Em andamento' AND deleted_at IS NULL"
+    ).get(userId) as { count: number }).count;
+
+    const dossiersConcluidos = (db.prepare(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = ? AND status = 'Concluído' AND deleted_at IS NULL"
+    ).get(userId) as { count: number }).count;
+
+    const totalCertidoes = (db.prepare(
+      `SELECT COUNT(*) as count FROM certificates c
+       JOIN dossiers d ON c.dossier_id = d.id
+       WHERE d.created_by = ? AND c.status = 'Emitida'`
+    ).get(userId) as { count: number }).count;
+
+    const recentActivities = db.prepare(
+      `SELECT id, action, reference, dossier_ref, created_at
+       FROM activities WHERE user_name = (SELECT name FROM users WHERE id = ?)
+       ORDER BY created_at DESC LIMIT 15`
+    ).all(userId);
+
+    res.json({
+      dossiersEmAndamento,
+      dossiersConcluidos,
+      totalCertidoes,
+      recentActivities,
+    });
+  } catch (error) {
+    console.error('[Auth] Erro no me/stats:', error);
     res.status(500).json({ error: 'Erro interno' });
   }
 });

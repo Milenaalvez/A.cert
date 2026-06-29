@@ -124,6 +124,28 @@ router.get('/', (_req, res) => {
   }
 });
 
+router.get('/search', (req, res) => {
+  try {
+    const q = ((req.query.q as string) || '').trim();
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    if (!q) { res.json({ properties: [] }); return; }
+
+    const properties = db.prepare(`
+      SELECT id, identifier, registration, type, address, neighborhood, city, status
+      FROM properties
+      WHERE (identifier LIKE ? OR address LIKE ? OR registration LIKE ? OR neighborhood LIKE ? OR city LIKE ?)
+        AND (deleted_at IS NULL OR deleted_at = '')
+      ORDER BY updated_at DESC
+      LIMIT ?
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, limit) as any[];
+
+    res.json({ properties });
+  } catch (error) {
+    console.error('[Properties Search] Erro:', error);
+    res.status(500).json({ error: 'Erro ao pesquisar imóveis' });
+  }
+});
+
 router.get('/category/:type', (req, res) => {
   try {
     const { type } = req.params;
@@ -524,19 +546,18 @@ router.delete('/:id', (req, res) => {
     const { id } = req.params;
     const existing = db.prepare('SELECT id FROM properties WHERE id = ?').get(id);
     if (!existing) { res.status(404).json({ error: 'Imóvel não encontrado' }); return; }
-    db.prepare('DELETE FROM property_owners WHERE property_id = ?').run(id);
-    db.prepare('DELETE FROM properties WHERE id = ?').run(id);
+    db.prepare('UPDATE properties SET deleted_at = datetime(\'now\') WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (error) {
     console.error('[Properties Delete] Erro:', error);
-    res.status(500).json({ error: 'Erro ao deletar imóvel' });
+    res.status(500).json({ error: 'Erro ao mover imóvel para lixeira' });
   }
 });
 
 router.post('/:id/archive', (req, res) => {
   try {
     const { id } = req.params;
-    db.prepare('UPDATE properties SET status = ? WHERE id = ?').run('Arquivado', id);
+    db.prepare('UPDATE properties SET archived_at = datetime(\'now\') WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (error) {
     console.error('[Properties Archive] Erro:', error);

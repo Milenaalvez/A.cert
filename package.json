@@ -11,17 +11,23 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@types/archiver": "^8.0.0",
+    "@types/unzipper": "^0.10.11",
+    "archiver": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.0",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.4.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "svg-captcha": "^1.4.0",
+    "unzipper": "^0.12.5",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -30,6 +36,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
     "@types/node": "^22.14.1",
     "@types/nodemailer": "^8.0.1",
     "@types/uuid": "^10.0.0",

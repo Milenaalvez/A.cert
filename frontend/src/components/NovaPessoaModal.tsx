@@ -141,7 +141,7 @@ export function NovaPessoaModal({ onClose, onCreated }: Props) {
         fatherName: (form as any).fatherName || "",
       };
 
-      const r = await fetch("http://localhost:3001/api/people", {
+      const r = await fetch("/api/people", {
         method: "POST", headers, body: JSON.stringify(body),
       });
       const data = await r.json();

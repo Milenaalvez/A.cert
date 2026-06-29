@@ -92,7 +92,7 @@ export default function DossiesPage() {
     if (activeTab !== "todos") params.set("status", STATUS_MAP[activeTab]);
     params.set("page", String(currentPage)); params.set("limit", "12");
     try {
-      const r = await fetch(`http://localhost:3001/api/dossiers?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const r = await fetch(`/api/dossiers?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!r.ok) throw new Error("Falha ao carregar");
       setData(await r.json());
     } catch (e: any) { setError(e.message); }

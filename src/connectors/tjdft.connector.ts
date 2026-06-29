@@ -2,14 +2,30 @@ import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper } from '../utils/dom-helper.js';
-import { detectarCaptcha } from '../utils/captcha.js';
-import { wait } from '../utils/retry-manager.service.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
+import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
+import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[TJDFT] ${msg}`);
+const DEBUG = process.env.DEBUG;
 
 function normalizar(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
+  const info = await page.evaluate(() => {
+    const labels = Array.from(document.querySelectorAll('label')).map(l => `"${l.textContent?.trim()}" for="${l.htmlFor}"`);
+    const inputs = Array.from(document.querySelectorAll('input')).map(i => `id="${i.id}" name="${i.name}" type="${i.type}" readonly="${i.readOnly}" disabled="${i.disabled}"`);
+    const buttons = Array.from(document.querySelectorAll('button')).map(b => `"${b.textContent?.trim()}" type="${b.type}" visible="${b.offsetParent !== null}"`);
+    const allText = Array.from(document.querySelectorAll('*')).filter(e => e.children.length === 0 && e.textContent?.trim()).slice(0, 30).map(e => `"${e.textContent?.trim()}"`);
+    return { labels, inputs, buttons, allText };
+  });
+  LOG(`Labels: ${info.labels.join(' | ')}`);
+  LOG(`Inputs: ${info.inputs.join(' | ')}`);
+  LOG(`Botoes: ${info.buttons.join(' | ')}`);
+  LOG(`Textos visiveis: ${info.allText.join(' | ')}`);
 }
 
 async function preencherInputPorLabel(
@@ -38,11 +54,27 @@ async function preencherInputPorLabel(
     return null;
   }, lblNorm);
 
-  if (!inputId) return false;
-
-  const sel = inputId ? `[id="${inputId}"]` : '';
-  const el = sel ? await page.$(sel) : null;
-  if (!el) return false;
+  let sel: string;
+  if (inputId) {
+    sel = `#${CSS.escape(inputId)}`;
+  } else {
+    // Fallback: busca por placeholder ou name
+    const fallbackSel = await page.evaluate((lbl) => {
+      const lb = lbl.toLowerCase();
+      const inputs = document.querySelectorAll<HTMLInputElement>('input');
+      for (const inp of inputs) {
+        const ph = (inp.placeholder || '').toLowerCase();
+        const nm = (inp.name || '').toLowerCase();
+        if (ph.includes(lb) || nm.includes(lb)) {
+          return inp.id ? `#${CSS.escape(inp.id)}` : nm ? `[name="${nm}"]` : 'input';
+        }
+      }
+      return null;
+    }, labelTexto);
+    if (!fallbackSel) return false;
+    sel = fallbackSel;
+    LOG(`Input "${labelTexto}" encontrado via fallback: ${sel}`);
+  }
 
   if (usarFallback) {
     const ok = await page.evaluate((s, v) => {
@@ -54,32 +86,19 @@ async function preencherInputPorLabel(
     return ok;
   }
 
-  await el.click();
-  await wait(100);
-  await page.keyboard.type(valor, { delay: 8 });
-  LOG(`Input "${labelTexto}" preenchido via keyboard`);
-  return true;
-}
-
-async function clicarBotao(page: import('puppeteer').Page, texto: string): Promise<boolean> {
-  return page.evaluate((txt) => {
-    const txtNorm = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const btns = document.querySelectorAll('button');
-    for (const b of btns) {
-      const t = (b.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (t.includes(txtNorm)) { b.click(); return true; }
-    }
-    return false;
-  }, texto);
+  return preencherInputRapido(page, sel, valor);
 }
 
 export class TJDFTConnector implements IConnector {
   readonly nome = 'TJDFT';
 
+  readonly #throttle = criarRateLimit(3000);
+
   async consultar(
     dados: DadosProprietario,
     captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta');
@@ -96,6 +115,7 @@ export class TJDFTConnector implements IConnector {
       await wait(3000);
       LOG('Pagina carregada');
 
+      if (DEBUG) await diagnosticarFormulario(page);
       await injectFillHelper(page);
 
       const cpfDigits = dados.cpf.replace(/\D/g, '');
@@ -132,7 +152,7 @@ export class TJDFTConnector implements IConnector {
       });
       await wait(500);
 
-      await clicarBotao(page, 'proximo');
+      await clicarBotaoPorTexto(page, 'proximo');
       LOG('Proximo clicado');
 
       // Aguarda nova pagina carregar (espera label "Nome da Mae" aparecer)
@@ -153,18 +173,7 @@ export class TJDFTConnector implements IConnector {
       // ----- STEP 2: filiacao -----
       LOG('Pagina de filiacao carregada');
 
-      // Diagnostico da pagina de filiacao
-      const diag = await page.evaluate(() => {
-        const labels = Array.from(document.querySelectorAll('label')).map(l => `"${l.textContent?.trim()}" for="${l.htmlFor}"`);
-        const inputs = Array.from(document.querySelectorAll('input')).map(i => `id="${i.id}" name="${i.name}" type="${i.type}" readonly="${i.readOnly}" disabled="${i.disabled}"`);
-        const buttons = Array.from(document.querySelectorAll('button')).map(b => `"${b.textContent?.trim()}" type="${b.type}" visible="${b.offsetParent !== null}"`);
-        const allText = Array.from(document.querySelectorAll('*')).filter(e => e.children.length === 0 && e.textContent?.trim()).slice(0, 30).map(e => `"${e.textContent?.trim()}"`);
-        return { labels, inputs, buttons, allText };
-      });
-      LOG(`Labels filiacao: ${diag.labels.join(' | ')}`);
-      LOG(`Inputs filiacao: ${diag.inputs.join(' | ')}`);
-      LOG(`Botoes filiacao: ${diag.buttons.join(' | ')}`);
-      LOG(`Textos visiveis: ${diag.allText.join(' | ')}`);
+      if (DEBUG) await diagnosticarFormulario(page);
 
       // Preenche nome da mae e do pai (campos estao editaveis disabled=false)
       const maeOk = await preencherInputPorLabel(page, 'Nome da Mae', dados.nomeMae, true);
@@ -178,28 +187,20 @@ export class TJDFTConnector implements IConnector {
       await wait(1500);
 
       // Na pagina de filiacao, o botao de submit eh "Proximo"
-      const proximoOk = await clicarBotao(page, 'proximo');
+      const proximoOk = await clicarBotaoPorTexto(page, 'proximo');
       LOG(`Proximo (submit) clicado: ${proximoOk}`);
 
       let formularioEnviado = proximoOk;
 
       if (!proximoOk) {
-        const solicitou = await clicarBotao(page, 'solicitar');
+        const solicitou = await clicarBotaoPorTexto(page, 'solicitar');
         LOG(`Solicitar clicado: ${solicitou}`);
         formularioEnviado = solicitou;
       }
 
       if (!formularioEnviado) {
-        LOG('Nenhum botao de envio encontrado. Tentando clique generico...');
-        const genOk = await page.evaluate(() => {
-          const btns = document.querySelectorAll('button');
-          for (const b of btns) {
-            if (b.offsetParent !== null) { b.click(); return b.textContent?.trim() || 'unknown'; }
-          }
-          return null;
-        });
-        LOG(`Clique generico: ${genOk}`);
-        formularioEnviado = !!genOk;
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
       }
 
       // Aguarda resultado se formulario foi enviado
@@ -215,19 +216,23 @@ export class TJDFTConnector implements IConnector {
       LOG(`CAPTCHA: ${captchaType}`);
 
       if (captchaType) {
+        await focusPageForCaptcha(page, captchaType);
+
         if (captchaManager && jobId) {
           const chave = `${jobId}-${this.nome}`;
           const img = await page.screenshot({ type: 'png' });
 
           LOG('Aguardando resolucao CAPTCHA...');
+          const waitPromise = captchaManager.waitForSolution(chave, this.nome, img, captchaType, page.url());
+          esperarCaptchaInterativo(page, captchaType).then(ok => {
+            if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
+          });
           await Promise.race([
-            captchaManager.waitForSolution(chave, this.nome, img, captchaType),
-            new Promise((_, reject) => {
-              const check = () => {
-                if (pageClosed) reject(new Error('Pagina fechada'));
-                else page.once('close', check);
-              };
-              page.once('close', check);
+            waitPromise,
+            new Promise<void>((resolve) => {
+              const check = () => { if (pageClosed) resolve(); };
+              page.on('close', check);
+              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
             }),
           ]);
           LOG('CAPTCHA resolvido');
@@ -245,10 +250,15 @@ export class TJDFTConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'Formulario nao enviado: nenhum botao de submit clicado' };
       }
 
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      LOG('PDF capturado');
-
       const protocolo = `TJDFT-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+      const pdfBuffer = await tentarBaixarPDF(page);
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
+      }
+      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
+
+      await this.#throttle();
       await page.close();
 
       return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };

@@ -8,9 +8,12 @@ import {
   Server, Eye, Trash2, Search, RefreshCw,
   Camera, Phone, Calendar, FileSpreadsheet, FileCheck,
   Shield, HardDrive, Download,
-  Lock, Smartphone, Database,
+  Lock, Smartphone, Database, Pencil,
+  LogIn, X,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import ConfirmModal from "@/components/ConfirmModal";
+import { useUser } from "@/contexts/UserContext";
 
 const apiBase = "";
 
@@ -29,7 +32,7 @@ const TABS = [
 const ROLES_MAP: Record<string, string> = {
   ADMIN: "Administrador",
   ANALYST: "Analista Documental",
-  EMPLOYE: "Corretor",
+  EMPLOYEE: "Vendedor",
 };
 
 const labelStyle = "block text-[11px] font-semibold text-muted uppercase tracking-[0.4px] mb-1.5";
@@ -46,6 +49,44 @@ const grid2 = "grid grid-cols-2 gap-5";
 const SWITCH_WRAP = "flex items-center justify-between py-6 border-b border-default last:border-0";
 const SWITCH_LABEL = "text-[13px] text-body";
 const SWITCH_DESC = "text-[11px] text-muted mt-0.5";
+
+function FieldRow({ label, value, editing, onEdit, onCancel, onChange, readOnly, badge }: {
+  label: string; value: string; editing?: boolean; onEdit?: () => void; onCancel?: () => void; onChange?: (v: string) => void; readOnly?: boolean; badge?: boolean;
+}) {
+  if (editing) {
+    return (
+      <div className="flex items-center justify-between py-2">
+        <span className="text-[12px] font-medium text-secondary">{label}</span>
+        <div className="flex items-center gap-2">
+          <input type="text" value={value} onChange={e => onChange?.(e.target.value)}
+            className="w-[200px] h-9 rounded-[6px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00]"
+            onKeyDown={e => { if (e.key === "Enter") onCancel?.(); }}
+            autoFocus />
+          <button onClick={onCancel} className="w-7 h-7 flex items-center justify-center text-muted hover:text-primary transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-[12px] font-medium text-secondary">{label}</span>
+      <div className="flex items-center gap-2">
+        {badge ? (
+          <span className="text-[12px] font-semibold text-[#059669] bg-[#059669]/10 px-2.5 py-0.5 rounded">{value}</span>
+        ) : (
+          <span className="text-[13px] text-primary">{value}</span>
+        )}
+        {!readOnly && (
+          <button onClick={onEdit} className="w-7 h-7 flex items-center justify-center text-muted hover:text-[#FF7A00] transition-colors">
+            <Pencil size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Switch({ checked, onChange, label, desc }: { checked: boolean; onChange: (v: boolean) => void; label: string; desc?: string }) {
   return (
@@ -86,6 +127,15 @@ function formatTimeAgo(d: string) {
 }
 
 export default function ConfiguracoesPage() {
+  return (
+    <DashboardLayout>
+      <ConfiguracoesContent />
+    </DashboardLayout>
+  );
+}
+
+function ConfiguracoesContent() {
+  const { setUser: setGlobalUser } = useUser();
   const [activeTab, setActiveTab] = useState("perfil");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -93,6 +143,12 @@ export default function ConfiguracoesPage() {
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [phone, setPhone] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [showConfirmExit, setShowConfirmExit] = useState(false);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const [themeMode, setThemeMode] = useState("system");
+  const [density, setDensity] = useState("default");
 
   // Segurança state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -340,6 +396,8 @@ export default function ConfiguracoesPage() {
       const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ phone }) });
       const data = await r.json();
       if (data.user) setUser(data.user);
+      setDirty(false);
+      setEditingField(null);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch {} finally { setSaving(false); }
   }
@@ -397,14 +455,36 @@ export default function ConfiguracoesPage() {
     const colors: Record<string, string> = {
       ADMIN: "bg-[#FF7A00]/10 text-[#FF7A00] border-[#FF7A00]/20",
       ANALYST: "bg-[#059669]/10 text-[#059669] border-[#059669]/20",
-      EMPLOYE: "bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]/20",
+      EMPLOYEE: "bg-[#FF7A00]/10 text-[#FF7A00] border-[#FF7A00]/20",
     };
     return (
-      <span className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${colors[role || ""] || colors.EMPLOYE}`}>
+      <span className={`text-[11px] font-semibold px-4 py-1 border text-center min-w-[90px] inline-block ${colors[role || ""] || colors.EMPLOYEE}`}>
         {label}
       </span>
     );
   };
+
+  function handleTabChange(key: string) {
+    if (dirty) { setPendingTab(key); setShowConfirmExit(true); }
+    else setActiveTab(key);
+  }
+
+  function discardAndGo() {
+    setDirty(false);
+    setEditingField(null);
+    if (pendingTab) setActiveTab(pendingTab);
+    setShowConfirmExit(false);
+    setPendingTab(null);
+  }
+
+  async function saveAndGo() {
+    await saveProfile();
+    setDirty(false);
+    setEditingField(null);
+    if (pendingTab) setActiveTab(pendingTab);
+    setShowConfirmExit(false);
+    setPendingTab(null);
+  }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -416,14 +496,14 @@ export default function ConfiguracoesPage() {
       try {
         const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ avatar: base64 }) });
         const data = await r.json();
-        if (data.user) setUser(data.user);
+        if (data.user) { setUser(data.user); setGlobalUser(data.user); }
       } catch {}
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   return (
-    <DashboardLayout>
       <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
         <div style={{ marginTop: 24, marginBottom: 28 }}>
           <div className="flex items-start justify-between gap-8">
@@ -432,9 +512,9 @@ export default function ConfiguracoesPage() {
               <p className="text-[14px] text-secondary leading-relaxed">Central de gerenciamento da sua conta e do sistema.</p>
             </div>
             <div className="flex items-center gap-3 shrink-0 pt-0.5">
-              {activeTab === "perfil" && (
+              {dirty && activeTab === "perfil" && (
                 <button onClick={saveProfile} className={btnPrimary}>
-                  <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Perfil"}
+                  <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar alterações"}
                 </button>
               )}
               {activeTab === "geral" && (
@@ -456,13 +536,13 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
-        <div className="border-b border-default mb-12">
+        <div className="border-b border-default mb-28">
           <div className="flex items-center gap-14">
             {TABS.map(t => {
               const Icon = t.icon;
               const isActive = activeTab === t.key;
               return (
-                <button key={t.key} onClick={() => setActiveTab(t.key)}
+                <button key={t.key} onClick={() => handleTabChange(t.key)}
                   className={`flex items-center gap-2 h-9 text-[13px] font-medium transition-colors -mb-px border-b-[3px] ${
                     isActive ? "border-[#FF7A00] text-primary" : "border-transparent text-secondary hover:text-body"
                   }`}>
@@ -475,178 +555,261 @@ export default function ConfiguracoesPage() {
         </div>
 
         {activeTab === "perfil" && (
-          <div>
-            <div className="flex gap-8">
-              <div className="flex-1 min-w-0">
-                <div className={sectionBox}>
-                  <div className="flex items-start gap-6 mb-10 pb-10 border-b border-default">
-                    <div className="relative group shrink-0">
-                      <div className="w-20 h-20 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
+          <div className="flex flex-col gap-6" style={{ paddingTop: 40 }}>
+            <div className="flex gap-6">
+              {/* Left: Perfil do Usuário (portrait) */}
+              <div className="w-[480px] shrink-0">
+                <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+                  style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 44px 44px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "40px", paddingBottom: "24px", borderBottom: "1px solid var(--border-default)" }}>
+                    <User size={18} className="text-[#FF7A00]" />
+                    <h3 className="text-[16px] font-bold text-primary">Perfil do Usuário</h3>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", marginBottom: "80px" }}>
+                    <label className="relative group shrink-0 cursor-pointer">
+                      <div className="w-28 h-28 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
                         {user?.avatar ? (
                           <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <User size={32} className="text-muted" />
+                          <User size={40} className="text-muted" />
                         )}
                       </div>
-                      <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity">
-                        <Camera size={18} className="text-white" />
-                        <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-                      </label>
-                    </div>
-                    <div className="min-w-0 pt-2">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-[20px] font-bold text-primary">{user?.name || "Carregando..."}</h2>
-                        {roleBadge(user?.role)}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-full transition-opacity">
+                        <Camera size={24} className="text-white" />
                       </div>
-                      <p className="text-[13px] text-muted">{user?.email}</p>
+                      <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                    </label>
+                    <div className="min-w-0" style={{ paddingTop: "6px" }}>
+                      <h2 className="text-[18px] font-bold text-primary">{user?.name || "Carregando..."}</h2>
+                      <div style={{ marginTop: "8px" }}>{roleBadge(user?.role)}</div>
+                      <p style={{ marginTop: "6px" }} className="text-[13px] text-secondary">{user?.email}</p>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Nome completo</span>
-                      <span className="text-[14px] font-semibold text-primary">{user?.name || "—"}</span>
-                    </div>
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Cargo</span>
-                      <span className="text-[14px] font-semibold" style={{ color: "#FF7A00" }}>{(user?.role && ROLES_MAP[user.role]) || "Corretor"}</span>
-                    </div>
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Matrícula</span>
-                      <span className="text-[14px] font-semibold text-primary">{user?.registration_number || "—"}</span>
-                    </div>
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">E-mail corporativo</span>
-                      <span className="text-[14px] font-semibold text-primary break-all">{user?.email || "—"}</span>
-                    </div>
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Telefone</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[14px] font-semibold text-primary">(61) 99999-9999</span>
-                        <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="flex-1 h-9 rounded-[6px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" placeholder="(61) 99999-9999" />
-                      </div>
-                    </div>
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Data de criação</span>
-                      <span className="text-[14px] font-semibold text-primary">{formatDateShort(user?.created_at)}</span>
-                    </div>
-                    <div className="bg-surface border border-default rounded-[10px] p-5 flex flex-col gap-2">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Último acesso</span>
-                      <span className="text-[14px] font-semibold text-primary">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</span>
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <FieldRow label="Nome completo" value={user?.name || "—"} readOnly />
+                    <FieldRow label="Cargo" value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
+                    <FieldRow label="Empresa vinculada" value="Bloco Imobiliária" readOnly />
+                    <FieldRow label="E-mail corporativo" value={user?.email || "—"} readOnly />
+                    <FieldRow label="Telefone" value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} readOnly={false} />
+                  </div>
+                  <div style={{ height: "120px" }} />
+                  <div style={{ borderTop: "1px solid var(--border-default)", paddingTop: "48px" }}>
+                    <FieldRow label="Matrícula" value={user?.registration_number || "—"} readOnly />
                   </div>
                 </div>
               </div>
 
-              <div style={{ width: "320px", minWidth: "320px" }}>
-                <div className="bg-surface rounded-[10px] p-6">
-                  <div className="mb-5 pb-3 border-b border-default">
-                    <h3 className="text-[15px] font-semibold text-primary">Informações da Conta</h3>
+              {/* Right: Preferências do Usuário (square) */}
+              <div className="w-[480px] shrink-0">
+                <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+                  style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 40px 40px" }}>
+                  <div className="flex items-center gap-3 mb-10 pb-6 border-b border-default">
+                    <Settings size={18} className="text-[#FF7A00]" />
+                    <h3 className="text-[16px] font-bold text-primary">Preferências</h3>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-4 py-4 border-b border-default last:border-0">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(59,130,246,0.1)" }}>
-                        <Clock size={18} className="text-[#3B82F6]" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-secondary uppercase tracking-wider font-semibold">Último acesso</p>
-                        <p className="text-[15px] font-semibold text-primary mt-0.5">{user?.last_access_at ? formatTimeAgo(user.last_access_at) : "—"}</p>
-                      </div>
+                  <div className="flex flex-col gap-5">
+                    <div>
+                      <label className={labelStyle}>Idioma</label>
+                      <select value={lang} onChange={e => { setLang(e.target.value); setDirty(true); }} className={selectBase}
+                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                        <option value="pt-BR">Português (Brasil)</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                      </select>
                     </div>
-                    <div className="flex items-center gap-4 py-4 border-b border-default last:border-0">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.1)" }}>
-                        <Calendar size={18} className="text-[#FF7A00]" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-secondary uppercase tracking-wider font-semibold">Data de criação</p>
-                        <p className="text-[15px] font-semibold text-primary mt-0.5">{formatDateShort(user?.created_at)}</p>
-                      </div>
+                    <div>
+                      <label className={labelStyle}>Tema</label>
+                      <select value={themeMode} onChange={e => { setThemeMode(e.target.value); setDirty(true); }} className={selectBase}
+                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                        <option value="light">Claro</option>
+                        <option value="dark">Escuro</option>
+                        <option value="system">Automático</option>
+                      </select>
                     </div>
-                    <div className="flex items-center gap-4 py-4 border-b border-default last:border-0">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(217,119,6,0.1)" }}>
-                        <FileSpreadsheet size={18} className="text-[#D97706]" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-secondary uppercase tracking-wider font-semibold">Dossiês em andamento</p>
-                        <p className="text-[15px] font-semibold text-primary mt-0.5">{stats?.dossiersEmAndamento ?? "—"}</p>
-                      </div>
+                    <div>
+                      <label className={labelStyle}>Densidade</label>
+                      <select value={density} onChange={e => { setDensity(e.target.value); setDirty(true); }} className={selectBase}
+                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                        <option value="compact">Compacta</option>
+                        <option value="default">Padrão</option>
+                        <option value="comfortable">Confortável</option>
+                      </select>
                     </div>
-                    <div className="flex items-center gap-4 py-4 border-b border-default last:border-0">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(5,150,105,0.1)" }}>
-                        <FileCheck size={18} className="text-[#059669]" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-secondary uppercase tracking-wider font-semibold">Dossiês concluídos</p>
-                        <p className="text-[15px] font-semibold text-primary mt-0.5">{stats?.dossiersConcluidos ?? "—"}</p>
-                      </div>
+                    <div>
+                      <label className={labelStyle}>Formato de data</label>
+                      <select value={dateFormat} onChange={e => { setDateFormat(e.target.value); setDirty(true); }} className={selectBase}
+                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                      </select>
                     </div>
-                    <div className="flex items-center gap-4 py-4 border-b border-default last:border-0">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(139,92,246,0.1)" }}>
-                        <Shield size={18} className="text-[#8B5CF6]" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-secondary uppercase tracking-wider font-semibold">Total de certidões</p>
-                        <p className="text-[15px] font-semibold text-primary mt-0.5">{stats?.totalCertidoes ?? "—"}</p>
-                      </div>
+                    <div>
+                      <label className={labelStyle}>Fuso horário</label>
+                      <select value={timezone} onChange={e => { setTimezone(e.target.value); setDirty(true); }} className={selectBase}
+                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                        <option value="America/Sao_Paulo">America/Sao_Paulo (UTC-3)</option>
+                        <option value="America/Manaus">America/Manaus (UTC-4)</option>
+                        <option value="America/Recife">America/Recife (UTC-3)</option>
+                      </select>
+                    </div>
+                    <div className="border-t border-default pt-6 mt-2">
+                      <Switch checked={showNotifications !== false} onChange={v => { setShowNotifications(v); setDirty(true); }} label="Notificações" desc="Alertas e notificações do sistema" />
+                      <Switch checked={confirmDelete !== false} onChange={v => { setConfirmDelete(v); setDirty(true); }} label="Confirmar exclusão" desc="Exibir confirmação ao mover para lixeira" />
+                      <Switch checked={showNotifications !== false} onChange={v => { setExpiryWarnings(v); setDirty(true); }} label="Avisos de vencimento" desc="Alertar certidões próximas de expirar" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Bloco 3: Segurança da Conta */}
+            <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 40px 40px" }}>
+              <div className="flex items-center gap-3 mb-10 pb-6 border-b border-default">
+                <Shield size={18} className="text-[#FF7A00]" />
+                <h3 className="text-[16px] font-bold text-primary">Segurança da Conta</h3>
+              </div>
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <button onClick={() => setActiveTab("seguranca")} className={btnPrimary}><Lock size={14} /> Alterar Senha</button>
+                <button className={btnOutline}><Shield size={14} /> Configurar 2FA</button>
+                <button className={btnOutline}><Smartphone size={14} /> Encerrar sessões ativas</button>
+              </div>
+              <div className="border border-default rounded-[8px] overflow-hidden">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="text-[10px] font-semibold text-muted uppercase tracking-wider border-b border-default bg-subtle">
+                      <th className="text-left px-4 py-3">Dispositivo</th>
+                      <th className="text-left px-4 py-3">Último acesso</th>
+                      <th className="text-left px-4 py-3">IP</th>
+                      <th className="text-right px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-default last:border-0">
+                      <td className="px-4 py-3 text-primary"><Smartphone size={13} className="inline mr-1.5" /> Chrome / Windows</td>
+                      <td className="px-4 py-3 text-secondary">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</td>
+                      <td className="px-4 py-3 text-secondary font-mono">—</td>
+                      <td className="px-4 py-3 text-right"><span className="text-[11px] font-semibold text-[#059669] bg-[#059669]/10 px-2 py-0.5 rounded">Ativo</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Bloco 4: Resumo da Atividade */}
+            <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 40px 40px" }}>
+              <div className="flex items-center gap-3 mb-10 pb-6 border-b border-default">
+                <Activity size={18} className="text-[#FF7A00]" />
+                <h3 className="text-[16px] font-bold text-primary">Resumo da Atividade</h3>
+              </div>
+              <div className="border border-default rounded-[8px] overflow-hidden">
+                <table className="w-full text-[13px]">
+                  <tbody>
+                    <tr className="border-b border-default">
+                      <td className="px-5 py-4 text-secondary w-1/2">Dossiês criados</td>
+                      <td className="px-5 py-4 text-primary font-semibold text-right">{stats?.dossiersEmAndamento ?? "—"}</td>
+                    </tr>
+                    <tr className="border-b border-default">
+                      <td className="px-5 py-4 text-secondary">Dossiês concluídos</td>
+                      <td className="px-5 py-4 text-primary font-semibold text-right">{stats?.dossiersConcluidos ?? "—"}</td>
+                    </tr>
+                    <tr className="border-b border-default">
+                      <td className="px-5 py-4 text-secondary">Certidões emitidas</td>
+                      <td className="px-5 py-4 text-primary font-semibold text-right">{stats?.totalCertidoes ?? "—"}</td>
+                    </tr>
+                    <tr className="border-b border-default">
+                      <td className="px-5 py-4 text-secondary">Último acesso</td>
+                      <td className="px-5 py-4 text-primary font-semibold text-right">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-5 py-4 text-secondary">Tempo médio de utilização</td>
+                      <td className="px-5 py-4 text-primary font-semibold text-right">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
+        )}
+
+        {showConfirmExit && (
+          <ConfirmModal
+            open={showConfirmExit}
+            title="Alterações não salvas"
+            message="Você tem alterações não salvas. Deseja salvar antes de sair?"
+            variant="warning"
+            confirmLabel="Salvar"
+            cancelLabel="Descartar"
+            onConfirm={saveAndGo}
+            onCancel={discardAndGo}
+            onClose={() => { setShowConfirmExit(false); setPendingTab(null); }}
+          />
         )}
 
         {activeTab === "geral" && (
           <div className="flex gap-8">
             <div className="flex-1 min-w-0">
-              <div className={sectionBox}>
+              <div>
                 <div className="mb-6 pb-4 border-b border-default">
                   <h3 className="text-[15px] font-semibold text-primary">Configurações Operacionais</h3>
                 </div>
-                <div className={grid2}>
-                  <div>
-                    <label className={labelStyle}>Prazo padrão para conclusão de dossiês (dias)</label>
-                    <input type="number" value={dossierDeadline} onChange={e => setDossierDeadline(e.target.value)} className={inputBase} />
+                <div className="border border-default p-6 flex flex-col gap-5">
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Prazo padrão para conclusão de dossiês</span>
+                    <input type="number" value={dossierDeadline} onChange={e => setDossierDeadline(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
                   </div>
-                  <div>
-                    <label className={labelStyle}>Itens por página</label>
-                    <input type="number" value={itemsPerPage} onChange={e => setItemsPerPage(e.target.value)} className={inputBase} />
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Itens por página</span>
+                    <input type="number" value={itemsPerPage} onChange={e => setItemsPerPage(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
                   </div>
-                  <div>
-                    <label className={labelStyle}>Tempo máximo de sessão (min)</label>
-                    <input type="number" value={sessionMax} onChange={e => setSessionMax(e.target.value)} className={inputBase} />
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Tempo máximo de sessão (min)</span>
+                    <input type="number" value={sessionMax} onChange={e => setSessionMax(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
                   </div>
-                  <div>
-                    <label className={labelStyle}>Limite de upload (MB)</label>
-                    <input type="number" value={uploadLimit} onChange={e => setUploadLimit(e.target.value)} className={inputBase} />
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Limite de upload (MB)</span>
+                    <input type="number" value={uploadLimit} onChange={e => setUploadLimit(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
                   </div>
-                  <div>
-                    <label className={labelStyle}>Fuso horário</label>
-                    <select value={timezone} onChange={e => setTimezone(e.target.value)} className={selectBase} style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Fuso horário</span>
+                    <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
+                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
                       <option value="America/Sao_Paulo">America/Sao_Paulo (UTC-3)</option>
                       <option value="America/Manaus">America/Manaus (UTC-4)</option>
                       <option value="America/Recife">America/Recife (UTC-3)</option>
                     </select>
                   </div>
-                  <div>
-                    <label className={labelStyle}>Formato de data</label>
-                    <select value={dateFormat} onChange={e => setDateFormat(e.target.value)} className={selectBase} style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Formato de data</span>
+                    <select value={dateFormat} onChange={e => setDateFormat(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
+                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
                       <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                       <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                       <option value="YYYY-MM-DD">YYYY-MM-DD</option>
                     </select>
                   </div>
-                  <div>
-                    <label className={labelStyle}>Formato de hora</label>
-                    <select value={timeFormat} onChange={e => setTimeFormat(e.target.value)} className={selectBase} style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                  <div className="flex items-center justify-between pb-4 border-b border-default">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Formato de hora</span>
+                    <select value={timeFormat} onChange={e => setTimeFormat(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
+                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
                       <option value="24h">24h</option>
                       <option value="12h">12h (AM/PM)</option>
                     </select>
                   </div>
-                  <div>
-                    <label className={labelStyle}>Idioma</label>
-                    <select value={lang} onChange={e => setLang(e.target.value)} className={selectBase} style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Idioma</span>
+                    <select value={lang} onChange={e => setLang(e.target.value)}
+                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
+                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
                       <option value="pt-BR">Português (Brasil)</option>
                       <option value="en">English</option>
                       <option value="es">Español</option>
@@ -656,7 +819,7 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
             <div style={{ width: "320px", minWidth: "320px" }}>
-              <div className="bg-surface rounded-[10px] p-6">
+              <div className="bg-surface p-6 border border-default">
                 <div className="mb-5 pb-3 border-b border-default">
                   <h3 className="text-[15px] font-semibold text-primary">Preferências do Sistema</h3>
                 </div>
@@ -1128,6 +1291,5 @@ export default function ConfiguracoesPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

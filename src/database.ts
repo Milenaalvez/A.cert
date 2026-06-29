@@ -48,6 +48,9 @@ try { db.exec('ALTER TABLE users ADD COLUMN company_id TEXT'); } catch {}
 try { db.exec('ALTER TABLE users ADD COLUMN avatar TEXT'); } catch {}
 try { db.exec('ALTER TABLE users ADD COLUMN registration_number TEXT'); } catch {}
 try { db.exec('ALTER TABLE users ADD COLUMN employee_code TEXT'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN birth_date TEXT'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN city TEXT'); } catch {}
+try { db.exec('ALTER TABLE users ADD COLUMN address TEXT'); } catch {}
 try { db.exec('ALTER TABLE persons ADD COLUMN cell_phone TEXT'); } catch {}
 try { db.exec('ALTER TABLE persons ADD COLUMN rg TEXT'); } catch {}
 try { db.exec('ALTER TABLE persons ADD COLUMN birth_date TEXT'); } catch {}
@@ -185,8 +188,54 @@ try { db.exec(`ALTER TABLE persons ADD COLUMN father_name TEXT DEFAULT ''`); } c
 try { db.exec(`ALTER TABLE persons ADD COLUMN cnpj TEXT`); } catch {}
 try { db.exec(`ALTER TABLE persons ADD COLUMN is_pre_cadastro INTEGER DEFAULT 0`); } catch {}
 try { db.exec(`ALTER TABLE persons ADD COLUMN archived_at TEXT`); } catch {}
+try { db.exec(`ALTER TABLE persons ADD COLUMN deleted_at TEXT`); } catch {}
 try { db.exec(`ALTER TABLE properties ADD COLUMN cartorio TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE properties ADD COLUMN deleted_at TEXT`); } catch {}
+try { db.exec(`ALTER TABLE dossiers ADD COLUMN archived_at TEXT`); } catch {}
+try { db.exec(`ALTER TABLE dossiers ADD COLUMN deleted_at TEXT`); } catch {}
+try { db.exec(`ALTER TABLE users ADD COLUMN deleted_at TEXT`); } catch {}
 try { db.exec(`ALTER TABLE certificates ADD COLUMN cert_type TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE organs ADD COLUMN last_sync TEXT`); } catch {}
+try { db.exec(`ALTER TABLE organs ADD COLUMN avg_response_time TEXT DEFAULT '—'`); } catch {}
+try { db.exec(`ALTER TABLE organs ADD COLUMN last_query TEXT`); } catch {}
+try { db.exec(`ALTER TABLE organs ADD COLUMN token_expiry TEXT`); } catch {}
+try { db.exec(`ALTER TABLE organs ADD COLUMN token_updated_at TEXT`); } catch {}
+try { db.exec(`ALTER TABLE audit_log ADD COLUMN ip_address TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE audit_log ADD COLUMN result TEXT DEFAULT 'success'`); } catch {}
+try { db.exec(`ALTER TABLE certificates ADD COLUMN person_id TEXT REFERENCES persons(id)`); } catch {}
+try { db.exec(`ALTER TABLE dossiers ADD COLUMN transaction_type TEXT DEFAULT 'venda'`); } catch {}
+try { db.exec(`ALTER TABLE users ADD COLUMN password_change_required INTEGER DEFAULT 0`); } catch {}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS dossier_participants (
+    dossier_id TEXT NOT NULL REFERENCES dossiers(id) ON DELETE CASCADE,
+    person_id TEXT NOT NULL REFERENCES persons(id),
+    role TEXT NOT NULL DEFAULT 'proprietario',
+    PRIMARY KEY (dossier_id, person_id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS companies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    cnpj TEXT,
+    logo_url TEXT,
+    plan TEXT NOT NULL DEFAULT 'trial',
+    license_status TEXT NOT NULL DEFAULT 'active',
+    license_expires_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS company_settings (
+    company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    PRIMARY KEY (company_id, key)
+  )
+`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS person_relationships (
@@ -327,6 +376,9 @@ if (certTemplateCount === 0) {
   for (const t of templates) {
     insert.run(t.id, t.key, t.label, t.category, t.site_url, t.ordem, t.requires_orgao || "", t.requires_cartorio || 0, t.requires_inscricao || 0, t.type, t.interval_ms || 0);
   }
+} else {
+  db.prepare(`INSERT OR IGNORE INTO certificate_templates (id, key, label, category, site_url, ordem, requires_orgao, requires_cartorio, requires_inscricao, type, interval_ms)
+    VALUES ('cert_ficha', 'FICHA_CADASTRAL', 'Ficha Cadastral do Imóvel', 'imovel', 'https://ww1.receita.fazenda.df.gov.br/cidadao/consulta/imoveis/iptu-tlp/FichaCadastral', 10, '', 0, 1, 'imovel', 0)`).run();
 }
 
 // Settings table

@@ -7,5 +7,6 @@ export interface IConnector {
     dados: DadosProprietario,
     captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult>;
 }
