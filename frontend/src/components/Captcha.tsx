@@ -1,136 +1,116 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { RotateCcw, Check, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Loader2 } from "lucide-react";
 
 interface Props {
-  onSolved: (verifiedToken: string) => void;
+  onSolved: (token: string) => void;
 }
 
-export default function Captcha({ onSolved }: Props) {
-  const [svg, setSvg] = useState("");
-  const [token, setToken] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [status, setStatus] = useState<"loading" | "ready" | "verifying" | "solved" | "error">("loading");
-  const [error, setError] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+declare global {
+  interface Window {
+    turnstile: any;
+    __cfTurnstileCallback: (token: string) => void;
+  }
+}
 
-  const generate = useCallback(async () => {
-    setStatus("loading");
-    setAnswer("");
-    setError("");
-    try {
-      const r = await fetch("/api/captcha/generate", { method: "POST" });
-      const data = await r.json();
-      setSvg(data.svg);
-      setToken(data.token);
-      setStatus("ready");
-      setTimeout(() => inputRef.current?.focus(), 100);
-    } catch {
-      setError("Erro ao carregar CAPTCHA");
-      setStatus("error");
-    }
+const SITE_KEY = "0x4AAAAAADtAu89ohLJSTfO-ZetilqIAM_k";
+
+export default function Captcha({ onSolved }: Props) {
+  const [status, setStatus] = useState<"loading" | "ready" | "solved">("loading");
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (mounted.current) return;
+    mounted.current = true;
+
+    (window as any).__cfTurnstileCallback = async (token: string) => {
+      try {
+        const r = await fetch("/api/captcha/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = await r.json();
+        if (data.valid) {
+          setStatus("solved");
+          onSolved(token);
+        }
+      } catch {}
+    };
+
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstileLoad";
+    script.async = true;
+    script.defer = true;
+
+    (window as any).__onTurnstileLoad = () => {
+      if (widgetRef.current && (window as any).turnstile) {
+        (window as any).turnstile.render(widgetRef.current, {
+          sitekey: SITE_KEY,
+          callback: (token: string) => (window as any).__cfTurnstileCallback(token),
+          theme: "dark",
+        });
+        setStatus("ready");
+      }
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
   }, []);
 
-  useEffect(() => { generate(); }, [generate]);
-
-  async function handleVerify() {
-    if (!answer.trim()) return;
-    setStatus("verifying");
-    setError("");
-    try {
-      const r = await fetch("/api/captcha/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, answer: answer.trim() }),
-      });
-      const data = await r.json();
-      if (data.valid) {
-        setStatus("solved");
-        onSolved(data.verifiedToken);
-      } else {
-        setError(data.error || "Resposta incorreta");
-        setStatus("error");
-        generate();
-      }
-    } catch {
-      setError("Erro ao verificar");
-      setStatus("error");
-      generate();
+  const handleVerify = async () => {
+    const token = (window as any).turnstile?.getResponse?.(widgetRef.current);
+    if (token) {
+      setStatus("loading");
+      try {
+        const r = await fetch("/api/captcha/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = await r.json();
+        if (data.valid) {
+          setStatus("solved");
+          onSolved(token);
+        }
+      } catch {}
+      setStatus("ready");
     }
-  }
+  };
 
   return (
     <div style={{ padding: "16px", borderRadius: "14px", background: "rgba(255,255,255,0.05)", border: status === "solved" ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(255,255,255,0.08)" }}>
       <div className="flex items-center justify-between mb-2.5">
         <span className="text-[13px] font-semibold text-white/80" style={{ letterSpacing: "0.3px" }}>
-          {status === "solved" ? "✅ CAPTCHA resolvido" : "🧩 Não sou robô"}
+          {status === "solved" ? "✅ Verificação concluída" : "🧩 Verificação de segurança"}
         </span>
-        {status !== "solved" && (
-          <button
-            type="button"
-            onClick={generate}
-            disabled={status === "loading"}
-            className="flex items-center gap-1.5 text-[12px] font-medium text-white/50 hover:text-white/80 transition-colors disabled:opacity-40"
-          >
-            <RotateCcw size={13} strokeWidth={1.5} />
-            Recarregar
-          </button>
-        )}
       </div>
 
       {status === "loading" && (
-        <div className="flex items-center justify-center" style={{ height: "60px" }}>
+        <div className="flex items-center justify-center" style={{ height: "65px" }}>
           <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-white/40" />
         </div>
       )}
 
-      {status === "ready" && svg && (
-        <>
-          <div
-            className="flex items-center justify-center select-none"
-            style={{ padding: "10px", borderRadius: "10px", background: "rgba(255,255,255,0.06)", minHeight: "60px" }}
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
-          <div className="flex items-center gap-2 mt-2.5">
-            <input
-              ref={inputRef}
-              type="text"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-              placeholder="Digite o resultado"
-              className="flex-1 h-[40px] bg-white/10 rounded-[10px] border border-white/15 text-white text-[14px] outline-none placeholder:text-white/40 transition-all px-4"
-              style={{ fontSize: "16px" }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(249,115,22,0.5)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-            />
-            <button
-              type="button"
-              onClick={handleVerify}
-              disabled={!answer.trim()}
-              className="flex items-center justify-center w-[40px] h-[40px] rounded-[10px] bg-accent hover:bg-accent-hover transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Check size={18} strokeWidth={2} className="text-white" />
-            </button>
-          </div>
-        </>
-      )}
-
-      {status === "verifying" && (
-        <div className="flex items-center justify-center" style={{ height: "60px" }}>
-          <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-accent" />
-        </div>
-      )}
-
-      {status === "solved" && (
+      {status === "solved" ? (
         <div className="flex items-center gap-2" style={{ padding: "8px 0" }}>
           <Check size={18} strokeWidth={2} className="text-green-400" />
           <span className="text-[13px] text-green-400 font-medium">Verificação concluída</span>
         </div>
+      ) : (
+        <div ref={widgetRef} onClick={handleVerify} style={{ minHeight: "65px", cursor: "pointer" }} />
       )}
 
-      {error && <p className="text-[12px] text-red-400 mt-1.5">{error}</p>}
+      {status !== "solved" && (
+        <p className="text-[11px] text-white/30 mt-2 leading-relaxed">
+          Protegido por Cloudflare Turnstile. Seus dados estão seguros.
+        </p>
+      )}
     </div>
   );
 }
