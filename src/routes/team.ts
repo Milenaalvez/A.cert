@@ -295,7 +295,7 @@ teamRouter.put('/:id/permissions', async (req, res) => {
     if (!Array.isArray(permissions)) { res.status(400).json({ error: 'permissions deve ser um array' }); return; }
     await executeRaw('DELETE FROM user_permissions WHERE user_id = $1', req.params.id);
     for (const p of permissions) {
-      await executeRaw('INSERT OR IGNORE INTO user_permissions (user_id, permission) VALUES ($1, $2)', req.params.id, p);
+      await executeRaw('INSERT INTO user_permissions (user_id, permission) VALUES ($1, $2) ON CONFLICT (user_id, permission) DO NOTHING', req.params.id, p);
     }
     res.json({ success: true, permissions });
   } catch (err) {

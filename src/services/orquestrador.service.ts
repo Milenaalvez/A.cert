@@ -50,7 +50,7 @@ async function persistirResultado(
 
   try {
     await executeRaw(
-      'INSERT OR IGNORE INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3)',
+      'INSERT INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING',
       dossierId, personId, 'proprietario'
     );
 

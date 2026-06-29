@@ -96,14 +96,14 @@ router.post('/', authMiddleware, async (req, res) => {
       }
 
       await executeRaw(`
-        INSERT OR IGNORE INTO dossier_participants (dossier_id, person_id, role)
-        VALUES ($1, $2, $3)
+        INSERT INTO dossier_participants (dossier_id, person_id, role)
+        VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING
       `, dossierId, personId, p.role || 'proprietario');
 
       if (propertyId) {
         await executeRaw(`
-          INSERT OR IGNORE INTO property_owners (id, property_id, person_id, participation)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO property_owners (id, property_id, person_id, participation)
+          VALUES ($1, $2, $3, $4) ON CONFLICT (property_id, person_id) DO NOTHING
         `, randomUUID(), propertyId, personId, 0);
       }
     }
