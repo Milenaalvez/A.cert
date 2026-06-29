@@ -35,13 +35,13 @@ router.post('/ticket', async (req, res) => {
           const nodemailer = await import('nodemailer');
           const transporter = nodemailer.default.createTransport({
             host: smtp.smtp_host,
-            port: parseInt(smtp.smtp_port || '587', 10),
-            secure: parseInt(smtp.smtp_port || '587', 10) === 465,
+              port: parseInt(smtp.smtp_port || '465', 10),
+              secure: parseInt(smtp.smtp_port || '465', 10) === 465,
             auth: { user: smtp.smtp_user, pass: smtp.smtp_pass || '' },
           });
 
           await transporter.sendMail({
-            from: `"${smtp.smtp_from_name || 'DONNOS Docs'}" <${smtp.smtp_from_email || smtp.smtp_user}>`,
+            from: `"${smtp.smtp_from_name || 'A.CERT'}" <${smtp.smtp_from_email || smtp.smtp_user}>`,
             to: smtp.smtp_from_email || smtp.smtp_user,
             subject: `[${protocol}] ${subject}`,
             html: `<h3>Nova solicitação de suporte</h3><p><strong>Protocolo:</strong> ${protocol}</p><p><strong>Nome:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Categoria:</strong> ${category}</p><p><strong>Mensagem:</strong></p><p>${message}</p>`,
