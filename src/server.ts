@@ -9,6 +9,7 @@ import { iniciarJob, getJob, getCaptchaManager } from './services/orquestrador.s
 import { criarConectores } from './connectors/index.js';
 import { gerarDossiePDF } from './services/dossie.service.js';
 import { closeBrowser } from './utils/browser.js';
+import { enviarEmailConfirmacao } from './services/email.service.js';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import peopleRoutes from './routes/people.js';
@@ -51,6 +52,16 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/trash', trashRoutes);
 app.use('/api/companies', companiesRoutes);
+
+app.get('/api/test-email', async (req, res) => {
+  const to = (req.query.to as string) || 'contato@acert.online';
+  try {
+    await enviarEmailConfirmacao(to, 'Teste A.CERT', 'test-token');
+    res.json({ success: true, message: `Email enviado para ${to}. Verifique a caixa de entrada e o spam.` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, code: err.code, response: err.response });
+  }
+});
 
 const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
 if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
