@@ -22,11 +22,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  DollarSign,
   CheckCircle2,
-  Lightbulb,
-  Phone,
-  ShieldCheck,
 } from "lucide-react";
 import SuccessModal from "./SuccessModal";
 import ErrorModal from "./ErrorModal";
@@ -85,6 +81,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [createdDossierId, setCreatedDossierId] = useState("");
 
   const router = useRouter();
 
@@ -134,13 +131,6 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const [preEmail, setPreEmail] = useState("");
 
   // Step 4 — Revisão
-  const [valorImovel, setValorImovel] = useState("");
-  const [valorComissao, setValorComissao] = useState("");
-  const [formaPagamento, setFormaPagamento] = useState("");
-  const [instituicao, setInstituicao] = useState("");
-  const [statusFinanciamento, setStatusFinanciamento] = useState("");
-  const [checklist, setChecklist] = useState<string[]>([]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validateStep(s: number) {
@@ -330,10 +320,6 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     setSelectedPeople(prev => prev.filter(p => p.id !== id));
   };
 
-  const toggleChecklist = (item: string) => {
-    setChecklist(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
-  };
-
   const handleCreate = async () => {
     if (!validateStep(step)) return;
     if (step < 4) { handleNext(); return; }
@@ -380,6 +366,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
 
       if (!r.ok) throw new Error(data.error || "Erro ao criar dossiê");
 
+      setCreatedDossierId(data.id);
       setCreatedId(data.identifier);
       setShowSuccess(true);
     } catch (e: any) {
@@ -391,15 +378,6 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const operacoes = [
     { value: "venda", label: "Compra e Venda" },
     { value: "locacao", label: "Locação" },
-  ];
-  const pagamentos = ["À vista", "Financiamento bancário", "Consórcio", "Parcelamento direto", "FGTS", "Carta de crédito"];
-  const statusFinanciamentos = ["Não se aplica", "Em análise", "Documentação enviada", "Pré-aprovado", "Aprovado", "Reprovado"];
-  const checkItems = [
-    { key: "docs_imovel", label: "Documentos do imóvel", icon: Building2 },
-    { key: "docs_pessoais", label: "Documentos pessoais", icon: User },
-    { key: "matricula", label: "Matrícula atualizada", icon: FileText },
-    { key: "contrato", label: "Contrato ou proposta", icon: FileText },
-    { key: "outros", label: "Outros documentos", icon: FileText },
   ];
 
   return (
@@ -673,12 +651,10 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                     {!showPreCadastro ? (
                       <div style={{ position: "relative" }}>
                         <div style={{ display: "flex", gap: 8 }}>
-                          <Field label="">
-                            <select value={personRole} onChange={(e) => setPersonRole(e.target.value)}
-                              style={{ ...inputBase, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px", width: 150, flexShrink: 0 }}>
-                              {DEFAULT_ROLES.map(r => <option key={r} value={r}>{r === 'proprietario' ? 'Proprietário' : r === 'comprador' ? 'Comprador' : r === 'vendedor' ? 'Vendedor' : r === 'locador' ? 'Locador' : 'Locatário'}</option>)}
-                            </select>
-                          </Field>
+                          <select value={personRole} onChange={(e) => setPersonRole(e.target.value)}
+                            style={{ ...inputBase, height: 42, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px", width: 150, flexShrink: 0 }}>
+                            {DEFAULT_ROLES.map(r => <option key={r} value={r}>{r === 'proprietario' ? 'Proprietário' : r === 'comprador' ? 'Comprador' : r === 'vendedor' ? 'Vendedor' : r === 'locador' ? 'Locador' : 'Locatário'}</option>)}
+                          </select>
                           <div style={{ position: "relative", flex: 1 }}>
                             <Search size={16} strokeWidth={1.5} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
                             <input type="text" placeholder="Buscar pessoa por nome ou CPF..." value={personSearch}
@@ -791,102 +767,55 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
 
             {/* Step 4: Revisão */}
             {step === 4 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                {/* Left column */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  {/* Financeiro */}
-                  <div>
-                    <div style={sectionTitle}><DollarSign size={16} strokeWidth={2} color="#059669" />Informações Financeiras</div>
-                    <div style={{ background: "var(--bg-subtle)", borderRadius: 8, border: "1px solid var(--border-light)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Valor do imóvel"><input type="text" style={inputBase} placeholder="R$ 0,00" value={valorImovel} onChange={(e) => setValorImovel(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                        </div>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Valor da comissão"><input type="text" style={inputBase} placeholder="R$ 0,00" value={valorComissao} onChange={(e) => setValorComissao(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                        </div>
-                      </div>
-                      <Field label="Forma de pagamento">
-                        <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)}
-                          style={{ ...inputBase, paddingTop: 0, paddingBottom: 0, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}
-                          onFocus={focusIn} onBlur={focusOut}>
-                          <option value="">Selecionar...</option>
-                          {pagamentos.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                      </Field>
-                      <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Instituição financeira"><input type="text" style={inputBase} placeholder="Banco ou agente" value={instituicao} onChange={(e) => setInstituicao(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                        </div>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Status do financiamento">
-                            <select value={statusFinanciamento} onChange={(e) => setStatusFinanciamento(e.target.value)}
-                              style={{ ...inputBase, paddingTop: 0, paddingBottom: 0, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}
-                              onFocus={focusIn} onBlur={focusOut}>
-                              {statusFinanciamentos.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </Field>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <div style={sectionTitle}>
+                  <CheckCircle2 size={16} strokeWidth={2} color="#059669" />
+                  Revisão do Dossiê
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: -12, marginBottom: 8 }}>
+                  Confira os dados antes de criar o dossiê.
+                </p>
 
-                  {/* Checklist Inicial */}
-                  <div>
-                    <div style={sectionTitle}><CheckCircle2 size={16} strokeWidth={2} color="#7C3AED" />Checklist Inicial</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {checkItems.map((item) => {
-                        const Icon = item.icon;
-                        const active = checklist.includes(item.key);
-                        return (
-                          <button key={item.key} type="button" onClick={() => toggleChecklist(item.key)}
-                            style={{
-                              display: "flex", alignItems: "center", gap: 8,
-                              padding: "10px 14px", borderRadius: 8, border: active ? "2px solid #059669" : "1px solid var(--border-light)",
-                              background: active ? "rgba(5,150,105,0.08)" : "var(--bg-subtle)",
-                              cursor: "pointer", fontSize: 12, fontWeight: active ? 600 : 500,
-                              color: active ? "#059669" : "var(--text-secondary)",
-                              transition: "all 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => { if (!active) { e.currentTarget.style.borderColor = "#059669"; e.currentTarget.style.background = "rgba(5,150,105,0.04)"; } }}
-                            onMouseLeave={(e) => { if (!active) { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-subtle)"; } }}
-                          >
-                            {active ? <Check size={14} strokeWidth={2.5} /> : <Icon size={14} strokeWidth={1.5} />}
-                            {item.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Operação</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{tipoOperacao === 'locacao' ? 'Locação' : 'Compra e Venda'}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>Prioridade: {prioridade}</div>
+                    {selectedResp && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Responsável: {selectedResp.name}</div>}
+                  </div>
+                  <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Imóvel</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{nomeImovel || '—'}</div>
+                    {temMatricula && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>Matrícula: {matricula}</div>}
+                    {endereco && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{endereco}</div>}
                   </div>
                 </div>
 
-                {/* Right column — Painel de ajuda */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  <div>
-                    <div style={sectionTitle}><Lightbulb size={16} strokeWidth={2} color="#D97706" />Boas Práticas</div>
-                    <div style={{ background: "var(--badge-amber-bg)", borderRadius: 10, border: "1px solid rgba(217,119,6,0.2)", padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {[
-                          "Defina corretamente o tipo de operação para melhor organização.",
-                          "Informe um prazo estimado para controle do processo.",
-                          "Adicione todas as partes envolvidas na etapa anterior.",
-                          "Preencha os dados financeiros para relatórios precisos.",
-                        ].map((tip, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                            <ShieldCheck size={14} strokeWidth={2} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
-                            <span style={{ fontSize: 12, color: "var(--badge-amber-text)", lineHeight: 1.5 }}>{tip}</span>
+                <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Partes Envolvidas ({selectedPeople.length})</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {selectedPeople.map((p: any) => {
+                      const roleLabel: Record<string, string> = { proprietario: 'Proprietário', comprador: 'Comprador', vendedor: 'Vendedor', locador: 'Locador', locatario: 'Locatário' };
+                      return (
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: p.preCadastro ? "#D97706" : "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                            {p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
-                        ))}
-                      </div>
-                      <div style={{ marginTop: 4, paddingTop: 14, borderTop: "1px solid rgba(217,119,6,0.15)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--badge-amber-text-secondary)", fontSize: 12 }}>
-                          <Phone size={13} strokeWidth={1.5} />
-                          <span>Dúvidas? Fale com o suporte</span>
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</span>
+                          {p.cpf && <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{formatDoc(p.cpf)}</span>}
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "#FF7A00", background: "rgba(255,122,0,0.1)", padding: "1px 7px", borderRadius: 4 }}>{roleLabel[p.role] || p.role}</span>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
+
+                {observacoes && (
+                  <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Observações</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{observacoes}</div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -932,8 +861,8 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {showSuccess && (
-        <SuccessModal identifier={createdId} dossierId={createdId}
-          onViewDossier={() => { setShowSuccess(false); onCreated?.(); onClose(); }}
+        <SuccessModal identifier={createdId} dossierId={createdDossierId}
+          onViewDossier={() => { setShowSuccess(false); onCreated?.(); onClose(); router.push(`/dashboard/dossies/${createdDossierId}`); }}
           onEmitirCertidoes={() => { setShowSuccess(false); onCreated?.(); onClose(); }}
           onClose={() => { setShowSuccess(false); onCreated?.(); onClose(); }} />
       )}
