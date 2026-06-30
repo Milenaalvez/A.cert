@@ -149,11 +149,11 @@ router.get('/', async (req, res) => {
     }
 
     if (period === 'hoje') {
-      conditions.push("d.updated_at >= NOW() - INTERVAL '1 day'");
+      conditions.push("d.updated_at::timestamp >= NOW() - INTERVAL '1 day'");
     } else if (period === 'semana') {
-      conditions.push("d.updated_at >= NOW() - INTERVAL '7 days'");
+      conditions.push("d.updated_at::timestamp >= NOW() - INTERVAL '7 days'");
     } else if (period === 'mes') {
-      conditions.push("d.updated_at >= NOW() - INTERVAL '30 days'");
+      conditions.push("d.updated_at::timestamp >= NOW() - INTERVAL '30 days'");
     }
 
     if (search) {
@@ -237,11 +237,11 @@ router.get('/', async (req, res) => {
     const statsRow = await queryRawOne(`
       SELECT
         (SELECT COUNT(*) FROM dossiers) as total,
-        (SELECT COUNT(*) FROM dossiers WHERE created_at >= NOW() - INTERVAL '30 days') as total_mes
+        (SELECT COUNT(*) FROM dossiers WHERE created_at::timestamp >= NOW() - INTERVAL '30 days') as total_mes
     `);
 
     const mesAnterior = await queryRawOne(
-      `SELECT COUNT(*) as count FROM dossiers WHERE created_at < NOW() - INTERVAL '30 days' AND created_at >= NOW() - INTERVAL '60 days'`
+      `SELECT COUNT(*) as count FROM dossiers WHERE created_at::timestamp < NOW() - INTERVAL '30 days' AND created_at::timestamp >= NOW() - INTERVAL '60 days'`
     );
 
     const pendentes = enriched.filter(d => d.status === 'Pendente').length;

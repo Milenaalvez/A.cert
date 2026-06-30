@@ -17,7 +17,7 @@ router.get('/', async (_req, res) => {
 
     const dossierAvgTime = await queryRaw(`
       SELECT status,
-        CAST(ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(updated_at, NOW())::timestamp - created_at::timestamp)) / 3600)) as INTEGER) as avg_hours
+        CAST(ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(updated_at::timestamp, NOW()) - created_at::timestamp)) / 3600)) as INTEGER) as avg_hours
       FROM dossiers GROUP BY status
     `) as any[];
 
@@ -33,23 +33,23 @@ router.get('/', async (_req, res) => {
 
     const monthlyEmission = await queryRaw(`
       SELECT TO_CHAR(obtained_at::timestamp, 'MM') as mes, COUNT(*) as total
-      FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at >= NOW() - INTERVAL '12 months'
+       FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at::timestamp >= NOW() - INTERVAL '12 months'
       GROUP BY TO_CHAR(obtained_at::timestamp, 'MM') ORDER BY mes
     `) as any[];
 
     const dailyEmission = await queryRaw(`
       SELECT obtained_at::date as dia, COUNT(*) as total
-      FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at >= CURRENT_DATE - INTERVAL '30 days'
+       FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at::timestamp >= CURRENT_DATE - INTERVAL '30 days'
       GROUP BY obtained_at::date ORDER BY dia
     `) as any[];
 
     const newClientsToday = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::date = CURRENT_DATE")).count;
     const newClientsYesterday = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day'")).count;
-    const newClientsWeek = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'")).count;
-    const newClientsLastWeek = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at >= CURRENT_DATE - INTERVAL '14 days' AND created_at < CURRENT_DATE - INTERVAL '7 days'")).count;
-    const newClientsMonth = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'")).count;
-    const newClientsLastMonth = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at >= CURRENT_DATE - INTERVAL '60 days' AND created_at < CURRENT_DATE - INTERVAL '30 days'")).count;
-    const newClientsYear = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at >= CURRENT_DATE - INTERVAL '365 days'")).count;
+    const newClientsWeek = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::timestamp >= CURRENT_DATE - INTERVAL '7 days'")).count;
+    const newClientsLastWeek = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::timestamp >= CURRENT_DATE - INTERVAL '14 days' AND created_at::timestamp < CURRENT_DATE - INTERVAL '7 days'")).count;
+    const newClientsMonth = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::timestamp >= CURRENT_DATE - INTERVAL '30 days'")).count;
+    const newClientsLastMonth = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::timestamp >= CURRENT_DATE - INTERVAL '60 days' AND created_at::timestamp < CURRENT_DATE - INTERVAL '30 days'")).count;
+    const newClientsYear = (await queryRawOne("SELECT COUNT(*) as count FROM persons WHERE created_at::timestamp >= CURRENT_DATE - INTERVAL '365 days'")).count;
 
     const propertiesByType = await queryRaw(`
       SELECT p.type, COUNT(DISTINCT p.id) as total,
@@ -84,10 +84,10 @@ router.get('/', async (_req, res) => {
       LIMIT 20
     `) as any[];
 
-    const certThisMonth = (await queryRawOne("SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at >= DATE_TRUNC('month', NOW())")).count;
-    const certLastMonth = (await queryRawOne("SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at >= DATE_TRUNC('month', NOW() - INTERVAL '1 month') AND obtained_at < DATE_TRUNC('month', NOW())")).count;
-    const dossierCancelledThisMonth = (await queryRawOne("SELECT COUNT(*) as count FROM dossiers WHERE status = 'Cancelado' AND updated_at >= DATE_TRUNC('month', NOW())")).count;
-    const dossierCancelledLastMonth = (await queryRawOne("SELECT COUNT(*) as count FROM dossiers WHERE status = 'Cancelado' AND updated_at >= DATE_TRUNC('month', NOW() - INTERVAL '1 month') AND updated_at < DATE_TRUNC('month', NOW())")).count;
+    const certThisMonth = (await queryRawOne("SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at::timestamp >= DATE_TRUNC('month', NOW())")).count;
+    const certLastMonth = (await queryRawOne("SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at IS NOT NULL AND obtained_at::timestamp >= DATE_TRUNC('month', NOW() - INTERVAL '1 month') AND obtained_at::timestamp < DATE_TRUNC('month', NOW())")).count;
+    const dossierCancelledThisMonth = (await queryRawOne("SELECT COUNT(*) as count FROM dossiers WHERE status = 'Cancelado' AND updated_at::timestamp >= DATE_TRUNC('month', NOW())")).count;
+    const dossierCancelledLastMonth = (await queryRawOne("SELECT COUNT(*) as count FROM dossiers WHERE status = 'Cancelado' AND updated_at::timestamp >= DATE_TRUNC('month', NOW() - INTERVAL '1 month') AND updated_at::timestamp < DATE_TRUNC('month', NOW())")).count;
 
     const organStatuses = await queryRaw('SELECT id, name, status, updated_at FROM organs') as any[];
 

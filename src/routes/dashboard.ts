@@ -63,7 +63,7 @@ router.get('/', async (_req, res) => {
     const emissions = await queryRaw(`
       SELECT TO_CHAR(obtained_at::timestamp, 'MM') as mes, COUNT(*) as total
       FROM certificates
-      WHERE status = 'Obtida' AND obtained_at >= NOW() - INTERVAL '6 months'
+      WHERE status = 'Obtida' AND obtained_at::timestamp >= NOW() - INTERVAL '6 months'
       GROUP BY TO_CHAR(obtained_at::timestamp, 'MM')
       ORDER BY mes
     `) as { mes: string; total: number }[];
@@ -84,7 +84,7 @@ router.get('/', async (_req, res) => {
 
     const tempoMedio = await queryRawOne(`
       SELECT COALESCE(AVG(
-        EXTRACT(EPOCH FROM (COALESCE(obtained_at, NOW())::timestamp - created_at::timestamp)) / 60
+        EXTRACT(EPOCH FROM (COALESCE(obtained_at::timestamp, NOW()) - created_at::timestamp)) / 60
       ), 0) as avg_minutes FROM certificates
     `) as { avg_minutes: number };
 

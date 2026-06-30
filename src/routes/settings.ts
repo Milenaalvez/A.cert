@@ -180,9 +180,9 @@ router.get('/audit', authMiddleware, async (req, res) => {
     if (filterAction) { query += ` AND action LIKE $${params.length + 1}`; params.push(`%${filterAction}%`); }
     if (filterModule) { query += ` AND module LIKE $${params.length + 1}`; params.push(`%${filterModule}%`); }
     if (filterResult) { query += ` AND result = $${params.length + 1}`; params.push(filterResult); }
-    if (period === 'hoje') { query += " AND created_at >= NOW() - INTERVAL '1 day'"; }
-    else if (period === 'semana') { query += " AND created_at >= NOW() - INTERVAL '7 days'"; }
-    else if (period === 'mes') { query += " AND created_at >= NOW() - INTERVAL '30 days'"; }
+    if (period === 'hoje') { query += " AND created_at::timestamp >= NOW() - INTERVAL '1 day'"; }
+    else if (period === 'semana') { query += " AND created_at::timestamp >= NOW() - INTERVAL '7 days'"; }
+    else if (period === 'mes') { query += " AND created_at::timestamp >= NOW() - INTERVAL '30 days'"; }
     query += ' ORDER BY created_at DESC LIMIT 200';
     const rows = await queryRaw(query, ...params);
     res.json(rows);
