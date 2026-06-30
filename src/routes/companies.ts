@@ -3,6 +3,7 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import prisma, { queryRaw } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { enviarEmailBoasVindas } from '../services/email.service.js';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.post('/', authMiddleware, async (req, res) => {
       data: {
         id: userId, name: admin_name.trim(), email: admin_email.toLowerCase().trim(),
         passwordHash: password_hash, role: 'ADMIN', companyId,
-        passwordChangeRequired: 1, emailVerified: 1, isActive: 1, createdAt: now,
+        passwordChangeRequired: 1, emailConfirmed: 1, emailVerified: 1, isActive: 1, createdAt: now,
       },
     });
 
@@ -57,6 +58,8 @@ router.post('/', authMiddleware, async (req, res) => {
         entityType: 'company', entityId: companyId, timestamp: now,
       },
     });
+
+    enviarEmailBoasVindas(admin_email.toLowerCase().trim(), admin_name.trim(), tempPassword, name.trim());
 
     res.status(201).json({
       company: { id: companyId, name: name.trim() },
