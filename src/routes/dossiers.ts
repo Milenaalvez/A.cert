@@ -89,9 +89,9 @@ router.post('/', authMiddleware, async (req, res) => {
         if (!personId || personId.startsWith('pre_')) {
           personId = randomUUID();
           await executeRaw(`
-            INSERT INTO persons (id, name, cpf, created_at)
-            VALUES ($1, $2, $3, NOW())
-          `, personId, p.name.trim(), cpfDigits || null);
+            INSERT INTO persons (id, name, cpf, birth_date, mother_name, father_name, email, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+          `, personId, p.name.trim(), cpfDigits || null, p.birthDate || null, p.motherName || null, p.fatherName || null, p.email || null);
         }
       }
 

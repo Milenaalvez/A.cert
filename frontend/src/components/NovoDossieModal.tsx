@@ -128,6 +128,10 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const [preCpf, setPreCpf] = useState("");
   const [preCpfError, setPreCpfError] = useState("");
   const [cpfStatus, setCpfStatus] = useState<"idle" | "verifying" | "ok" | "notfound">("idle");
+  const [preNasc, setPreNasc] = useState("");
+  const [preMae, setPreMae] = useState("");
+  const [prePai, setPrePai] = useState("");
+  const [preEmail, setPreEmail] = useState("");
 
   // Step 4 — Revisão
   const [valorImovel, setValorImovel] = useState("");
@@ -305,12 +309,16 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       setPreCpfError("CPF inválido");
       return;
     }
-    const newPerson = { id: `pre_${Date.now()}`, name: preNome.trim(), cpf: preCpf.trim(), preCadastro: true, role: personRole };
+    const newPerson = { id: `pre_${Date.now()}`, name: preNome.trim(), cpf: preCpf.trim(), preCadastro: true, role: personRole, birthDate: preNasc, motherName: preMae.trim() || undefined, fatherName: prePai.trim() || undefined, email: preEmail.trim() || undefined };
     setSelectedPeople(prev => [...prev, newPerson]);
     setPreNome("");
     setPreCpf("");
     setPreCpfError("");
     setCpfStatus("idle");
+    setPreNasc("");
+    setPreMae("");
+    setPrePai("");
+    setPreEmail("");
     setNoResultsFound(false);
     setShowPreCadastro(false);
     setPersonResults([]);
@@ -361,6 +369,10 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
             cpf: p.cpf || "",
             preCadastro: !!p.preCadastro,
             role: p.role || "proprietario",
+            birthDate: p.birthDate,
+            motherName: p.motherName,
+            fatherName: p.fatherName,
+            email: p.email,
           })),
         }),
       });
@@ -729,26 +741,38 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                       <div style={{ display: "flex", gap: 8, padding: "14px", borderRadius: 8, border: "1px solid rgba(217,119,6,0.25)", background: "var(--badge-amber-bg)" }}>
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-amber-text)" }}>Pré-cadastro rápido</span>
-                          <input type="text" placeholder="Nome completo *" value={preNome} onChange={(e) => setPreNome(e.target.value)}
-                            style={{ ...inputBase, background: "var(--bg-surface)" }} />
-                          <div>
-                            <div style={{ position: "relative" }}>
-                              <input type="text" placeholder="CPF *" value={preCpf} onChange={(e) => handleCpfChange(e.target.value)}
-                                style={{ ...inputBase, background: "var(--bg-surface)", borderColor: preCpfError ? "#DC2626" : cpfStatus === "ok" ? "#059669" : cpfStatus === "notfound" ? "#D97706" : "var(--border-default)", paddingRight: 32 }} />
-                              {cpfStatus === "verifying" && (
-                                <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
-                                  <div style={{ width: 14, height: 14, border: "2px solid var(--border-default)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-                                </div>
-                              )}
-                              {cpfStatus === "ok" && (
-                                <Check size={14} strokeWidth={2.5} color="#059669" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
-                              )}
-                              {cpfStatus === "notfound" && (
-                                <AlertTriangle size={14} strokeWidth={2} color="#D97706" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
-                              )}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <input type="text" placeholder="Nome completo *" value={preNome} onChange={(e) => setPreNome(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
+                            <div>
+                              <div style={{ position: "relative" }}>
+                                <input type="text" placeholder="CPF *" value={preCpf} onChange={(e) => handleCpfChange(e.target.value)}
+                                  style={{ ...inputBase, background: "var(--bg-surface)", borderColor: preCpfError ? "#DC2626" : cpfStatus === "ok" ? "#059669" : cpfStatus === "notfound" ? "#D97706" : "var(--border-default)", paddingRight: 32 }} />
+                                {cpfStatus === "verifying" && (
+                                  <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
+                                    <div style={{ width: 14, height: 14, border: "2px solid var(--border-default)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+                                  </div>
+                                )}
+                                {cpfStatus === "ok" && (
+                                  <Check size={14} strokeWidth={2.5} color="#059669" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
+                                )}
+                                {cpfStatus === "notfound" && (
+                                  <AlertTriangle size={14} strokeWidth={2} color="#D97706" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
+                                )}
+                              </div>
+                              {preCpfError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{preCpfError}</span>}
+                              {cpfStatus === "notfound" && !preCpfError && <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#D97706" }}>CPF não localizado</span>}
                             </div>
-                            {preCpfError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{preCpfError}</span>}
-                            {cpfStatus === "notfound" && !preCpfError && <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#D97706" }}>CPF não localizado na Receita Federal — será possível prosseguir</span>}
+                            <input type="date" placeholder="Data de Nascimento" value={preNasc} onChange={(e) => setPreNasc(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)", color: preNasc ? "var(--text-primary)" : "var(--text-muted)" }} />
+                            <input type="email" placeholder="E-mail" value={preEmail} onChange={(e) => setPreEmail(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <input type="text" placeholder="Nome da Mãe" value={preMae} onChange={(e) => setPreMae(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
+                            <input type="text" placeholder="Nome do Pai (opcional)" value={prePai} onChange={(e) => setPrePai(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
                           </div>
                           <span style={{ fontSize: 10, color: "var(--badge-amber-text-secondary)" }}>A pessoa será marcada como cadastro pendente e precisará ser completada depois.</span>
                           <div style={{ display: "flex", gap: 6 }}>
