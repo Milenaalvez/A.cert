@@ -1,4 +1,4 @@
-import prisma, { queryRawOne } from '../lib/prisma.js';
+import prisma, { queryRaw } from '../lib/prisma.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -11,12 +11,11 @@ async function getSmtpConfig(): Promise<{
   fromName: string;
 } | null> {
   try {
-    const settings = await queryRawOne(
+    const settings = await queryRaw(
       `SELECT key, value FROM settings WHERE key IN ('smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_email','smtp_from_name')`
     );
-    const dbSettings = Array.isArray(settings) ? settings : [];
     const map: Record<string, string> = {};
-    for (const s of dbSettings) map[s.key] = s.value;
+    for (const s of settings) map[s.key] = s.value;
 
     const host = map.smtp_host || process.env.SMTP_HOST;
     const port = parseInt(map.smtp_port || process.env.SMTP_PORT || '465', 10);

@@ -98,18 +98,19 @@ export default function RegisterPage() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
+    setShowTransition(true);
     try {
       const res = await register(nome.trim(), email.trim(), password);
       setRegisteredEmail(email.trim());
       if ((res as Record<string, unknown>).confirmationLink) {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
       }
-      setShowTransition(true);
       setTimeout(() => {
         setShowTransition(false);
         setRegistered(true);
       }, 1800);
     } catch (err) {
+      setShowTransition(false);
       setErrors({ form: err instanceof Error ? err.message : 'Erro inesperado' });
     } finally {
       setLoading(false);
