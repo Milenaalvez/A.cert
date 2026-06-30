@@ -75,6 +75,7 @@ router.post('/', authMiddleware, async (req, res) => {
       transaction_type || 'venda'
     );
 
+    let firstPersonId: string | null = null;
     for (const p of participants) {
       let personId = p.id;
       const cpfDigits = (p.cpf || '').replace(/\D/g, '');
@@ -95,6 +96,8 @@ router.post('/', authMiddleware, async (req, res) => {
         }
       }
 
+      if (!firstPersonId) firstPersonId = personId;
+
       await executeRaw(`
         INSERT INTO dossier_participants (dossier_id, person_id, role)
         VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING
@@ -106,6 +109,10 @@ router.post('/', authMiddleware, async (req, res) => {
           VALUES ($1, $2, $3, $4) ON CONFLICT (property_id, person_id) DO NOTHING
         `, randomUUID(), propertyId, personId, 0);
       }
+    }
+
+    if (firstPersonId) {
+      await executeRaw(`UPDATE dossiers SET person_id = $1 WHERE id = $2`, firstPersonId, dossierId);
     }
 
     const userRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, req.user!.userId);

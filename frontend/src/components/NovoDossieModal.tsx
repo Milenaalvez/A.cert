@@ -863,7 +863,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       {showSuccess && (
         <SuccessModal identifier={createdId} dossierId={createdDossierId}
           onViewDossier={() => { setShowSuccess(false); onCreated?.(); onClose(); router.push(`/dashboard/dossies/${createdDossierId}`); }}
-          onEmitirCertidoes={() => { setShowSuccess(false); onCreated?.(); onClose(); }}
+          onEmitirCertidoes={() => { setShowSuccess(false); onCreated?.(); onClose(); router.push(`/dashboard/dossies/${createdDossierId}?emitir=true&tab=partes`); }}
           onClose={() => { setShowSuccess(false); onCreated?.(); onClose(); }} />
       )}
       {showError && (

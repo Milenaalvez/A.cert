@@ -2,7 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   FileText, Clock, User, AlertCircle, ArrowLeft, Building2, ScrollText, Calendar,
@@ -15,10 +15,11 @@ import ConfirmModal from "@/components/ConfirmModal";
 
 interface DossierDetail {
   id: string; identifier: string; status: string; priority: string; responsible: string;
-  observation: string; createdAt: string; updatedAt: string;
+  observation: string; createdAt: string; updatedAt: string; transactionType?: string;
   person: { id: string; name: string; cpf: string | null; rg: string | null; mother_name?: string; father_name?: string } | null;
-  property: { identifier: string; type: string; address: string; registration: string | null } | null;
+  property: { identifier: string; type: string; address: string; registration: string | null; cartorio?: string } | null;
   personProperties: { id: string; identifier: string; registration: string; type: string; address: string; neighborhood: string; city: string; status: string }[];
+  participants?: { id: string; name: string; cpf: string | null; role: string; certTotal: number; certObtidas: number }[];
   certificateCount: number; certificatesObtidas: number; certificatesPendentes: number; progress: number;
   certificates: { id: string; name: string; organ: string; status: string; protocol: string | null; obtained_at: string | null; created_at: string }[];
   activities: { user_name: string; action: string; reference: string | null; created_at: string }[];
@@ -42,10 +43,12 @@ const TABS = [
 
 export default function DossierDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const emitir = searchParams.get("emitir") === "true";
   const [dossier, setDossier] = useState<DossierDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("resumo");
+  const [activeTab, setActiveTab] = useState(emitir ? "partes" : "resumo");
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -93,7 +96,18 @@ export default function DossierDetailPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col px-16 pt-12 pb-24 w-full gap-8" style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
-        {/* Topbar */}
+        {/* Emissão rápida */}
+        {emitir && dossier.participants && dossier.participants.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderRadius: 10, background: "rgba(255,122,0,0.08)", border: "1px solid rgba(255,122,0,0.2)", marginBottom: 8 }}>
+            <ScrollText size={24} strokeWidth={1.5} color="#FF7A00" />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Emitir Certidões</div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
+                {dossier.participants.length} participante{dossier.participants.length > 1 ? 's' : ''} neste dossiê. Selecione na aba <strong>Partes Envolvidas</strong> abaixo e inicie a emissão para cada pessoa.
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[11px]">
             <Link href="/dashboard/dossies" className="flex items-center gap-1 text-secondary hover:text-primary transition-colors"><ArrowLeft size={13} />Voltar</Link>
