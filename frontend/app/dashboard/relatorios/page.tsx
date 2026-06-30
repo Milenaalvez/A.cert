@@ -196,15 +196,16 @@ export default function RelatoriosPage() {
   const now = new Date();
   const chartData = period === "hoje" || period === "ontem" ? d.dailyEmission : d.monthlyEmission;
 
+  const trends = d.trends || { certGrowthPct: 0, cancelGrowthPct: 0 };
   const insights: { title: string; desc: string; icon: typeof TrendingUp; color: string }[] = [];
-  if (d.trends.certGrowthPct > 5) insights.push({ title: "Crescimento detectado", desc: `Certidões emitidas cresceram ${d.trends.certGrowthPct}% em relação ao mês anterior.`, icon: TrendingUp, color: "#059669" });
-  else if (d.trends.certGrowthPct < -5) insights.push({ title: "Queda nas emissões", desc: `Emissões caíram ${Math.abs(d.trends.certGrowthPct)}% comparado ao mês passado.`, icon: TrendingDown, color: "#DC2626" });
-  if (d.trends.cancelGrowthPct > 10) insights.push({ title: "Cancelamentos em alta", desc: `Cancelamentos de dossiês subiram ${d.trends.cancelGrowthPct}% este mês.`, icon: AlertTriangle, color: "#D97706" });
-  const slowOrgans = d.certByOrgan.filter(c => c.avgMinutes > 60).sort((a, b) => b.avgMinutes - a.avgMinutes);
+  if (trends.certGrowthPct > 5) insights.push({ title: "Crescimento detectado", desc: `Certidões emitidas cresceram ${trends.certGrowthPct}% em relação ao mês anterior.`, icon: TrendingUp, color: "#059669" });
+  else if (trends.certGrowthPct < -5) insights.push({ title: "Queda nas emissões", desc: `Emissões caíram ${Math.abs(trends.certGrowthPct)}% comparado ao mês passado.`, icon: TrendingDown, color: "#DC2626" });
+  if (trends.cancelGrowthPct > 10) insights.push({ title: "Cancelamentos em alta", desc: `Cancelamentos de dossiês subiram ${trends.cancelGrowthPct}% este mês.`, icon: AlertTriangle, color: "#D97706" });
+  const slowOrgans = (d.certByOrgan || []).filter(c => c.avgMinutes > 60).sort((a, b) => b.avgMinutes - a.avgMinutes);
   if (slowOrgans.length > 0) insights.push({ title: "Gargalo operacional", desc: `${slowOrgans[0].name} possui o maior tempo médio de emissão (${slowOrgans[0].avgMinutes} min).`, icon: Clock, color: "#3B82F6" });
-  const topType = [...d.propertiesByType].sort((a, b) => b.dossiers_generated - a.dossiers_generated)[0];
+  const topType = [...(d.propertiesByType || [])].sort((a, b) => b.dossiers_generated - a.dossiers_generated)[0];
   if (topType?.dossiers_generated) insights.push({ title: "Categoria principal", desc: `Imóveis do tipo "${topType.type}" lideram com ${topType.dossiers_generated} dossiês gerados.`, icon: Building2, color: "#FF7A00" });
-  if (d.productivityRanking[0]) insights.push({ title: "Liderança da equipe", desc: `${d.productivityRanking[0].name} lidera em produtividade com ${d.productivityRanking[0].total_dossiers} dossiês.`, icon: Target, color: "#7C3AED" });
+  if ((d.productivityRanking || [])[0]) insights.push({ title: "Liderança da equipe", desc: `${d.productivityRanking[0].name} lidera em produtividade com ${d.productivityRanking[0].total_dossiers} dossiês.`, icon: Target, color: "#7C3AED" });
   if (insights.length < 3) insights.push({ title: "Operação estável", desc: "Sistema operando dentro dos parâmetros normais nos últimos 30 dias.", icon: CheckCircle2, color: "#059669" });
 
   return (

@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   FolderOpen,
   Users,
-  Building2,
   ScrollText,
   BarChart3,
   UserCog,
@@ -119,7 +118,6 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
       label: "CADASTROS",
       items: [
         { label: "Pessoas", icon: Users, page: "pessoas" },
-        { label: "Imóveis", icon: Building2, page: "imoveis" },
       ],
     },
     {
