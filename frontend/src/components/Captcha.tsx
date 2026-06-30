@@ -9,48 +9,59 @@ interface Props {
 
 const SITE_KEY = "0x4AAAAAADtAu89ohLJSTfO-ZetilqIAM_k";
 
-declare global {
-  interface Window {
-    turnstileCallback: (token: string) => void;
-  }
-}
-
 export default function Captcha({ onSolved }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "solved">("loading");
-  const mounted = useRef(false);
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const rendered = useRef(false);
 
   useEffect(() => {
-    if (mounted.current) return;
-    mounted.current = true;
+    if (rendered.current) return;
+    rendered.current = true;
 
-    (window as any).turnstileCallback = async (token: string) => {
-      setStatus("loading");
-      try {
-        const r = await fetch("/api/captcha/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
+    let attempts = 0;
+    const tryRender = () => {
+      attempts++;
+      const turnstile = (window as any).turnstile;
+
+      if (turnstile && widgetRef.current) {
+        turnstile.render(widgetRef.current, {
+          sitekey: SITE_KEY,
+          callback: async (token: string) => {
+            setStatus("loading");
+            try {
+              const r = await fetch("/api/captcha/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token }),
+              });
+              const data = await r.json();
+              if (data.valid) {
+                setStatus("solved");
+                onSolved(token);
+              }
+            } catch {}
+          },
+          theme: "dark",
         });
-        const data = await r.json();
-        if (data.valid) {
-          setStatus("solved");
-          onSolved(token);
-        }
-      } catch {}
+        setStatus("ready");
+        return;
+      }
+
+      if (attempts < 40) {
+        setTimeout(tryRender, 250);
+      }
     };
 
     const existingScript = document.querySelector("script[src*='turnstile']");
     if (!existingScript) {
       const script = document.createElement("script");
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
     }
 
-    return () => {
-      delete (window as any).turnstileCallback;
-    };
+    setTimeout(tryRender, 300);
   }, []);
 
   return (
@@ -73,13 +84,7 @@ export default function Captcha({ onSolved }: Props) {
           <span className="text-[13px] text-green-400 font-medium">Verificação concluída</span>
         </div>
       ) : (
-        <div
-          className="cf-turnstile"
-          data-sitekey={SITE_KEY}
-          data-callback="turnstileCallback"
-          data-theme="dark"
-          style={{ minHeight: "65px" }}
-        />
+        <div ref={widgetRef} style={{ minHeight: "65px" }} />
       )}
 
       <p className="text-[11px] text-white/30 mt-2 leading-relaxed">
