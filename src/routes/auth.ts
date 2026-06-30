@@ -261,7 +261,7 @@ router.post('/login', async (req, res) => {
       return;
     }
 
-    if (!user.email_confirmed) {
+    if (!user.email_confirmed && process.env.BYPASS_EMAIL_CONFIRM !== 'true') {
       res.status(403).json({ error: 'Confirme seu email antes de acessar. Verifique sua caixa de entrada.', precisaConfirmar: true });
       return;
     }
