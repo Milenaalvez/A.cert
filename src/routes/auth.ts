@@ -5,21 +5,15 @@ import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 import { gerarToken, authMiddleware } from '../middleware/auth.js';
 import { enviarEmailConfirmacao, enviarEmailRedefinirSenha } from '../services/email.service.js';
 import { validarSenhaForte, validarEmail } from '../utils/validation.js';
-import { checkCaptchaVerified } from './captcha.js';
 
 const router = Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, captchaToken } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
-      return;
-    }
-
-    if (!checkCaptchaVerified(captchaToken)) {
-      res.status(400).json({ error: 'Resolva o CAPTCHA antes de cadastrar' });
       return;
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   Mail,
@@ -19,7 +19,6 @@ import AuthLayout from "./AuthLayout";
 import LoginTransition from "./LoginTransition";
 import Link from "next/link";
 import { register } from "@/lib/api";
-import Captcha from "./Captcha";
 
 function Field({
   label,
@@ -63,7 +62,6 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [captchaToken, setCaptchaToken] = useState("");
 
   const passwordChecks = {
     length: password.length >= 8,
@@ -80,8 +78,7 @@ export default function RegisterPage() {
     passwordChecks.lower &&
     passwordChecks.symbol &&
     confirm === password &&
-    acceptTerms &&
-    !!captchaToken;
+    acceptTerms;
 
   useEffect(() => {
     if (!registered) return;
@@ -89,17 +86,6 @@ export default function RegisterPage() {
     const id = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(id);
   }, [registered, timer]);
-
-  useEffect(() => {
-    const existing = document.querySelector("script[src*='turnstile']");
-    if (!existing) {
-      const script = document.createElement("script");
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,12 +95,11 @@ export default function RegisterPage() {
     if (!password || !passwordChecks.length || !passwordChecks.upper || !passwordChecks.lower || !passwordChecks.symbol) errs.password = "Mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 símbolo";
     if (password !== confirm) errs.confirm = "Senhas não conferem";
     if (!acceptTerms) errs.terms = "Aceite os termos para continuar";
-    if (!captchaToken) errs.captcha = "Resolva o CAPTCHA";
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
     try {
-      const res = await register(nome.trim(), email.trim(), password, captchaToken);
+      const res = await register(nome.trim(), email.trim(), password);
       setRegisteredEmail(email.trim());
       if ((res as Record<string, unknown>).confirmationLink) {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
@@ -414,13 +399,6 @@ export default function RegisterPage() {
               </div>
             )}
           </div>
-
-          {acceptTerms && (
-            <>
-              <Captcha onSolved={(t) => { setCaptchaToken(t); setErrors((p) => ({ ...p, captcha: "" })); }} />
-              {errors.captcha && <span className="text-xs text-[#EF4444]">{errors.captcha}</span>}
-            </>
-          )}
 
           {errors.form && (
             <span className="text-sm text-[#EF4444] text-center">{errors.form}</span>
