@@ -404,8 +404,12 @@ export default function RegisterPage() {
             )}
           </div>
 
-          <Captcha onSolved={(t) => { setCaptchaToken(t); setErrors((p) => ({ ...p, captcha: "" })); }} />
-          {errors.captcha && <span className="text-xs text-[#EF4444]">{errors.captcha}</span>}
+          {acceptTerms && (
+            <>
+              <Captcha onSolved={(t) => { setCaptchaToken(t); setErrors((p) => ({ ...p, captcha: "" })); }} />
+              {errors.captcha && <span className="text-xs text-[#EF4444]">{errors.captcha}</span>}
+            </>
+          )}
 
           {errors.form && (
             <span className="text-sm text-[#EF4444] text-center">{errors.form}</span>
