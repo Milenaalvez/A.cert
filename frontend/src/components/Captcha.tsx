@@ -12,18 +12,13 @@ const SITE_KEY = "0x4AAAAAADtAu89ohLJSTfO-ZetilqIAM_k";
 export default function Captcha({ onSolved }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "solved">("loading");
   const widgetRef = useRef<HTMLDivElement>(null);
-  const rendered = useRef(false);
 
   useEffect(() => {
-    if (rendered.current) return;
-    rendered.current = true;
-
     let attempts = 0;
-    const tryRender = () => {
+    const id = setInterval(() => {
       attempts++;
       const turnstile = (window as any).turnstile;
-
-      if (turnstile && widgetRef.current) {
+      if (turnstile && widgetRef.current && !widgetRef.current.hasChildNodes()) {
         turnstile.render(widgetRef.current, {
           sitekey: SITE_KEY,
           callback: async (token: string) => {
@@ -44,24 +39,12 @@ export default function Captcha({ onSolved }: Props) {
           theme: "dark",
         });
         setStatus("ready");
-        return;
+        clearInterval(id);
       }
+      if (attempts > 60) clearInterval(id);
+    }, 200);
 
-      if (attempts < 40) {
-        setTimeout(tryRender, 250);
-      }
-    };
-
-    const existingScript = document.querySelector("script[src*='turnstile']");
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-
-    setTimeout(tryRender, 300);
+    return () => clearInterval(id);
   }, []);
 
   return (
@@ -72,7 +55,7 @@ export default function Captcha({ onSolved }: Props) {
         </span>
       </div>
 
-      {status === "loading" && (
+      {status === "loading" && !widgetRef.current?.hasChildNodes() && (
         <div className="flex items-center justify-center" style={{ height: "65px" }}>
           <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-white/40" />
         </div>

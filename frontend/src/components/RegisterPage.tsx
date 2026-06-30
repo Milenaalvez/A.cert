@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   User,
   Mail,
@@ -89,6 +89,17 @@ export default function RegisterPage() {
     const id = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(id);
   }, [registered, timer]);
+
+  useEffect(() => {
+    const existing = document.querySelector("script[src*='turnstile']");
+    if (!existing) {
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
