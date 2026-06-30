@@ -117,8 +117,8 @@ async function main() {
   ];
   for (const u of users) {
     await executeRaw(
-      `INSERT INTO users (id, name, email, password_hash, role, department_id, position_id, weekly_hours, contract_type, work_schedule, registration_number, phone, hire_date, email_verified, is_active, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'CLT','Seg-Sex',$9,$10,$11,1,1,$12) ON CONFLICT (id) DO NOTHING`,
+      `INSERT INTO users (id, name, email, password_hash, role, department_id, position_id, weekly_hours, contract_type, work_schedule, registration_number, phone, hire_date, email_confirmed, email_verified, is_active, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'CLT','Seg-Sex',$9,$10,$11,1,1,1,$12) ON CONFLICT (id) DO NOTHING`,
       u[0], u[1], u[2], pass, u[3], u[4], u[5], u[6], u[7], u[8], u[9], now
     );
   }
