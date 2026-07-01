@@ -1,6 +1,5 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
-import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
 import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
@@ -130,7 +129,6 @@ export class ONRConnector implements IConnector {
 
   async consultar(
     dados: DadosProprietario,
-    captchaManager?: CaptchaManager,
     jobId?: string,
     certKeys?: string[],
   ): Promise<ConnectorResult> {
@@ -194,27 +192,14 @@ export class ONRConnector implements IConnector {
 
         // Check for CAPTCHA after login
         const captchaLogin = await detectarCaptcha(page);
-        if (captchaLogin) {
-          LOG(`CAPTCHA no login: ${captchaLogin}`);
-          if (captchaManager && jobId) {
-            const chave = `${jobId}-${this.nome}-login`;
-            const img = await page.screenshot({ type: 'png' });
-            const waitPromise = captchaManager.waitForSolution(chave, `${this.nome} (login)`, img, captchaLogin, page.url());
-            esperarCaptchaInterativo(page, captchaLogin).then(ok => {
-              if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
-            });
-            await Promise.race([
-              waitPromise,
-              new Promise<void>((resolve) => {
-                const check = () => { if (pageClosed) resolve(); };
-                page.on('close', check);
-                setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
-              }),
-            ]);
+          if (captchaLogin) {
+            LOG(`CAPTCHA no login: ${captchaLogin}`);
+            await focusPageForCaptcha(page, captchaLogin);
+            LOG('CAPTCHA detectado - resolva na janela do navegador...');
+            await esperarCaptchaInterativo(page, captchaLogin);
             LOG('CAPTCHA do login resolvido');
             await wait(3000);
           }
-        }
       } else {
         LOG('Formulario de login nao encontrado, tentando navegar para /login');
         try {
@@ -303,30 +288,10 @@ export class ONRConnector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-
-        if (captchaManager && jobId) {
-          const chave = `${jobId}-${this.nome}`;
-          const img = await page.screenshot({ type: 'png' });
-
-          LOG('Aguardando resolucao CAPTCHA...');
-          const waitPromise = captchaManager.waitForSolution(chave, this.nome, img, captchaType, page.url());
-          esperarCaptchaInterativo(page, captchaType).then(ok => {
-            if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
-          });
-          await Promise.race([
-            waitPromise,
-            new Promise<void>((resolve) => {
-              const check = () => { if (pageClosed) resolve(); };
-              page.on('close', check);
-              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
-            }),
-          ]);
-          LOG('CAPTCHA resolvido');
-          await wait(3000);
-        } else {
-          await page.close();
-          return { status: 'captcha_required', orgao: this.nome, dataConsulta, error: 'CAPTCHA presente' };
-        }
+        LOG('CAPTCHA detectado - resolva na janela do navegador...');
+        await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA resolvido, continuando...');
+        await wait(3000);
       }
 
       if (pageClosed) throw new Error('Pagina fechada');

@@ -134,3 +134,37 @@ export async function clicarBotaoPorTexto(page: Page, texto: string): Promise<bo
     return false;
   }, texto);
 }
+
+export async function preencherInputPorLabelTexto(
+  page: Page,
+  labelTexto: string,
+  valor: string,
+): Promise<boolean> {
+  return page.evaluate((lbl, val) => {
+    const textoBusca = lbl.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const todos = document.querySelectorAll('label, span, td, div, p, strong, b, th');
+    for (const el of todos) {
+      const txt = (el.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (!txt.includes(textoBusca)) continue;
+
+      // Sobe no DOM ate achar container com input
+      let container: HTMLElement | null = el as HTMLElement;
+      while (container && container !== document.body) {
+        const inp = container.querySelector<HTMLInputElement>(
+          'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"])'
+        );
+        if (inp) {
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+          if (setter) setter.call(inp, val);
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+          inp.dispatchEvent(new Event('blur', { bubbles: true }));
+          return true;
+        }
+        container = container.parentElement;
+      }
+    }
+    return false;
+  }, labelTexto, valor);
+}

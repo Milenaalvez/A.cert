@@ -6,8 +6,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   FileText, Clock, User, AlertCircle, ArrowLeft, Building2, ScrollText, Calendar,
-  MapPin, Edit3, Printer, Archive, DollarSign, FileDown, X, Loader2, Check,
-  Search, Unlink2, Link2, Plus, Repeat,
+  MapPin, Edit3, Printer, Archive, DollarSign, FileDown, Download, X, Loader2, Check,
+  Search, Unlink2, Link2, Plus, Repeat, Square, CheckSquare,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DossierEditModal from "@/components/DossierEditModal";
@@ -21,7 +21,7 @@ interface DossierDetail {
   personProperties: { id: string; identifier: string; registration: string; type: string; address: string; neighborhood: string; city: string; status: string }[];
   participants?: { id: string; name: string; cpf: string | null; role: string; certTotal: number; certObtidas: number }[];
   certificateCount: number; certificatesObtidas: number; certificatesPendentes: number; progress: number;
-  certificates: { id: string; name: string; organ: string; status: string; protocol: string | null; obtained_at: string | null; created_at: string }[];
+  certificates: { id: string; name: string; organ: string; status: string; protocol: string | null; obtained_at: string | null; created_at: string; document_path?: string }[];
   activities: { user_name: string; action: string; reference: string | null; created_at: string }[];
 }
 
@@ -53,6 +53,7 @@ export default function DossierDetailPage() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showLinkProperty, setShowLinkProperty] = useState(false);
+  const [selectedCerts, setSelectedCerts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -88,6 +89,40 @@ export default function DossierDetailPage() {
         };
       });
     } catch {}
+  }
+
+  async function downloadCert(certId: string, certName: string) {
+    try {
+      const res = await fetch(`/api/certificates/${certId}/download`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${certName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {}
+  }
+
+  function toggleCert(certId: string) {
+    setSelectedCerts(prev => {
+      const next = new Set(prev);
+      if (next.has(certId)) next.delete(certId);
+      else next.add(certId);
+      return next;
+    });
+  }
+
+  function selectAllCerts() {
+    const obtidas = dossier?.certificates.filter(c => c.status === 'Obtida' && c.document_path) || [];
+    if (selectedCerts.size === obtidas.length && obtidas.length > 0) {
+      setSelectedCerts(new Set());
+    } else {
+      setSelectedCerts(new Set(obtidas.map(c => c.id)));
+    }
   }
 
   if (loading) return <DashboardLayout><div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ background: "var(--bg-app)", minHeight: "100vh" }}><div className="flex items-center justify-center py-32"><div className="w-8 h-8 border-2 border-default border-t-[#FF7A00] animate-spin" /></div></div></DashboardLayout>;
@@ -258,25 +293,73 @@ export default function DossierDetailPage() {
         <div id="certidoes" className="bg-surface p-6">
           <div className="flex items-center justify-between mb-4">
             <div style={sectionTitle}><FileText size={16} strokeWidth={2} color="#FF7A00" />Certidões</div>
-            <span className="text-[12px] text-secondary">{dossier.certificateCount} certidão{dossier.certificateCount !== 1 ? "ões" : ""}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[12px] text-secondary">
+                <span className="font-semibold" style={{ color: "#059669" }}>{dossier.certificatesObtidas}</span>/{dossier.certificateCount} obtidas
+              </span>
+              {dossier.certificates.filter(c => c.status === 'Obtida' && c.document_path).length > 0 && (
+                <button onClick={selectAllCerts} className="text-[11px] text-secondary hover:text-primary flex items-center gap-1">
+                  {selectedCerts.size > 0 && selectedCerts.size === dossier.certificates.filter(c => c.status === 'Obtida' && c.document_path).length
+                    ? <CheckSquare size={14} />
+                    : <Square size={14} />}
+                  Todas
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-3">
             {dossier.certificates.map((cert) => {
               const isObtida = cert.status === "Obtida";
+              const hasDoc = !!cert.document_path;
+              const isSelected = selectedCerts.has(cert.id);
               return (
                 <div key={cert.id} className="flex items-center justify-between p-3" style={{ background: "var(--bg-app)" }}>
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-2 h-2 shrink-0" style={{ background: isObtida ? "#059669" : "#DC2626" }} />
-                    <div className="min-w-0"><span className="text-[13px] font-semibold text-primary block leading-snug">{cert.name}</span><span className="text-[11px] text-secondary">{cert.organ}</span></div>
+                    {isObtida && hasDoc ? (
+                      <button onClick={() => toggleCert(cert.id)} className="shrink-0 text-secondary hover:text-primary" style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {isSelected ? <CheckSquare size={16} color="#FF7A00" /> : <Square size={16} />}
+                      </button>
+                    ) : (
+                      <div className="w-[18px] h-[18px] shrink-0 flex items-center justify-center">
+                        <div className="w-2 h-2" style={{ borderRadius: '50%', background: isObtida ? "#059669" : "#DC2626" }} />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <span className="text-[13px] font-semibold text-primary block leading-snug">{cert.name}</span>
+                      <span className="text-[11px] text-secondary">{cert.organ}{cert.protocol ? ` · ${cert.protocol}` : ''}</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-semibold px-2 py-1 shrink-0" style={{ background: isObtida ? "rgba(5,150,105,0.12)" : "rgba(220,38,38,0.1)", color: isObtida ? "#059669" : "#DC2626" }}>
-                    {isObtida ? `Obtida ${cert.obtained_at ? new Date(cert.obtained_at).toLocaleDateString("pt-BR") : ""}` : "Pendente"}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isObtida && hasDoc && (
+                      <button onClick={() => downloadCert(cert.id, cert.name)} className="p-1.5 text-secondary hover:text-[#FF7A00]" style={{ borderRadius: 6 }} title="Baixar certidão">
+                        <Download size={15} />
+                      </button>
+                    )}
+                    <span className="text-[10px] font-semibold px-2 py-1" style={{ borderRadius: 4, background: isObtida ? "rgba(5,150,105,0.12)" : "rgba(220,38,38,0.1)", color: isObtida ? "#059669" : "#DC2626" }}>
+                      {isObtida ? `Obtida ${cert.obtained_at ? new Date(cert.obtained_at).toLocaleDateString("pt-BR") : ""}` : "Pendente"}
+                    </span>
+                  </div>
                 </div>
               );
             })}
           </div>
           {dossier.certificateCount === 0 && <div className="text-[12px] text-secondary italic text-center py-6">Nenhuma certidão vinculada.</div>}
+          {selectedCerts.size > 0 && (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  const ids = Array.from(selectedCerts);
+                  const certs = dossier.certificates.filter(c => ids.includes(c.id));
+                  certs.forEach(c => downloadCert(c.id, c.name));
+                }}
+                className="flex items-center gap-2 h-9 px-4 text-[13px] font-medium text-white"
+                style={{ borderRadius: 8, background: "#FF7A00" }}
+              >
+                <FileDown size={15} />
+                Baixar selecionadas ({selectedCerts.size})
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Documentos */}

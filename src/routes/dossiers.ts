@@ -397,7 +397,7 @@ router.get('/:id', async (_req, res) => {
     const derivedStatus = allCertsObtained && personComplete ? 'Concluído' : 'Pendente';
 
     const certificates = await queryRaw(`
-      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at
+      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.document_path
       FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.created_at DESC
     `, id);
 

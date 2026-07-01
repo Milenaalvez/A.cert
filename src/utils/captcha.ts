@@ -14,10 +14,18 @@ export async function detectarCaptcha(page: Page): Promise<CaptchaType> {
     for (const img of imgs) {
       const src = (img.getAttribute('src') || '').toLowerCase();
       const alt = (img.getAttribute('alt') || '').toLowerCase();
-      if (src.includes('captcha') || alt.includes('captcha') || alt.includes('segurança') || alt.includes('código'))
+      if (src.includes('captcha') || alt.includes('captcha') || alt.includes('seguran') || alt.includes('codigo'))
         return 'texto';
       if (src.includes('/captcha/') || src.includes('securimage') || src.includes('kcaptcha') || src.includes('simple-php-captcha'))
         return 'texto';
+    }
+    // Frases comuns de CAPTCHA texto
+    const textos = document.querySelectorAll('span, p, label, div, td, strong, b');
+    for (const el of textos) {
+      const t = (el.textContent?.trim() || '').toLowerCase();
+      if (t.includes('digite os caracteres') || t.includes('caracteres exibidos') || t.includes('ouça as palavras') || t.includes('digite o codigo') || t.includes('digite as letras')) {
+        return 'texto';
+      }
     }
     const inputs = document.querySelectorAll('input[type="text"], input:not([type])');
     for (const input of inputs) {
@@ -94,6 +102,17 @@ export async function esperarCaptchaInterativo(
         if (t === 'recaptcha') {
           const ta = document.querySelector('textarea[id*="g-recaptcha-response"]');
           if (ta && (ta as HTMLTextAreaElement).value.length > 3) return true;
+        }
+        if (t === 'texto') {
+          const inputs = document.querySelectorAll('input[type="text"], input:not([type])');
+          for (const inp of inputs) {
+            const name = (inp.getAttribute('name') || '').toLowerCase();
+            const id = (inp.id || '').toLowerCase();
+            const ph = (inp.getAttribute('placeholder') || '').toLowerCase();
+            if (name.includes('captcha') || id.includes('captcha') || ph.includes('captcha')) {
+              if ((inp as HTMLInputElement).value.length >= 3) return true;
+            }
+          }
         }
         return false;
       }, tipo);

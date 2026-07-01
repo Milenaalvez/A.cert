@@ -1,115 +1,17 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
-import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { tentarBaixarPDF } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[TST] ${msg}`);
-const DEBUG = process.env.DEBUG;
 
-async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
-  const info = await page.evaluate(() => {
-    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input')).map(el => ({
-      id: el.id, name: el.name, type: el.type, placeholder: el.placeholder, className: el.className.slice(0, 50),
-    }));
-    const labels = Array.from(document.querySelectorAll('label')).map(el => ({
-      htmlFor: el.htmlFor, text: (el.textContent || '').trim().slice(0, 80),
-    }));
-    const buttons = Array.from(document.querySelectorAll('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]')).map(el => {
-      const text = (el as HTMLElement).textContent?.trim() || (el as HTMLInputElement).value || '';
-      return { tag: el.tagName, text: text.slice(0, 60), type: (el as HTMLInputElement).type || '', class: el.className.slice(0, 40) };
-    });
-    const selects = Array.from(document.querySelectorAll('select')).map(el => ({
-      id: el.id, name: el.name, options: Array.from(el.options).map(o => o.text.trim()).slice(0, 15),
-    }));
-    const allText: string[] = [];
-    document.querySelectorAll('h1, h2, h3, h4, h5, p, span, td, div.texto, .mensagem, .panel, .content').forEach(el => {
-      const t = (el as HTMLElement).textContent?.trim();
-      if (t && t.length > 3 && t.length < 100) allText.push(t);
-    });
-    return { inputs, labels, buttons, selects, allText: allText.slice(0, 30) };
-  });
-  LOG(`Inputs (${info.inputs.length}):`);
-  for (const i of info.inputs) LOG(`  id="${i.id}" name="${i.name}" type="${i.type}" placeholder="${i.placeholder}" class="${i.className}"`);
-  LOG(`Labels (${info.labels.length}):`);
-  for (const l of info.labels) LOG(`  for="${l.htmlFor}" text="${l.text}"`);
-  LOG(`Botoes (${info.buttons.length}):`);
-  for (const b of info.buttons) LOG(`  <${b.tag}> "${b.text}" type="${b.type}" class="${b.class}"`);
-  if (info.selects.length > 0) LOG(`Selects: ${JSON.stringify(info.selects)}`);
-  LOG(`Textos: ${info.allText.join(' | ')}`);
-}
-
-async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto: string, valor: string): Promise<boolean> {
-  const lblNorm = labelTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const sel = await page.evaluate((lbl) => {
-    const labels = Array.from(document.querySelectorAll('label'));
-    for (const label of labels) {
-      const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (!txt.includes(lbl)) continue;
-      if (label.htmlFor) return `#${CSS.escape(label.htmlFor)}`;
-      const parent = label.closest('.field, .p-field, .form-group, div') || label.parentElement;
-      if (parent) {
-        const inp = parent.querySelector<HTMLInputElement>('input, select, textarea');
-        if (inp && inp.id) return `#${CSS.escape(inp.id)}`;
-        if (inp && inp.name) return `[name="${inp.name}"]`;
-      }
-    }
-    return null;
-  }, lblNorm);
-
-  if (!sel) return false;
-  return preencherInputRapido(page, sel, valor);
-}
-
-async function preencherInputFallback(page: import('puppeteer').Page, busca: string, valor: string): Promise<boolean> {
-  const sel = await page.evaluate((b) => {
-    const lb = b.toLowerCase();
-    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input'));
-    for (const inp of inputs) {
-      const id = (inp.id || '').toLowerCase();
-      const name = (inp.name || '').toLowerCase();
-      const ph = (inp.placeholder || '').toLowerCase();
-      if (id.includes(lb) || name.includes(lb) || ph.includes(lb)) {
-        return inp.id ? `#${CSS.escape(inp.id)}` : inp.name ? `[name="${inp.name}"]` : 'input';
-      }
-    }
-    return null;
-  }, busca);
-  if (!sel) return false;
-  return preencherInputRapido(page, sel, valor);
-}
-
-async function selecionarSelectPorLabel(page: import('puppeteer').Page, labelTexto: string, valorTexto: string): Promise<boolean> {
-  const lblNorm = labelTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const result = await page.evaluate((lbl, val) => {
-    const valNorm = val.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const labels = Array.from(document.querySelectorAll('label'));
-    for (const label of labels) {
-      const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (!txt.includes(lbl)) continue;
-      let sel: HTMLSelectElement | null = null;
-      if (label.htmlFor) sel = document.querySelector<HTMLSelectElement>(`#${CSS.escape(label.htmlFor)}`);
-      if (!sel) {
-        const parent = label.closest('.field, .p-field, .form-group, div') || label.parentElement;
-        if (parent) sel = parent.querySelector<HTMLSelectElement>('select');
-      }
-      if (!sel) continue;
-      for (let i = 0; i < sel.options.length; i++) {
-        const optNorm = sel.options[i].text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        if (optNorm.includes(valNorm) || valNorm.includes(optNorm)) {
-          sel.selectedIndex = i;
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
-          return sel.options[i].text;
-        }
-      }
-    }
-    return null;
-  }, lblNorm, valorTexto);
-  return result !== null;
-}
+// Seletores exatos extraidos do HTML real do TST (Jun/2026)
+// IDs com ":" precisam ser escapados ou usar [id="..."]
+const SEL_CPF     = '[id="gerarCertidaoForm:cpfCnpj"]';
+const SEL_SUBMIT  = '[id="gerarCertidaoForm:btnEmitirCertidao"]';
+const SEL_EMAIL   = '[id="gerarCertidaoForm:btnEmitirCertidaoEEnviarPorEmail"]';
 
 export class TSTConnector implements IConnector {
   readonly nome = 'TST';
@@ -118,7 +20,6 @@ export class TSTConnector implements IConnector {
 
   async consultar(
     dados: DadosProprietario,
-    captchaManager?: CaptchaManager,
     jobId?: string,
     certKeys?: string[],
   ): Promise<ConnectorResult> {
@@ -130,99 +31,147 @@ export class TSTConnector implements IConnector {
       let pageClosed = false;
       page.once('close', () => { pageClosed = true; });
 
-      const url = 'https://www.tst.jus.br/certidao1';
-      LOG('Navegando...');
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      // 1. Navega + aguarda carregamento
+      await page.goto('https://www.tst.jus.br/certidao1', { waitUntil: 'domcontentloaded', timeout: 30000 });
       await wait(3000);
+      LOG(`URL: ${page.url()}`);
 
-      if (DEBUG) await diagnosticarFormulario(page);
-      await injectFillHelper(page);
-
-      const cpfDigits = dados.cpf.replace(/\D/g, '');
-      const nomeCompleto = dados.nome;
-
-      LOG('Preenchendo formulario...');
-
-      const cpfOk = await preencherInputPorLabel(page, 'CPF', cpfDigits)
-        || await preencherInputPorLabel(page, 'Número', cpfDigits)
-        || await preencherInputPorLabel(page, 'Documento', cpfDigits)
-        || await preencherInputFallback(page, 'cpf', cpfDigits)
-        || await preencherInputFallback(page, 'ni', cpfDigits);
-      LOG(`CPF: ${cpfOk || 'nao encontrado'}`);
-
-      const nomeOk = await preencherInputPorLabel(page, 'Nome', nomeCompleto)
-        || await preencherInputFallback(page, 'nome', nomeCompleto);
-      LOG(`Nome: ${nomeOk || 'nao encontrado'}`);
-
-      if (dados.dataNascimento) {
-        const [ano, mes, dia] = dados.dataNascimento.split('-');
-        const dataFormatada = `${dia}/${mes}/${ano}`;
-        const dataOk = await preencherInputPorLabel(page, 'Nascimento', dataFormatada)
-          || await preencherInputPorLabel(page, 'Data', dataFormatada)
-          || await preencherInputFallback(page, 'nascimento', dataFormatada)
-          || await preencherInputFallback(page, 'data', dataFormatada);
-        LOG(`Data: ${dataOk || 'nao encontrado'}`);
-      }
-
-      await wait(500);
-
-      const submitOk = await clicarBotaoPorTexto(page, 'emitir')
-        || await clicarBotaoPorTexto(page, 'consultar')
-        || await clicarBotaoPorTexto(page, 'enviar')
-        || await clicarBotaoPorTexto(page, 'solicitar')
-        || await clicarBotaoPorTexto(page, 'ok')
-        || await clicarBotaoPorTexto(page, 'gerar')
-        || await clicarBotaoPorTexto(page, 'certidão')
-        || await clicarBotaoPorTexto(page, 'certidao');
-      LOG(`Submit: ${submitOk}`);
-
-      if (!submitOk) {
+      // 2. Aguarda input CPF aparecer (max 60s — usuario aceita cookies)
+      LOG('Aguardando formulario (aceite cookies na janela se necessario)...');
+      const cpfReady = await page.waitForSelector(SEL_CPF, { visible: true, timeout: 60000 }).catch(() => null);
+      if (!cpfReady) {
         await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Input CPF nao encontrado' };
+      }
+      LOG('Formulario pronto');
+
+      // 3. CAPTCHA pre-preenchimento (pode ja estar visivel)
+      LOG('Verificando CAPTCHA antes de preencher...');
+      let captchaType: string | null = null;
+      for (let i = 0; i < 5; i++) {
+        try { captchaType = await detectarCaptcha(page); } catch {}
+        if (captchaType) break;
+        await wait(500);
+      }
+      LOG(`CAPTCHA pre: ${captchaType || 'nao'}`);
+
+      // 4. Preenche CPF via setter nativo + eventos (JSF com onkeyup=formataCnpjCpf)
+      const cpfDigits = dados.cpf.replace(/\D/g, '');
+      LOG(`CPF: ${cpfDigits}`);
+      const cpfOk = await page.evaluate((cpf) => {
+        // Busca input pelo ID exato, name, ou classe caixaTexto
+        const inp = document.querySelector<HTMLInputElement>(
+          '[id="gerarCertidaoForm:cpfCnpj"], [name="gerarCertidaoForm:cpfCnpj"], input.caixaTexto[maxlength="18"]'
+        );
+        if (!inp) return false;
+
+        // Foca
+        inp.focus();
+
+        // Seta valor via setter nativo
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        if (setter) setter.call(inp, cpf);
+
+        // Chama formatador JSF diretamente
+        if (typeof (window as any).formataCnpjCpf === 'function') {
+          (window as any).formataCnpjCpf(inp);
+        }
+
+        // Dispara eventos na ordem correta
+        inp.dispatchEvent(new Event('keydown', { bubbles: true }));
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('keyup', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        inp.dispatchEvent(new Event('blur', { bubbles: true }));
+
+        return true;
+      }, cpfDigits);
+      LOG(`CPF: ${cpfOk ? 'OK' : 'FALHOU'}`);
+
+      if (!cpfOk) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Input CPF nao encontrado' };
       }
 
-      await wait(2000);
+      // Verifica visualmente se o valor foi aceito
+      const valorConfirmado = await page.evaluate(() => {
+        const inp = document.querySelector<HTMLInputElement>('[id="gerarCertidaoForm:cpfCnpj"]');
+        return inp?.value || '(vazio)';
+      });
+      LOG(`Valor no input: ${valorConfirmado}`);
 
-      const captchaType = await detectarCaptcha(page);
-      LOG(`CAPTCHA: ${captchaType}`);
+      // Se valor nao entrou, tenta de novo com click + keyboard (fallback)
+      if (valorConfirmado === '(vazio)' || !valorConfirmado.includes(cpfDigits)) {
+        LOG('Valor nao aceito! Tentando click + type...');
+        await page.click(SEL_CPF, { clickCount: 3 });
+        await wait(200);
+        await page.keyboard.type(cpfDigits, { delay: 50 });
+        await wait(500);
+        const v2 = await page.evaluate(() => {
+          const inp = document.querySelector<HTMLInputElement>('[id="gerarCertidaoForm:cpfCnpj"]');
+          return inp?.value || '(vazio)';
+        });
+        LOG(`Valor apos retry: ${v2}`);
+      }
+
+      // 5. CAPTCHA (ja tentamos detectar antes, verifica de novo)
+      if (!captchaType) {
+        LOG('Re-verificando CAPTCHA apos preencher CPF...');
+        for (let i = 0; i < 5; i++) {
+          try { captchaType = await detectarCaptcha(page); } catch {}
+          if (captchaType) break;
+          await wait(1000);
+        }
+      }
+      LOG(`CAPTCHA: ${captchaType || 'nao detectado'}`);
 
       if (captchaType) {
-        await focusPageForCaptcha(page, captchaType);
-
-        if (captchaManager && jobId) {
-          const chave = `${jobId}-${this.nome}`;
-          const img = await page.screenshot({ type: 'png' });
-
-          LOG('Aguardando resolucao CAPTCHA...');
-          const waitPromise = captchaManager.waitForSolution(chave, this.nome, img, captchaType, page.url());
-          esperarCaptchaInterativo(page, captchaType).then(ok => {
-            if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
-          });
-          await Promise.race([
-            waitPromise,
-            new Promise<void>((resolve) => {
-              const check = () => { if (pageClosed) resolve(); };
-              page.on('close', check);
-              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
-            }),
-          ]);
-          LOG('CAPTCHA resolvido');
-          await wait(3000);
-        } else {
+        try { await page.bringToFront(); } catch {}
+        LOG('>>> CAPTCHA! Resolva na janela do navegador...');
+        const ok = await esperarCaptchaInterativo(page, captchaType as any, 300000);
+        if (!ok) {
           await page.close();
-          return { status: 'captcha_required', orgao: this.nome, dataConsulta, error: 'CAPTCHA presente' };
+          return { status: 'error', orgao: this.nome, dataConsulta, error: 'CAPTCHA nao resolvido' };
         }
+        LOG('CAPTCHA resolvido!');
+        await wait(1000);
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
 
+      // 5. Clica "Emitir Certidão" (AJAX via A4J, nao submit HTTP)
+      LOG('Clicando Emitir Certidão...');
+      await page.click(SEL_SUBMIT);
+      LOG('Botao clicado, aguardando AJAX + download...');
+
+      // 6. Aguarda: network idle (AJAX terminou) + texto resultado ou download
+      try { await page.waitForNetworkIdle({ idleTime: 3000, timeout: 30000 }); } catch {}
+      await wait(2000);
+
+      // Verifica se apareceu texto de sucesso/erro
+      const resultText = await page.evaluate(() => {
+        const body = document.body?.textContent?.toLowerCase() || '';
+        if (body.includes('nada consta') || body.includes('não consta')) return 'nada_consta';
+        if (body.includes('certidão') || body.includes('protocolo') || body.includes('emitida')) return 'ok';
+        return null;
+      });
+      LOG(`Resultado: ${resultText || 'aguardando...'}`);
+
+      if (pageClosed) throw new Error('Pagina fechada');
+
+      // 7. Captura PDF (fazerDownload() do TST pode ja ter rodado)
       const protocolo = `TST-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+
+      // Tenta capturar download, fallback: PDF da pagina
+      let pdfBuffer = await tentarBaixarPDF(page);
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+      }
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF invalido ou vazio' };
       }
-      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
+      LOG(`PDF: ${pdfBuffer.length} bytes`);
 
       await this.#throttle();
       await page.close();

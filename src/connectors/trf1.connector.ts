@@ -1,6 +1,5 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
-import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
 import { injectFillHelper, preencherInputRapido, tentarBaixarPDF } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
@@ -304,7 +303,6 @@ export class TRF1Connector implements IConnector {
 
   async consultar(
     dados: DadosProprietario,
-    captchaManager?: CaptchaManager,
     jobId?: string,
     certKeys?: string[],
   ): Promise<ConnectorResult> {
@@ -380,27 +378,10 @@ export class TRF1Connector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-
-        if (captchaManager && jobId) {
-          const chave = `${jobId}-${this.nome}-${run.tipo}`;
-          const img = await page.screenshot({ type: 'png' });
-
-          LOG('Aguardando usuario resolver CAPTCHA na janela do navegador...');
-          const waitPromise = captchaManager.waitForSolution(chave, `${this.nome} (${run.tipo})`, img, captchaType, page.url());
-          esperarCaptchaInterativo(page, captchaType).then(ok => {
-            if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
-          });
-          await Promise.race([
-            waitPromise,
-            new Promise<void>((resolve) => {
-              const check = () => { if (pageClosed) resolve(); };
-              page.on('close', check);
-              setTimeout(() => { page.off('close', check); resolve(); }, 300000).unref();
-            }),
-          ]);
-          LOG('CAPTCHA resolvido, continuando...');
-          await wait(2000);
-        }
+        LOG('CAPTCHA detectado - resolva na janela do navegador...');
+        await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA resolvido, continuando...');
+        await wait(2000);
       }
 
       const pdf = await capturarPDF(page);

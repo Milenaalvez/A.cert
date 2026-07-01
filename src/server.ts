@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import multer from 'multer';
 import { fileURLToPath } from 'node:url';
-import { iniciarJob, getJob, getCaptchaManager } from './services/orquestrador.service.js';
+import { iniciarJob, getJob } from './services/orquestrador.service.js';
 import { criarConectores } from './connectors/index.js';
 import { gerarDossiePDF } from './services/dossie.service.js';
 import { closeBrowser } from './utils/browser.js';
@@ -23,7 +23,7 @@ import settingsRoutes from './routes/settings.js';
 import supportRoutes from './routes/support.js';
 import trashRoutes from './routes/trash.js';
 import companiesRoutes from './routes/companies.js';
-import prisma, { executeRaw } from './lib/prisma.js';
+import prisma, { executeRaw, queryRawOne } from './lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[Server] ${msg}`);
 
@@ -152,8 +152,6 @@ app.get('/api/consultar/:jobId', (req, res) => {
     return;
   }
 
-  const cm = getCaptchaManager();
-
   const resultados = job.resultados.map(r => ({
     status: r.status,
     orgao: r.orgao,
@@ -163,14 +161,6 @@ app.get('/api/consultar/:jobId', (req, res) => {
     documentoId: r.documento ? `${job.id}-${r.orgao.replace(/\s+/g, '_')}` : undefined,
   }));
 
-  const captchaPendente = cm.listarPendentes(job.id).map(p => ({
-    orgao: p.orgao,
-    chave: p.chave,
-    tipo: p.tipo,
-    captchaUrl: `/api/consultar/${job.id}/captcha/${encodeURIComponent(p.chave)}`,
-    paginaUrl: p.captchaUrl || undefined,
-  }));
-
   res.json({
     id: job.id,
     status: job.status,
@@ -178,39 +168,6 @@ app.get('/api/consultar/:jobId', (req, res) => {
     resultados,
     inicio: job.inicio,
     fim: job.fim,
-    captchaPendente,
-  });
-});
-
-app.get('/api/consultar/:jobId/captcha/:chaveEncoded', (req, res) => {
-  const cm = getCaptchaManager();
-  const chave = decodeURIComponent(req.params.chaveEncoded);
-  const img = cm.getCaptchaImage(chave);
-
-  if (!img) {
-    res.status(404).json({ error: 'CAPTCHA não encontrado ou já resolvido' });
-    return;
-  }
-
-  res.setHeader('Content-Type', 'image/png');
-  res.send(Buffer.from(img));
-});
-
-app.post('/api/consultar/:jobId/captcha', (req, res) => {
-  const { chave, solution } = req.body;
-  if (!chave) {
-    res.status(400).json({ error: 'chave é obrigatória' });
-    return;
-  }
-
-  const cm = getCaptchaManager();
-  const ok = cm.resolveCaptcha(chave, solution);
-
-  res.json({
-    resolved: ok,
-    message: ok
-      ? 'CAPTCHA resolvido, consulta continuando'
-      : 'Nenhum CAPTCHA pendente para este órgão',
   });
 });
 
@@ -238,7 +195,6 @@ app.post('/api/consultar/:jobId/retry', (req, res) => {
   job.resultados = job.resultados.filter(r => r.status === 'success');
   job.fim = undefined;
 
-  const captchaManager = getCaptchaManager();
   const conectores = criarConectores();
 
   (async () => {
@@ -246,7 +202,7 @@ app.post('/api/consultar/:jobId/retry', (req, res) => {
       if (!falhos.includes(connector.nome)) continue;
       LOG(`>>> Retry conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(job.dados, captchaManager, job.id);
+        const resultado = await connector.consultar(job.dados, job.id);
         job.resultados.push(resultado);
         LOG(`<<< Retry finalizado: ${connector.nome} → ${resultado.status}`);
       } catch (err) {
@@ -299,6 +255,31 @@ app.get('/api/documentos/:docId', (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${req.params.docId}.pdf"`);
   res.send(Buffer.from(data));
+});
+
+app.get('/api/certificates/:id/download', async (req, res) => {
+  try {
+    const cert = await queryRawOne(
+      'SELECT document_path, name FROM certificates WHERE id = $1',
+      req.params.id
+    );
+    if (!cert || !cert.document_path) {
+      res.status(404).json({ error: 'Certidão não encontrada ou sem documento' });
+      return;
+    }
+    if (!fs.existsSync(cert.document_path)) {
+      res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
+      return;
+    }
+    const pdfBuffer = fs.readFileSync(cert.document_path);
+    const safeName = (cert.name || 'certidao').replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('[CertDownload] Erro:', error);
+    res.status(500).json({ error: 'Erro ao baixar certidão' });
+  }
 });
 
 app.get('/api/dossie/:jobId', async (req, res) => {

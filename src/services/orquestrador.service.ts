@@ -4,7 +4,6 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from '../connectors/index.js';
 import { criarConectores } from '../connectors/index.js';
-import { CaptchaManager } from './captcha-manager.service.js';
 import prisma, { executeRaw } from '../lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
@@ -77,14 +76,9 @@ async function persistirResultado(
 }
 
 const JOBS = new Map<string, ConsultaJob>();
-const CAPTCHA_MANAGER = new CaptchaManager();
 
 export function getJob(jobId: string): ConsultaJob | undefined {
   return JOBS.get(jobId);
-}
-
-export function getCaptchaManager(): CaptchaManager {
-  return CAPTCHA_MANAGER;
 }
 
 export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): ConsultaJob {
@@ -109,7 +103,7 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
     for (const connector of conectores) {
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(dados, CAPTCHA_MANAGER, jobId, dados.certKeys);
+        const resultado = await connector.consultar(dados, jobId, dados.certKeys);
         job.resultados.push(resultado);
         LOG(`<<< Conector finalizado: ${connector.nome} → ${resultado.status}`);
 
