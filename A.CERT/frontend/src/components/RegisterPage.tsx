@@ -34,8 +34,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-[14px] font-semibold text-white/90">
+    <div className="flex flex-col gap-1">
+      <label className="text-[13px] font-semibold text-white/90">
         {label}
       </label>
       {children}
@@ -345,16 +345,16 @@ export default function RegisterPage() {
       }
     >
       <div>
-        <div className="mb-8">
-          <h1 className="text-[32px] font-bold text-white tracking-tight">
+        <div className="mb-5">
+          <h1 className="text-[28px] font-bold text-white tracking-tight">
             Criar conta
           </h1>
-          <p className="text-white/75 text-[15px] mt-2">
+          <p className="text-white/75 text-[14px] mt-1">
             Preencha os dados para começar
           </p>
         </div>
 
-        <div className="flex mb-6" style={{
+        <div className="flex mb-4" style={{
           background: "rgba(255,255,255,0.06)", borderRadius: "14px", padding: "4px",
         }}>
           <button type="button" style={toggleBtn(accountType === "pf")} onClick={() => { setAccountType("pf"); setErrors({}); }}>
@@ -365,7 +365,7 @@ export default function RegisterPage() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
           <Field label={t("people.fields.name")} error={errors.nome}>
             <div className={`${wrapperBase} ${errors.nome ? wrapperError : wrapperNormal}`}>
               <User size={20} strokeWidth={1.5} className="text-white/60 shrink-0" />
@@ -438,7 +438,7 @@ export default function RegisterPage() {
               </button>
             </div>
             {password.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                 {[
                   { ok: passwordChecks.length, label: "8+ caracteres" },
                   { ok: passwordChecks.upper, label: "Maiúscula" },
@@ -506,7 +506,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="text-sm text-center text-white/65 mt-5">
+        <p className="text-sm text-center text-white/65 mt-4">
           Já tem uma conta?{" "}
           <Link href="/" className="font-semibold text-accent hover:text-accent-hover transition-colors">Fazer login</Link>
         </p>
