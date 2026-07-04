@@ -2,8 +2,6 @@ node_modules/
 extensions/
 *.zip
 opencode.json
-package.json
-package-lock.json
 cli/
 argv.json
 chronos-dashboard.html
