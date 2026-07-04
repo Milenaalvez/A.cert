@@ -1,7 +1,7 @@
 import ConfirmarEmailClient from "./ConfirmarEmailClient";
 
 export function generateStaticParams() {
-  return [];
+  return [{ token: "_" }];
 }
 
 export default function ConfirmarEmailPage() {

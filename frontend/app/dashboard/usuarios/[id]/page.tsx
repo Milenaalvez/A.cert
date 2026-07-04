@@ -1,7 +1,7 @@
 import UsuarioDetalheRedirectClient from "./UsuarioDetalheRedirectClient";
 
 export function generateStaticParams() {
-  return [];
+  return [{ id: "_" }];
 }
 
 export default function UsuarioDetalheRedirect() {
