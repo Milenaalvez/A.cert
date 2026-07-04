@@ -12,6 +12,7 @@
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^0.468.0",
     "next": "^15.2.0",
+    "next-intl": "^4.13.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.9.0"
