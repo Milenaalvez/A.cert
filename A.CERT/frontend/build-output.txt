@@ -1,0 +1,33 @@
+﻿   Ôû▓ Next.js 15.5.19
+
+   Creating an optimized production build ...
+node.exe : Failed to compile.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./app/dashboard/page.tsx
+Error:   [31mx[0m Expected '</', got '.'
+     ,-[[36;1;4mC:\Users\dougl\.vscode\A.CERT\frontend\app\dashboard\page.tsx[0m:341:1]
+ [2m338[0m |           <div style={{ marginTop: 24 }}>
+ [2m339[0m |             <PageHeader
+ [2m340[0m |               title={t("dashboard.title")}
+ [2m341[0m |               subtitle={t("dashboard.subtitle")} os dossi├¬s e acompanhe o andamento das 
+solicita├º├Áes."
+     : [35;1m                                                                                                    ^[0m
+ [2m342[0m |             />
+ [2m343[0m |           </div>
+ [2m343[0m |         </div>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/dashboard/page.tsx
+
+
+> Build failed because of webpack errors

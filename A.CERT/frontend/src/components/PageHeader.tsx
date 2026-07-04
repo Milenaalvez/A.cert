@@ -32,7 +32,7 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
       try {
-        const r = await fetch(`http://localhost:3001/api/dossiers?search=${encodeURIComponent(query)}&limit=5`, { headers });
+        const r = await fetch(`/api/dossiers?search=${encodeURIComponent(query)}&limit=5`, { headers });
         if (r.ok) {
           const d = await r.json();
           const mapped: SearchResult[] = ((d.dossiers || []) as any[]).flatMap((item: any) => {

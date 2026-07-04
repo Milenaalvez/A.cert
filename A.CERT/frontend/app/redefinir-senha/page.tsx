@@ -5,10 +5,12 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Lock, Loader2, Eye, EyeOff, CheckCircle, Check, X } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { verificarTokenRedefinir, redefinirSenha } from "@/lib/api";
+import { useT } from "@/i18n/useT";
 
 function RedefinirSenhaForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useT();
   const token = searchParams.get("token") || "";
 
   const [validating, setValidating] = useState(true);
@@ -131,7 +133,7 @@ function RedefinirSenhaForm() {
                 type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: "" })); }}
-                placeholder="Nova senha"
+                placeholder={t("config.nova_senha")}
                 className={inputBase}
                 autoComplete="new-password"
               />

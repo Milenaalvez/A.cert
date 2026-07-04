@@ -4,8 +4,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from '../connectors/index.js';
 import { criarConectores } from '../connectors/index.js';
-import { CaptchaManager } from './captcha-manager.service.js';
-import db from '../database.js';
+import prisma, { executeRaw } from '../lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
 
@@ -42,28 +41,17 @@ async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Arr
 
 async function persistirResultado(
   personId: string,
+  dossierId: string,
   resultado: ConnectorResult,
   jobId: string,
 ): Promise<void> {
   if (resultado.status !== 'success') return;
 
   try {
-    let dossierId: string;
-
-    const dossierExistente = db.prepare(
-      'SELECT id FROM dossiers WHERE person_id = ? ORDER BY created_at DESC LIMIT 1'
-    ).get(personId) as { id: string } | undefined;
-
-    if (dossierExistente) {
-      dossierId = dossierExistente.id;
-    } else {
-      dossierId = randomUUID();
-      const now = new Date().toISOString();
-      db.prepare(
-        'INSERT INTO dossiers (id, identifier, person_id, status, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(dossierId, `#AUTO-${now.slice(0, 10)}-${dossierId.slice(0, 6)}`, personId, 'Em andamento', 'Regular', now, now);
-      LOG(`Dossie auto-criado: ${dossierId}`);
-    }
+    await executeRaw(
+      'INSERT INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING',
+      dossierId, personId, 'proprietario'
+    );
 
     const certId = randomUUID();
     const certName = nomeCertidao(resultado.orgao);
@@ -74,30 +62,26 @@ async function persistirResultado(
       docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento);
     }
 
-    db.prepare(
-      'INSERT INTO certificates (id, dossier_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(certId, dossierId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now);
+    await executeRaw(
+      'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      certId, dossierId, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
+    );
 
-    db.prepare('UPDATE dossiers SET updated_at = ? WHERE id = ?').run(now, dossierId);
+    await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, dossierId);
 
-    LOG(`Certificado salvo: ${certName} (${resultado.orgao}) → dossie ${dossierId}`);
+    LOG(`Certificado salvo: ${certName} (${resultado.orgao}) → pessoa ${personId}`);
   } catch (err) {
     LOG(`Erro ao persistir: ${err}`);
   }
 }
 
 const JOBS = new Map<string, ConsultaJob>();
-const CAPTCHA_MANAGER = new CaptchaManager();
 
 export function getJob(jobId: string): ConsultaJob | undefined {
   return JOBS.get(jobId);
 }
 
-export function getCaptchaManager(): CaptchaManager {
-  return CAPTCHA_MANAGER;
-}
-
-export function iniciarJob(dados: DadosProprietario): ConsultaJob {
+export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): ConsultaJob {
   const jobId = randomUUID();
 
   const job: ConsultaJob = {
@@ -110,18 +94,21 @@ export function iniciarJob(dados: DadosProprietario): ConsultaJob {
 
   JOBS.set(jobId, job);
 
-  const conectores = criarConectores();
+  const conectores = criarConectores().filter(c => {
+    if (!onlyOrgans || onlyOrgans.length === 0) return true;
+    return onlyOrgans.includes(c.nome);
+  });
 
   (async () => {
     for (const connector of conectores) {
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(dados, CAPTCHA_MANAGER, jobId);
+        const resultado = await connector.consultar(dados, jobId, dados.certKeys);
         job.resultados.push(resultado);
         LOG(`<<< Conector finalizado: ${connector.nome} → ${resultado.status}`);
 
-        if (resultado.status === 'success' && dados.personId) {
-          await persistirResultado(dados.personId, resultado, jobId);
+        if (resultado.status === 'success' && dados.personId && dados.dossierId) {
+          await persistirResultado(dados.personId, dados.dossierId, resultado, jobId);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

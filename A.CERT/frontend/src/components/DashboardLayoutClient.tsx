@@ -6,6 +6,8 @@ import { Sidebar } from "./Sidebar";
 import NovoDossieModal from "./NovoDossieModal";
 import PageLoadingOverlay from "./PageLoadingOverlay";
 import ElectronTitleBar from "./ElectronTitleBar";
+import { UserProvider, useUser } from "@/contexts/UserContext";
+import { useT } from "@/i18n/useT";
 
 function pathToPage(pathname: string): string {
   if (pathname === "/dashboard") return "dashboard";
@@ -18,12 +20,14 @@ const PAGE_HREF: Record<string, string> = {
   dossies: "/dashboard/dossies",
   "dossies/novo": "/dashboard/dossies/novo",
   pessoas: "/dashboard/pessoas",
+  empresas: "/dashboard/empresas",
   imoveis: "/dashboard/imoveis",
   certidoes: "/dashboard/certidoes",
   relatorios: "/dashboard/relatorios",
   usuarios: "/dashboard/usuarios",
   configuracoes: "/dashboard/configuracoes",
   suporte: "/dashboard/suporte",
+  trash: "/dashboard/trash",
 };
 
 export default function DashboardLayoutClient({
@@ -35,6 +39,7 @@ export default function DashboardLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useT();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,13 +76,43 @@ export default function DashboardLayoutClient({
     router.push("/");
   }, [router]);
 
-  const user = { name: "Milena Santos", position: "Corretora", role: "Corretora" };
-
-  useEffect(() => {
-    if (typeof window !== "undefined") (window as any).__acertUser = user.name;
-  }, [user.name]);
-
   const activePage = pathToPage(pathname);
+
+  return (
+    <UserProvider>
+      <DashboardInner
+        activePage={activePage}
+        pathname={pathname}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        collapsed={collapsed}
+        handleCollapseChange={handleCollapseChange}
+        handleNavigate={handleNavigate}
+        handleNavigateWithLoading={handleNavigateWithLoading}
+        handleLogout={handleLogout}
+        showNovoDossie={showNovoDossie}
+        setShowNovoDossie={setShowNovoDossie}
+        pageLoading={pageLoading}
+        sidebarWidth={sidebarWidth}
+      >
+        {children}
+      </DashboardInner>
+    </UserProvider>
+  );
+}
+
+function DashboardInner({
+  activePage, pathname, sidebarOpen, setSidebarOpen, collapsed, handleCollapseChange,
+  handleNavigate, handleNavigateWithLoading, handleLogout,
+  showNovoDossie, setShowNovoDossie, pageLoading, sidebarWidth, children,
+}: {
+  activePage: string; pathname: string; sidebarOpen: boolean; setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  collapsed: boolean; handleCollapseChange: (v: boolean) => void;
+  handleNavigate: (p: string) => void; handleNavigateWithLoading: (p: string) => void; handleLogout: () => void;
+  showNovoDossie: boolean; setShowNovoDossie: React.Dispatch<React.SetStateAction<boolean>>; pageLoading: boolean;
+  sidebarWidth: number; children: React.ReactNode;
+}) {
+  const { user } = useUser();
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-app">
@@ -87,7 +122,7 @@ export default function DashboardLayoutClient({
         activePage={activePage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
-        user={user}
+        user={user ? { name: user.name || '', position: user.position, role: user.role, avatar: user.avatar } : undefined}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         collapsed={collapsed}

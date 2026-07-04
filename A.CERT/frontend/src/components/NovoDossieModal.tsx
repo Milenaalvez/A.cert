@@ -22,14 +22,11 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  DollarSign,
   CheckCircle2,
-  Lightbulb,
-  Phone,
-  ShieldCheck,
 } from "lucide-react";
 import SuccessModal from "./SuccessModal";
 import ErrorModal from "./ErrorModal";
+import { useT } from "@/i18n/useT";
 
 const inputBase: React.CSSProperties = {
   height: "42px", borderRadius: "6px", border: "1px solid var(--border-default)",
@@ -78,6 +75,7 @@ const STEPS = [
 ];
 
 export default function NovoDossieModal({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
+  const { t } = useT();
   const [step, setStep] = useState(1);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -85,11 +83,12 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [createdDossierId, setCreatedDossierId] = useState("");
 
   const router = useRouter();
 
   // Step 1 — Dados Principais
-  const [tipoOperacao, setTipoOperacao] = useState("");
+  const [tipoOperacao, setTipoOperacao] = useState("venda");
   const [prioridade, setPrioridade] = useState("Regular");
   const [observacoes, setObservacoes] = useState("");
   const [responsavel, setResponsavel] = useState("");
@@ -99,14 +98,9 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const [selectedResp, setSelectedResp] = useState<any>(null);
 
   // Step 2 — Imóvel
-  const [matricula, setMatricula] = useState(() => {
-    const now = new Date();
-    const dia = String(now.getDate()).padStart(2, "0");
-    const mes = String(now.getMonth() + 1).padStart(2, "0");
-    const ano = String(now.getFullYear()).slice(2);
-    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `REG-${ano}${mes}${dia}-${rand}`;
-  });
+  const [temMatricula, setTemMatricula] = useState(false);
+  const [matricula, setMatricula] = useState("");
+  const [inscricao, setInscricao] = useState("");
   const [nomeImovel, setNomeImovel] = useState("");
   const [cartorio, setCartorio] = useState("");
   const [cartorioSearch, setCartorioSearch] = useState("");
@@ -123,6 +117,8 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   // Step 3 — Partes Envolvidas
   const [personSearch, setPersonSearch] = useState("");
   const [selectedPeople, setSelectedPeople] = useState<any[]>([]);
+  const DEFAULT_ROLES = tipoOperacao === 'venda' ? ['proprietario', 'comprador', 'vendedor'] : ['proprietario', 'locador', 'locatario'];
+  const [personRole, setPersonRole] = useState(DEFAULT_ROLES[0]);
   const [searchingPerson, setSearchingPerson] = useState(false);
   const [personResults, setPersonResults] = useState<any[]>([]);
   const [showPreCadastro, setShowPreCadastro] = useState(false);
@@ -131,21 +127,20 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
   const [preCpf, setPreCpf] = useState("");
   const [preCpfError, setPreCpfError] = useState("");
   const [cpfStatus, setCpfStatus] = useState<"idle" | "verifying" | "ok" | "notfound">("idle");
+  const [preNasc, setPreNasc] = useState("");
+  const [preMae, setPreMae] = useState("");
+  const [prePai, setPrePai] = useState("");
+  const [preEmail, setPreEmail] = useState("");
 
   // Step 4 — Revisão
-  const [valorImovel, setValorImovel] = useState("");
-  const [valorComissao, setValorComissao] = useState("");
-  const [formaPagamento, setFormaPagamento] = useState("");
-  const [instituicao, setInstituicao] = useState("");
-  const [statusFinanciamento, setStatusFinanciamento] = useState("");
-  const [checklist, setChecklist] = useState<string[]>([]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validateStep(s: number) {
     const errs: Record<string, string> = {};
     if (s === 1 && !tipoOperacao) errs.tipo = "Obrigatório";
-    if (s === 3 && selectedPeople.length === 0) errs.person = "Adicione pelo menos uma pessoa";
+    if (s === 2 && !nomeImovel.trim()) errs.imovel = "Identificação do imóvel é obrigatória";
+    if (s === 2 && temMatricula && !matricula.trim()) errs.matricula = "Informe a matrícula";
+    if (s === 3 && selectedPeople.length === 0) errs.person = "Adicione pelo menos um proprietário";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -164,7 +159,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     setSearchingResp(true);
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch("http://localhost:3001/api/team/enriched", {
+      const r = await fetch("/api/team/enriched", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await r.json();
@@ -178,7 +173,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     if (q.length < 2 && q.length > 0) { setCartorioResults([]); return; }
     setSearchingCartorio(true);
     try {
-      const r = await fetch(`http://localhost:3001/api/properties/cartorios?q=${encodeURIComponent(q)}`);
+      const r = await fetch(`/api/properties/cartorios?q=${encodeURIComponent(q)}`);
       const data = await r.json();
       setCartorioResults(data);
     } catch { setCartorioResults([]); }
@@ -213,7 +208,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     setSearchingPerson(true);
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch("http://localhost:3001/api/people", {
+      const r = await fetch("/api/people", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await r.json();
@@ -234,7 +229,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
 
   const addPerson = (p: any) => {
     if (selectedPeople.some(x => x.id === p.id)) return;
-    setSelectedPeople(prev => [...prev, p]);
+    setSelectedPeople(prev => [...prev, { ...p, role: personRole }]);
     setPersonResults([]);
     setPersonSearch("");
     setNoResultsFound(false);
@@ -306,12 +301,16 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       setPreCpfError("CPF inválido");
       return;
     }
-    const newPerson = { id: `pre_${Date.now()}`, name: preNome.trim(), cpf: preCpf.trim(), preCadastro: true };
+    const newPerson = { id: `pre_${Date.now()}`, name: preNome.trim(), cpf: preCpf.trim(), preCadastro: true, role: personRole, birthDate: preNasc, motherName: preMae.trim() || undefined, fatherName: prePai.trim() || undefined, email: preEmail.trim() || undefined };
     setSelectedPeople(prev => [...prev, newPerson]);
     setPreNome("");
     setPreCpf("");
     setPreCpfError("");
     setCpfStatus("idle");
+    setPreNasc("");
+    setPreMae("");
+    setPrePai("");
+    setPreEmail("");
     setNoResultsFound(false);
     setShowPreCadastro(false);
     setPersonResults([]);
@@ -323,10 +322,6 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     setSelectedPeople(prev => prev.filter(p => p.id !== id));
   };
 
-  const toggleChecklist = (item: string) => {
-    setChecklist(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
-  };
-
   const handleCreate = async () => {
     if (!validateStep(step)) return;
     if (step < 4) { handleNext(); return; }
@@ -336,14 +331,44 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       const token = localStorage.getItem("acert_token");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const r = await fetch("http://localhost:3001/api/dossiers", {
+      const r = await fetch("/api/dossiers", {
         method: "POST", headers,
-        body: JSON.stringify({ person_id: selectedPeople[0]?.id, created_by: responsavel || selectedResp?.name || "Sistema", status: "Em andamento", priority: prioridade }),
+        body: JSON.stringify({
+          transaction_type: tipoOperacao,
+          created_by: responsavel || selectedResp?.name || "Sistema",
+          status: "Em andamento",
+          priority: prioridade,
+          observation: observacoes,
+          property: {
+            identifier: nomeImovel,
+            registration: temMatricula ? matricula : "",
+            cartorio: cartorio,
+            address: endereco,
+            neighborhood: bairro,
+            city: cidade,
+            state: estado,
+            zipCode: cep.replace(/\D/g, ""),
+            has_registration: temMatricula,
+            inscricao_municipal: temMatricula ? inscricao : "",
+          },
+          participants: selectedPeople.map(p => ({
+            id: p.preCadastro ? undefined : p.id,
+            name: p.name,
+            cpf: p.cpf || "",
+            preCadastro: !!p.preCadastro,
+            role: p.role || "proprietario",
+            birthDate: p.birthDate,
+            motherName: p.motherName,
+            fatherName: p.fatherName,
+            email: p.email,
+          })),
+        }),
       });
       const data = await r.json();
 
       if (!r.ok) throw new Error(data.error || "Erro ao criar dossiê");
 
+      setCreatedDossierId(data.id);
       setCreatedId(data.identifier);
       setShowSuccess(true);
     } catch (e: any) {
@@ -352,15 +377,9 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     } finally { setSaving(false); }
   };
 
-  const operacoes = ["Compra e Venda", "Locação", "Regularização", "Inventário", "Financiamento", "Escrituração"];
-  const pagamentos = ["À vista", "Financiamento bancário", "Consórcio", "Parcelamento direto", "FGTS", "Carta de crédito"];
-  const statusFinanciamentos = ["Não se aplica", "Em análise", "Documentação enviada", "Pré-aprovado", "Aprovado", "Reprovado"];
-  const checkItems = [
-    { key: "docs_imovel", label: "Documentos do imóvel", icon: Building2 },
-    { key: "docs_pessoais", label: "Documentos pessoais", icon: User },
-    { key: "matricula", label: "Matrícula atualizada", icon: FileText },
-    { key: "contrato", label: "Contrato ou proposta", icon: FileText },
-    { key: "outros", label: "Outros documentos", icon: FileText },
+  const operacoes = [
+    { value: "venda", label: "Compra e Venda" },
+    { value: "locacao", label: "Locação" },
   ];
 
   return (
@@ -435,8 +454,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                   <select value={tipoOperacao} onChange={(e) => { setTipoOperacao(e.target.value); setErrors(p => ({ ...p, tipo: "" })); }}
                     style={{ ...inputBase, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}
                     onFocus={focusIn} onBlur={focusOut}>
-                    <option value="">Selecionar...</option>
-                    {operacoes.map(o => <option key={o} value={o}>{o}</option>)}
+                    {operacoes.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </Field>
                 <Field label="Prioridade">
@@ -446,7 +464,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                     {["Baixa", "Normal", "Alta", "Urgente"].map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </Field>
-                <Field label="Responsável">
+                <Field label={t("dossiers.columns.responsible")}>
                   {!selectedResp ? (
                     <div style={{ position: "relative" }}>
                       <div style={{ display: "flex", gap: 8 }}>
@@ -512,58 +530,81 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
 
             {/* Step 2: Imóvel */}
             {step === 2 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                <Field label="CEP">
-                  <input type="text" style={{ ...inputBase, borderColor: cepError ? "#DC2626" : cepLoading ? "#FF7A00" : "var(--border-default)" }} placeholder="00000-000" value={cep}
-                    onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 8); let f = v; if (v.length > 5) f = v.slice(0, 5) + "-" + v.slice(5); setCep(f); setCepError(""); }}
-                    onBlur={handleCepBlur} onFocus={focusIn} />
-                  {cepLoading && <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#FF7A00" }}>Buscando CEP...</span>}
-                  {cepError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{cepError}</span>}
-                </Field>
-                <Field label="Matrícula">
-                  <div style={{ position: "relative" }}>
-                    <input type="text" readOnly style={{ ...inputBase, color: "var(--text-muted)", cursor: "default", paddingRight: 36, background: "var(--bg-subtle)" }} value={matricula} tabIndex={-1} />
-                    <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 4, pointerEvents: "none" }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#059669" }} />
-                      <span style={{ fontSize: 10, color: "#059669", fontWeight: 600, letterSpacing: 0.3 }}>AUTO</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                  <div style={{ gridColumn: "span 3" }}>
+                    <Field label="Identificação do Imóvel" required error={errors.imovel}>
+                      <input type="text" style={inputBase} placeholder="Ex.: APT-101, Edifício Central" value={nomeImovel} onChange={(e) => { setNomeImovel(e.target.value); setErrors(p => ({ ...p, imovel: "" })); }} onFocus={focusIn} onBlur={focusOut} />
+                    </Field>
+                  </div>
+                  <div style={{ gridColumn: "span 3" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: temMatricula ? 16 : 0, padding: "12px 16px", borderRadius: 8, border: `2px solid ${temMatricula ? "#059669" : "var(--border-default)"}`, background: temMatricula ? "rgba(5,150,105,0.06)" : "var(--bg-subtle)" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }}>
+                        <button type="button" onClick={() => setTemMatricula(!temMatricula)}
+                          style={{ width: 20, height: 20, borderRadius: 4, border: temMatricula ? "2px solid #059669" : "2px solid var(--border-default)", background: temMatricula ? "#059669" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 0 }}>
+                          {temMatricula && <Check size={12} strokeWidth={3} color="#FFF" />}
+                        </button>
+                        <div>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>O imóvel possui matrícula?</span>
+                          <span style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Se marcado, serão geradas as certidões de Ônus (ONR), Matrícula e Ficha Cadastral</span>
+                        </div>
+                      </label>
                     </div>
-                  </div>
-                </Field>
-                <Field label="Nome do imóvel"><input type="text" style={inputBase} placeholder="Nome ou empreendimento" value={nomeImovel} onChange={(e) => setNomeImovel(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                <Field label="Cartório">
-                  <div style={{ position: "relative" }}>
-                    <input type="text" style={inputBase} placeholder="Digite para buscar cartório..." value={cartorioSearch || cartorio}
-                      onChange={(e) => { setCartorioSearch(e.target.value); setCartorio(""); handleSearchCartorio(e.target.value); }}
-                      onFocus={(e) => { focusIn(e); if (!cartorio) handleSearchCartorio(""); }}
-                      onBlur={(e) => { setTimeout(() => setCartorioResults([]), 200); focusOut(e); }} />
-                    {searchingCartorio && (
-                      <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
-                        <div style={{ width: 14, height: 14, border: "2px solid var(--border-default)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+                    {temMatricula && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginTop: 16 }}>
+                        <Field label="Nº da Matrícula" required error={errors.matricula}>
+                          <input type="text" style={inputBase} placeholder="Nº da matrícula do imóvel" value={matricula} onChange={(e) => { setMatricula(e.target.value); setErrors(p => ({ ...p, matricula: "" })); }} onFocus={focusIn} onBlur={focusOut} />
+                        </Field>
+                        <Field label="Inscrição Municipal">
+                          <input type="text" style={inputBase} placeholder="Inscrição IPTU" value={inscricao} onChange={(e) => setInscricao(e.target.value)} onFocus={focusIn} onBlur={focusOut} />
+                        </Field>
+                        <Field label="Cartório">
+                          <div style={{ position: "relative" }}>
+                            <input type="text" style={inputBase} placeholder="Digite para buscar cartório..." value={cartorioSearch || cartorio}
+                              onChange={(e) => { setCartorioSearch(e.target.value); setCartorio(""); handleSearchCartorio(e.target.value); }}
+                              onFocus={(e) => { focusIn(e); if (!cartorio) handleSearchCartorio(""); }}
+                              onBlur={(e) => { setTimeout(() => setCartorioResults([]), 200); focusOut(e); }} />
+                            {searchingCartorio && (
+                              <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
+                                <div style={{ width: 14, height: 14, border: "2px solid var(--border-default)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+                              </div>
+                            )}
+                            {cartorioResults.length > 0 && (
+                              <div style={{ marginTop: 4, borderRadius: 6, border: "1px solid var(--border-light)", background: "var(--bg-surface)", overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", position: "absolute", left: 0, right: 0, zIndex: 10, maxHeight: 200, overflowY: "auto" }}>
+                                {cartorioResults.map((c, i) => (
+                                  <button key={i} type="button"
+                                    onClick={() => { setCartorio(c.name); setCartorioSearch(""); setCartorioResults([]); }}
+                                    style={{ width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", borderBottom: "1px solid var(--border-light)", color: "var(--text-primary)" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                                    {c.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </Field>
                       </div>
                     )}
-                    {cartorioResults.length > 0 && (
-                      <div style={{ marginTop: 4, borderRadius: 6, border: "1px solid var(--border-light)", background: "var(--bg-surface)", overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", position: "absolute", left: 0, right: 0, zIndex: 10, maxHeight: 200, overflowY: "auto" }}>
-                        {cartorioResults.map((c, i) => (
-                          <button key={i} type="button"
-                            onClick={() => { setCartorio(c.name); setCartorioSearch(""); setCartorioResults([]); }}
-                            style={{ width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", borderBottom: "1px solid var(--border-light)", color: "var(--text-primary)" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
-                            {c.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                </Field>
-                <div style={{ gridColumn: "span 3" }}>
-                  <Field label="Endereço">
-                    <input type="text" style={inputBase} placeholder="Endereço completo" value={endereco} onChange={(e) => setEndereco(e.target.value)} onFocus={focusIn} onBlur={focusOut} />
-                  </Field>
                 </div>
-                <Field label="Bairro"><input type="text" style={inputBase} placeholder="Bairro" value={bairro} onChange={(e) => setBairro(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                <Field label="Cidade"><input type="text" style={inputBase} placeholder="Cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                <Field label="Estado"><input type="text" style={inputBase} placeholder="UF" value={estado} onChange={(e) => setEstado(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                  <Field label="CEP">
+                    <input type="text" style={{ ...inputBase, borderColor: cepError ? "#DC2626" : cepLoading ? "#FF7A00" : "var(--border-default)" }} placeholder="00000-000" value={cep}
+                      onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 8); let f = v; if (v.length > 5) f = v.slice(0, 5) + "-" + v.slice(5); setCep(f); setCepError(""); }}
+                      onBlur={handleCepBlur} onFocus={focusIn} />
+                    {cepLoading && <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#FF7A00" }}>Buscando CEP...</span>}
+                    {cepError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{cepError}</span>}
+                  </Field>
+                  <Field label="Bairro"><input type="text" style={inputBase} placeholder="Bairro" value={bairro} onChange={(e) => setBairro(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
+                  <Field label={t("people.fields.city")}><input type="text" style={inputBase} placeholder={t("people.fields.city")} value={cidade} onChange={(e) => setCidade(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
+                  <Field label={t("people.fields.state")}><input type="text" style={inputBase} placeholder="UF" value={estado} onChange={(e) => setEstado(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <Field label={t("people.fields.address")}>
+                      <input type="text" style={inputBase} placeholder="Endereço completo" value={endereco} onChange={(e) => setEndereco(e.target.value)} onFocus={focusIn} onBlur={focusOut} />
+                    </Field>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -576,13 +617,15 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                     Partes Envolvidas
                   </div>
                   <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, marginTop: -6, lineHeight: 1.4 }}>
-                    Adicione todas as pessoas relacionadas a este dossiê. Use a busca para encontrar cadastros existentes ou o pré-cadastro para novos.
+                    Adicione as pessoas envolvidas neste dossiê. Pelo menos um <strong>proprietário</strong> é obrigatório.
                   </p>
                 </div>
                 <Field label="Pessoas envolvidas" required error={errors.person}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                     {/* Existing selected people */}
-                    {selectedPeople.map((p) => (
+                    {selectedPeople.map((p) => {
+                      const roleLabel: Record<string, string> = { proprietario: 'Proprietário', comprador: 'Comprador', vendedor: 'Vendedor', locador: 'Locador', locatario: 'Locatário' };
+                      return (
                       <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 64, padding: "12px 16px", borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--bg-subtle)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                           <div style={{ width: 40, height: 40, borderRadius: "50%", background: p.preCadastro ? "#D97706" : "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
@@ -590,8 +633,9 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", display: "block", lineHeight: 1.3 }}>{p.name}</span>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
                               {p.cpf && <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{formatDoc(p.cpf)}</span>}
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "#FF7A00", background: "rgba(255,122,0,0.1)", padding: "2px 8px", borderRadius: 4 }}>{roleLabel[p.role] || p.role}</span>
                               {p.preCadastro && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--badge-amber-text)", background: "var(--badge-amber-bg)", padding: "2px 8px", borderRadius: 4 }}>Cadastro pendente</span>}
                             </div>
                           </div>
@@ -602,12 +646,17 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                           <X size={16} strokeWidth={2} />
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Search/add more */}
                     {!showPreCadastro ? (
                       <div style={{ position: "relative" }}>
                         <div style={{ display: "flex", gap: 8 }}>
+                          <select value={personRole} onChange={(e) => setPersonRole(e.target.value)}
+                            style={{ ...inputBase, height: 42, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px", width: 150, flexShrink: 0 }}>
+                            {DEFAULT_ROLES.map(r => <option key={r} value={r}>{r === 'proprietario' ? 'Proprietário' : r === 'comprador' ? 'Comprador' : r === 'vendedor' ? 'Vendedor' : r === 'locador' ? 'Locador' : 'Locatário'}</option>)}
+                          </select>
                           <div style={{ position: "relative", flex: 1 }}>
                             <Search size={16} strokeWidth={1.5} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
                             <input type="text" placeholder="Buscar pessoa por nome ou CPF..." value={personSearch}
@@ -670,26 +719,38 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                       <div style={{ display: "flex", gap: 8, padding: "14px", borderRadius: 8, border: "1px solid rgba(217,119,6,0.25)", background: "var(--badge-amber-bg)" }}>
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-amber-text)" }}>Pré-cadastro rápido</span>
-                          <input type="text" placeholder="Nome completo *" value={preNome} onChange={(e) => setPreNome(e.target.value)}
-                            style={{ ...inputBase, background: "var(--bg-surface)" }} />
-                          <div>
-                            <div style={{ position: "relative" }}>
-                              <input type="text" placeholder="CPF *" value={preCpf} onChange={(e) => handleCpfChange(e.target.value)}
-                                style={{ ...inputBase, background: "var(--bg-surface)", borderColor: preCpfError ? "#DC2626" : cpfStatus === "ok" ? "#059669" : cpfStatus === "notfound" ? "#D97706" : "var(--border-default)", paddingRight: 32 }} />
-                              {cpfStatus === "verifying" && (
-                                <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
-                                  <div style={{ width: 14, height: 14, border: "2px solid var(--border-default)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-                                </div>
-                              )}
-                              {cpfStatus === "ok" && (
-                                <Check size={14} strokeWidth={2.5} color="#059669" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
-                              )}
-                              {cpfStatus === "notfound" && (
-                                <AlertTriangle size={14} strokeWidth={2} color="#D97706" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
-                              )}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <input type="text" placeholder="Nome completo *" value={preNome} onChange={(e) => setPreNome(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
+                            <div>
+                              <div style={{ position: "relative" }}>
+                                <input type="text" placeholder="CPF *" value={preCpf} onChange={(e) => handleCpfChange(e.target.value)}
+                                  style={{ ...inputBase, background: "var(--bg-surface)", borderColor: preCpfError ? "#DC2626" : cpfStatus === "ok" ? "#059669" : cpfStatus === "notfound" ? "#D97706" : "var(--border-default)", paddingRight: 32 }} />
+                                {cpfStatus === "verifying" && (
+                                  <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
+                                    <div style={{ width: 14, height: 14, border: "2px solid var(--border-default)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+                                  </div>
+                                )}
+                                {cpfStatus === "ok" && (
+                                  <Check size={14} strokeWidth={2.5} color="#059669" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
+                                )}
+                                {cpfStatus === "notfound" && (
+                                  <AlertTriangle size={14} strokeWidth={2} color="#D97706" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }} />
+                                )}
+                              </div>
+                              {preCpfError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{preCpfError}</span>}
+                              {cpfStatus === "notfound" && !preCpfError && <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#D97706" }}>CPF não localizado</span>}
                             </div>
-                            {preCpfError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{preCpfError}</span>}
-                            {cpfStatus === "notfound" && !preCpfError && <span style={{ display: "block", marginTop: 4, fontSize: 11, color: "#D97706" }}>CPF não localizado na Receita Federal — será possível prosseguir</span>}
+                            <input type="date" placeholder="Data de Nascimento" value={preNasc} onChange={(e) => setPreNasc(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)", color: preNasc ? "var(--text-primary)" : "var(--text-muted)" }} />
+                            <input type="email" placeholder={t("people.fields.email")} value={preEmail} onChange={(e) => setPreEmail(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <input type="text" placeholder="Nome da Mãe" value={preMae} onChange={(e) => setPreMae(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
+                            <input type="text" placeholder="Nome do Pai (opcional)" value={prePai} onChange={(e) => setPrePai(e.target.value)}
+                              style={{ ...inputBase, background: "var(--bg-surface)" }} />
                           </div>
                           <span style={{ fontSize: 10, color: "var(--badge-amber-text-secondary)" }}>A pessoa será marcada como cadastro pendente e precisará ser completada depois.</span>
                           <div style={{ display: "flex", gap: 6 }}>
@@ -708,102 +769,55 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
 
             {/* Step 4: Revisão */}
             {step === 4 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                {/* Left column */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  {/* Financeiro */}
-                  <div>
-                    <div style={sectionTitle}><DollarSign size={16} strokeWidth={2} color="#059669" />Informações Financeiras</div>
-                    <div style={{ background: "var(--bg-subtle)", borderRadius: 8, border: "1px solid var(--border-light)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                      <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Valor do imóvel"><input type="text" style={inputBase} placeholder="R$ 0,00" value={valorImovel} onChange={(e) => setValorImovel(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                        </div>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Valor da comissão"><input type="text" style={inputBase} placeholder="R$ 0,00" value={valorComissao} onChange={(e) => setValorComissao(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                        </div>
-                      </div>
-                      <Field label="Forma de pagamento">
-                        <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)}
-                          style={{ ...inputBase, paddingTop: 0, paddingBottom: 0, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}
-                          onFocus={focusIn} onBlur={focusOut}>
-                          <option value="">Selecionar...</option>
-                          {pagamentos.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                      </Field>
-                      <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Instituição financeira"><input type="text" style={inputBase} placeholder="Banco ou agente" value={instituicao} onChange={(e) => setInstituicao(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                        </div>
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <Field label="Status do financiamento">
-                            <select value={statusFinanciamento} onChange={(e) => setStatusFinanciamento(e.target.value)}
-                              style={{ ...inputBase, paddingTop: 0, paddingBottom: 0, cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}
-                              onFocus={focusIn} onBlur={focusOut}>
-                              {statusFinanciamentos.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </Field>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <div style={sectionTitle}>
+                  <CheckCircle2 size={16} strokeWidth={2} color="#059669" />
+                  Revisão do Dossiê
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: -12, marginBottom: 8 }}>
+                  Confira os dados antes de criar o dossiê.
+                </p>
 
-                  {/* Checklist Inicial */}
-                  <div>
-                    <div style={sectionTitle}><CheckCircle2 size={16} strokeWidth={2} color="#7C3AED" />Checklist Inicial</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {checkItems.map((item) => {
-                        const Icon = item.icon;
-                        const active = checklist.includes(item.key);
-                        return (
-                          <button key={item.key} type="button" onClick={() => toggleChecklist(item.key)}
-                            style={{
-                              display: "flex", alignItems: "center", gap: 8,
-                              padding: "10px 14px", borderRadius: 8, border: active ? "2px solid #059669" : "1px solid var(--border-light)",
-                              background: active ? "rgba(5,150,105,0.08)" : "var(--bg-subtle)",
-                              cursor: "pointer", fontSize: 12, fontWeight: active ? 600 : 500,
-                              color: active ? "#059669" : "var(--text-secondary)",
-                              transition: "all 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => { if (!active) { e.currentTarget.style.borderColor = "#059669"; e.currentTarget.style.background = "rgba(5,150,105,0.04)"; } }}
-                            onMouseLeave={(e) => { if (!active) { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-subtle)"; } }}
-                          >
-                            {active ? <Check size={14} strokeWidth={2.5} /> : <Icon size={14} strokeWidth={1.5} />}
-                            {item.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Operação</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{tipoOperacao === 'locacao' ? 'Locação' : 'Compra e Venda'}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>Prioridade: {prioridade}</div>
+                    {selectedResp && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Responsável: {selectedResp.name}</div>}
+                  </div>
+                  <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Imóvel</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{nomeImovel || '—'}</div>
+                    {temMatricula && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>Matrícula: {matricula}</div>}
+                    {endereco && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{endereco}</div>}
                   </div>
                 </div>
 
-                {/* Right column — Painel de ajuda */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  <div>
-                    <div style={sectionTitle}><Lightbulb size={16} strokeWidth={2} color="#D97706" />Boas Práticas</div>
-                    <div style={{ background: "var(--badge-amber-bg)", borderRadius: 10, border: "1px solid rgba(217,119,6,0.2)", padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {[
-                          "Defina corretamente o tipo de operação para melhor organização.",
-                          "Informe um prazo estimado para controle do processo.",
-                          "Adicione todas as partes envolvidas na etapa anterior.",
-                          "Preencha os dados financeiros para relatórios precisos.",
-                        ].map((tip, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                            <ShieldCheck size={14} strokeWidth={2} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
-                            <span style={{ fontSize: 12, color: "var(--badge-amber-text)", lineHeight: 1.5 }}>{tip}</span>
+                <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Partes Envolvidas ({selectedPeople.length})</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {selectedPeople.map((p: any) => {
+                      const roleLabel: Record<string, string> = { proprietario: 'Proprietário', comprador: 'Comprador', vendedor: 'Vendedor', locador: 'Locador', locatario: 'Locatário' };
+                      return (
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: p.preCadastro ? "#D97706" : "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                            {p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
-                        ))}
-                      </div>
-                      <div style={{ marginTop: 4, paddingTop: 14, borderTop: "1px solid rgba(217,119,6,0.15)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--badge-amber-text-secondary)", fontSize: 12 }}>
-                          <Phone size={13} strokeWidth={1.5} />
-                          <span>Dúvidas? Fale com o suporte</span>
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</span>
+                          {p.cpf && <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{formatDoc(p.cpf)}</span>}
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "#FF7A00", background: "rgba(255,122,0,0.1)", padding: "1px 7px", borderRadius: 4 }}>{roleLabel[p.role] || p.role}</span>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
+
+                {observacoes && (
+                  <div style={{ padding: "14px", borderRadius: 8, background: "var(--bg-subtle)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Observações</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{observacoes}</div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -849,7 +863,10 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {showSuccess && (
-        <SuccessModal identifier={createdId} onClose={() => { setShowSuccess(false); onCreated?.(); onClose(); }} />
+        <SuccessModal identifier={createdId} dossierId={createdDossierId}
+          onViewDossier={() => { setShowSuccess(false); onCreated?.(); onClose(); router.push(`/dashboard/dossies/${createdDossierId}`); }}
+          onEmitirCertidoes={() => { setShowSuccess(false); onCreated?.(); onClose(); router.push(`/dashboard/dossies/${createdDossierId}?emitir=true&tab=partes`); }}
+          onClose={() => { setShowSuccess(false); onCreated?.(); onClose(); }} />
       )}
       {showError && (
         <ErrorModal

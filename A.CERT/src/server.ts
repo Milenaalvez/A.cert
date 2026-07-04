@@ -2,11 +2,14 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
+import fs from 'node:fs';
+import multer from 'multer';
 import { fileURLToPath } from 'node:url';
-import { iniciarJob, getJob, getCaptchaManager } from './services/orquestrador.service.js';
+import { iniciarJob, getJob } from './services/orquestrador.service.js';
 import { criarConectores } from './connectors/index.js';
 import { gerarDossiePDF } from './services/dossie.service.js';
 import { closeBrowser } from './utils/browser.js';
+import { enviarEmailConfirmacao } from './services/email.service.js';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import peopleRoutes from './routes/people.js';
@@ -18,6 +21,9 @@ import captchaRoutes from './routes/captcha.js';
 import propertiesRoutes from './routes/properties.js';
 import settingsRoutes from './routes/settings.js';
 import supportRoutes from './routes/support.js';
+import trashRoutes from './routes/trash.js';
+import companiesRoutes from './routes/companies.js';
+import prisma, { executeRaw, queryRawOne } from './lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[Server] ${msg}`);
 
@@ -44,10 +50,55 @@ app.use('/api/captcha', captchaRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/trash', trashRoutes);
+app.use('/api/companies', companiesRoutes);
+
+app.get('/api/test-email', async (req, res) => {
+  const to = (req.query.to as string) || 'contato@acert.tech';
+  try {
+    await enviarEmailConfirmacao(to, 'Teste A.CERT', 'test-token');
+    res.json({ success: true, message: `Email enviado para ${to}. Verifique a caixa de entrada e o spam.` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, code: err.code, response: err.response });
+  }
+});
+
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
+if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Apenas imagens são permitidas'));
+  },
+});
+
+app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
+  const userId = req.body.userId;
+  if (!userId || !req.file) {
+    res.status(400).json({ error: 'userId e avatar são obrigatórios' });
+    return;
+  }
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  await executeRaw('UPDATE users SET avatar = $1 WHERE id = $2', avatarUrl, userId);
+  res.json({ avatarUrl });
+});
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
 app.use(express.static(publicPath));
+
+const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsPublicPath));
 
 const documentos = new Map<string, Uint8Array>();
 
@@ -72,7 +123,7 @@ function checkDocsLoop(jobId: string): void {
 
 app.post('/api/consultar', (req, res) => {
   try {
-    const { nome, cpf, dataNascimento, nomeMae, nomePai, email } = req.body;
+    const { nome, cpf, dataNascimento, nomeMae, nomePai, email, personId, dossierId, organs, certKeys } = req.body;
 
     if (!nome || !cpf || !dataNascimento || !nomeMae || !email) {
       res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos.' });
@@ -85,7 +136,7 @@ app.post('/api/consultar', (req, res) => {
       return;
     }
 
-    const job = iniciarJob({ nome, cpf: cpfDigits, dataNascimento, nomeMae, nomePai: nomePai || undefined, email });
+    const job = iniciarJob({ nome, cpf: cpfDigits, dataNascimento, nomeMae, nomePai: nomePai || undefined, email, personId, dossierId, certKeys }, organs);
     checkDocsLoop(job.id);
     res.json({ jobId: job.id });
   } catch (error) {
@@ -101,8 +152,6 @@ app.get('/api/consultar/:jobId', (req, res) => {
     return;
   }
 
-  const cm = getCaptchaManager();
-
   const resultados = job.resultados.map(r => ({
     status: r.status,
     orgao: r.orgao,
@@ -112,14 +161,6 @@ app.get('/api/consultar/:jobId', (req, res) => {
     documentoId: r.documento ? `${job.id}-${r.orgao.replace(/\s+/g, '_')}` : undefined,
   }));
 
-  const captchaPendente = cm.listarPendentes(job.id).map(p => ({
-    orgao: p.orgao,
-    chave: p.chave,
-    tipo: p.tipo,
-    captchaUrl: `/api/consultar/${job.id}/captcha/${encodeURIComponent(p.chave)}`,
-    paginaUrl: p.captchaUrl || undefined,
-  }));
-
   res.json({
     id: job.id,
     status: job.status,
@@ -127,39 +168,6 @@ app.get('/api/consultar/:jobId', (req, res) => {
     resultados,
     inicio: job.inicio,
     fim: job.fim,
-    captchaPendente,
-  });
-});
-
-app.get('/api/consultar/:jobId/captcha/:chaveEncoded', (req, res) => {
-  const cm = getCaptchaManager();
-  const chave = decodeURIComponent(req.params.chaveEncoded);
-  const img = cm.getCaptchaImage(chave);
-
-  if (!img) {
-    res.status(404).json({ error: 'CAPTCHA não encontrado ou já resolvido' });
-    return;
-  }
-
-  res.setHeader('Content-Type', 'image/png');
-  res.send(Buffer.from(img));
-});
-
-app.post('/api/consultar/:jobId/captcha', (req, res) => {
-  const { chave, solution } = req.body;
-  if (!chave) {
-    res.status(400).json({ error: 'chave é obrigatória' });
-    return;
-  }
-
-  const cm = getCaptchaManager();
-  const ok = cm.resolveCaptcha(chave, solution);
-
-  res.json({
-    resolved: ok,
-    message: ok
-      ? 'CAPTCHA resolvido, consulta continuando'
-      : 'Nenhum CAPTCHA pendente para este órgão',
   });
 });
 
@@ -187,7 +195,6 @@ app.post('/api/consultar/:jobId/retry', (req, res) => {
   job.resultados = job.resultados.filter(r => r.status === 'success');
   job.fim = undefined;
 
-  const captchaManager = getCaptchaManager();
   const conectores = criarConectores();
 
   (async () => {
@@ -195,7 +202,7 @@ app.post('/api/consultar/:jobId/retry', (req, res) => {
       if (!falhos.includes(connector.nome)) continue;
       LOG(`>>> Retry conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(job.dados, captchaManager, job.id);
+        const resultado = await connector.consultar(job.dados, job.id);
         job.resultados.push(resultado);
         LOG(`<<< Retry finalizado: ${connector.nome} → ${resultado.status}`);
       } catch (err) {
@@ -248,6 +255,31 @@ app.get('/api/documentos/:docId', (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${req.params.docId}.pdf"`);
   res.send(Buffer.from(data));
+});
+
+app.get('/api/certificates/:id/download', async (req, res) => {
+  try {
+    const cert = await queryRawOne(
+      'SELECT document_path, name FROM certificates WHERE id = $1',
+      req.params.id
+    );
+    if (!cert || !cert.document_path) {
+      res.status(404).json({ error: 'Certidão não encontrada ou sem documento' });
+      return;
+    }
+    if (!fs.existsSync(cert.document_path)) {
+      res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
+      return;
+    }
+    const pdfBuffer = fs.readFileSync(cert.document_path);
+    const safeName = (cert.name || 'certidao').replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('[CertDownload] Erro:', error);
+    res.status(500).json({ error: 'Erro ao baixar certidão' });
+  }
 });
 
 app.get('/api/dossie/:jobId', async (req, res) => {

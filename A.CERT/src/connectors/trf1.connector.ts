@@ -1,8 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
-import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { PDFDocument } from 'pdf-lib';
@@ -11,6 +10,7 @@ import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 
 const LOG = (msg: string) => console.log(`[TRF1] ${msg}`);
+const DEBUG = process.env.DEBUG;
 
 const FORM_URL = 'https://sistemas.trf1.jus.br/certidao/#/solicitacao';
 
@@ -105,6 +105,8 @@ async function selecionarDropdown(
   page: import('puppeteer').Page,
   filtro: (t: string) => boolean,
 ): Promise<string | null> {
+  const filtroStr = filtro.toString();
+
   await wait(2000);
   await page.keyboard.press('ArrowDown');
   await wait(300);
@@ -117,14 +119,14 @@ async function selecionarDropdown(
     return null;
   });
   if (selected && selected.length > 0) {
-    LOG(`Selecionado via teclado: ${selected}`);
+    LOG(`Selecionado via ArrowDown+Enter: ${selected}`);
     return selected;
   }
 
-  await page.waitForSelector('.p-autocomplete-panel, ul.p-autocomplete-items, [role="listbox"], p-autocomplete .p-autocomplete-items', { timeout: 5000 }).catch(() => {});
+  // Fallback: clicar no item dentro do painel
+  await page.waitForSelector('.p-autocomplete-panel, ul.p-autocomplete-items, [role="listbox"]', { timeout: 5000 }).catch(() => {});
   await wait(500);
 
-  const filtroStr = filtro.toString();
   const clicked = await page.evaluate((filtroS: string) => {
     const fn = new Function('t', `return ${filtroS}`) as (t: string) => boolean;
     const panels = document.querySelectorAll('.p-autocomplete-panel, ul.p-autocomplete-items, [role="listbox"], p-autocomplete .p-autocomplete-items, .p-autocomplete-items-wrapper');
@@ -142,24 +144,12 @@ async function selecionarDropdown(
   }, filtroStr);
 
   if (clicked) {
-    LOG(`Clicou no item: ${clicked}`);
+    LOG(`Clicou no item do painel: ${clicked}`);
     return clicked;
   }
 
-  return page.evaluate((filtroS: string) => {
-    const fn = new Function('t', `return ${filtroS}`) as (t: string) => boolean;
-    const all = document.querySelectorAll<HTMLElement>('[role="option"], li, .p-autocomplete-item, .p-element, .p-ripple');
-    for (const el of all) {
-      if (el.offsetParent !== null) {
-        const t = el.textContent?.trim().toLowerCase() || '';
-        if (fn(t)) {
-          el.click();
-          return el.textContent?.trim() || '';
-        }
-      }
-    }
-    return null;
-  }, filtroStr);
+  LOG(`Nenhum item encontrado para o filtro: ${filtroStr.slice(0, 60)}`);
+  return null;
 }
 
 async function preencherInputKeyboard(
@@ -196,7 +186,7 @@ async function preencherEEnviar(
   });
   await wait(3000);
 
-  await diagnosticarFormulario(page);
+  if (DEBUG) await diagnosticarFormulario(page);
   await injectFillHelper(page);
 
   await preencherAutocomplete(page, 'Tipo de certidão', tipo);
@@ -255,7 +245,7 @@ async function preencherEEnviarMulti(
   });
   await wait(3000);
 
-  await diagnosticarFormulario(page);
+  if (DEBUG) await diagnosticarFormulario(page);
   await injectFillHelper(page);
 
   // Seleciona Tipo de certidão
@@ -302,45 +292,10 @@ async function preencherEEnviarMulti(
 
 async function capturarPDF(page: import('puppeteer').Page): Promise<Uint8Array | null> {
   await wait(3000);
-
-  const pdfUrl = await page.evaluate(() => {
-    const e = document.querySelector('embed[type="application/pdf"]');
-    if (e) return (e as HTMLEmbedElement).src;
-    const o = document.querySelector('object[type="application/pdf"]');
-    if (o) return (o as HTMLObjectElement).data;
-    const a = document.querySelector('a[href$=".pdf"], a[href*="download"]');
-    if (a) return (a as HTMLAnchorElement).href;
-    return null;
-  });
-
-  if (pdfUrl) {
-    LOG(`Baixando PDF de: ${pdfUrl.slice(0, 100)}`);
-    const buf = await page.evaluate(async (url) => {
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) return null;
-        const blob = await resp.blob();
-        const ab = await blob.arrayBuffer();
-        return Array.from(new Uint8Array(ab));
-      } catch { return null; }
-    }, pdfUrl);
-
-    if (buf) {
-      LOG(`PDF via fetch (${buf.length} bytes)`);
-      return new Uint8Array(buf);
-    }
-  }
-
   if (page.isClosed()) return null;
-
-  try {
-    const buf = await page.pdf({ format: 'A4', printBackground: true });
-    LOG(`PDF via print (${buf.length} bytes)`);
-    return buf;
-  } catch {
-    LOG('Erro ao gerar PDF via print');
-    return null;
-  }
+  const buf = await tentarBaixarPDF(page);
+  if (buf) LOG(`PDF capturado (${buf.length} bytes)`);
+  return buf;
 }
 
 export class TRF1Connector implements IConnector {
@@ -348,8 +303,8 @@ export class TRF1Connector implements IConnector {
 
   async consultar(
     dados: DadosProprietario,
-    captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta');
@@ -362,6 +317,7 @@ export class TRF1Connector implements IConnector {
   const runs = [
     {
       tipo: 'Cível',
+      chave: 'TRF1_CIVEL',
       orgaos: ['SJDF', 'TRF1'],
       filtroTipo: (t: string) => t.includes('cível'),
       filtrosOrgao: [
@@ -377,6 +333,7 @@ export class TRF1Connector implements IConnector {
     },
     {
       tipo: 'Criminal',
+      chave: 'TRF1_CRIMINAL',
       orgaos: ['SJDF', 'TRF1'],
       filtroTipo: (t: string) => t.includes('criminal'),
       filtrosOrgao: [
@@ -390,23 +347,28 @@ export class TRF1Connector implements IConnector {
         },
       ],
     },
-  ];
+  ].filter(r => !certKeys || certKeys.length === 0 || certKeys.includes(r.chave));
 
   const pdfs: Uint8Array[] = [];
   const errors: string[] = [];
   const throttle = criarRateLimit(4000);
 
-  for (const run of runs) {
+  for (let i = 0; i < runs.length; i++) {
+    const run = runs[i];
+    if (i > 0) {
+      LOG(`Aguardando 5s antes do proximo orgao...`);
+      await wait(5000);
+    }
+
     try {
       if (pageClosed) throw new Error('Pagina fechada pelo usuario');
-
       await throttle();
 
       LOG(`--- ${run.tipo} (${run.orgaos.join(' + ')}) ---`);
       await preencherEEnviarMulti(page, dados, run.tipo, run.orgaos, run.filtroTipo, run.filtrosOrgao);
 
       let captchaType = null;
-      for (let i = 0; i < 30; i++) {
+      for (let tentativa = 0; tentativa < 30; tentativa++) {
         if (pageClosed) throw new Error('Pagina fechada pelo usuario');
         captchaType = await detectarCaptcha(page);
         if (captchaType) break;
@@ -416,29 +378,10 @@ export class TRF1Connector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-
-        if (captchaManager && jobId) {
-          const chave = `${jobId}-${this.nome}-${run.tipo}`;
-          const img = await page.screenshot({ type: 'png' });
-
-          LOG('Aguardando usuario resolver CAPTCHA na janela do navegador...');
-          const waitPromise = captchaManager.waitForSolution(chave, `${this.nome} (${run.tipo})`, img, captchaType, page.url());
-          esperarCaptchaInterativo(page, captchaType).then(ok => {
-            if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
-          });
-          await Promise.race([
-            waitPromise,
-            new Promise((_, reject) => {
-              const check = () => {
-                if (pageClosed) reject(new Error('Pagina fechada pelo usuario'));
-                else page.once('close', check);
-              };
-              page.once('close', check);
-            }),
-          ]);
-          LOG('CAPTCHA resolvido, continuando...');
-          await wait(2000);
-        }
+        LOG('CAPTCHA detectado - resolva na janela do navegador...');
+        await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA resolvido, continuando...');
+        await wait(2000);
       }
 
       const pdf = await capturarPDF(page);

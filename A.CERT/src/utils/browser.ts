@@ -35,6 +35,9 @@ export async function createPage(): Promise<Page> {
 
   page.on('pageerror', (err) => console.log(`[PAGE CRASH] ${String(err)}`));
 
+  // Cookie auto-accept desabilitado — cliques acidentais redirecionam sites
+  // Cada conector deve lidar com cookies explicitamente se necessario
+
   await page.setViewport({ width: 1366, height: 768 });
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'

@@ -69,7 +69,7 @@ export default function DossierEditModal({ dossier, onClose, onSave }: Props) {
 
   useEffect(() => {
     const token = localStorage.getItem("acert_token");
-    fetch("http://localhost:3001/api/team/enriched", {
+    fetch("/api/team/enriched", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => r.json())
@@ -81,7 +81,7 @@ export default function DossierEditModal({ dossier, onClose, onSave }: Props) {
     setSaving(true);
     try {
       const token = localStorage.getItem("acert_token");
-      const r = await fetch(`http://localhost:3001/api/dossiers/${dossier.id}`, {
+      const r = await fetch(`/api/dossiers/${dossier.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

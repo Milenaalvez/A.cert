@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import NovoDossieModal from "@/components/NovoDossieModal";
+import { useT } from "@/i18n/useT";
 
 interface Dossier {
   id: string; identifier: string; status: string; priority: string; responsible: string;
@@ -72,6 +73,7 @@ function DossierCard({ dossier }: { dossier: Dossier }) {
 }
 
 export default function DossiesPage() {
+  const { t } = useT();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export default function DossiesPage() {
     if (activeTab !== "todos") params.set("status", STATUS_MAP[activeTab]);
     params.set("page", String(currentPage)); params.set("limit", "12");
     try {
-      const r = await fetch(`http://localhost:3001/api/dossiers?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const r = await fetch(`/api/dossiers?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!r.ok) throw new Error("Falha ao carregar");
       setData(await r.json());
     } catch (e: any) { setError(e.message); }
@@ -129,7 +131,7 @@ export default function DossiesPage() {
           <div className="flex items-center gap-3 shrink-0 pt-0.5">
             <div className="relative">
               <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-              <input type="text" placeholder="Buscar por número, pessoa ou imóvel..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-[360px] focus:outline-none placeholder:text-muted transition-colors" style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-surface)", paddingLeft: "42px", paddingRight: "16px" }} onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00" }} onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)" }} />
+              <input type="text" placeholder={t("dossiers.search")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-[360px] focus:outline-none placeholder:text-muted transition-colors" style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-surface)", paddingLeft: "42px", paddingRight: "16px" }} onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00" }} onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)" }} />
             </div>
           </div>
         </div>

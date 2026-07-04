@@ -20,6 +20,7 @@ import {
   Star,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useT } from "@/i18n/useT";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PageHeader } from "@/components/PageHeader";
 import { StatsCard } from "@/components/StatsCard";
@@ -160,6 +161,7 @@ const quickActions = [
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t } = useT();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export default function DashboardPage() {
     const newPriority = priorityStar(dossier.priority) ? "Regular" : "Preferencial";
     const token = localStorage.getItem("acert_token");
     try {
-      const r = await fetch(`http://localhost:3001/api/dossiers/${dossier.id}`, {
+      const r = await fetch(`/api/dossiers/${dossier.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -212,7 +214,7 @@ export default function DashboardPage() {
   const fetchDashboard = useCallback(async () => {
     const token = localStorage.getItem("acert_token");
     try {
-      const r = await fetch("http://localhost:3001/api/dashboard", {
+      const r = await fetch("/api/dashboard", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!r.ok) throw new Error("Falha ao carregar dashboard");
@@ -239,7 +241,7 @@ export default function DashboardPage() {
     params.set("page", String(dossierPage));
     params.set("limit", "15");
     try {
-      const r = await fetch(`http://localhost:3001/api/dossiers?${params}`, {
+      const r = await fetch(`/api/dossiers?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!r.ok) throw new Error("Falha ao carregar dossiês");
@@ -335,8 +337,8 @@ export default function DashboardPage() {
         <div style={{ marginBottom: 32 }}>
           <div style={{ marginTop: 24 }}>
             <PageHeader
-              title="Dashboard"
-              subtitle="Gerencie todos os dossiês e acompanhe o andamento das solicitações."
+              title={t("dashboard.title")}
+              subtitle={t("dashboard.subtitle")}
             />
           </div>
         </div>
@@ -344,41 +346,41 @@ export default function DashboardPage() {
         <div className="dashboard-stats" style={{ marginBottom: 0, marginTop: -12 }}>
           <StatsCard
             icon={FolderOpen}
-            title="Dossiês em andamento"
+            title={t("dashboard.dossiersInProgress")}
             value={String(data.dossiersAndamento)}
             growth="+12%"
             growthPositive={true}
-            complement="Em relação ao mês anterior"
+            complement={t("dashboard.lastMonth")}
             iconBg="#FFF7ED"
             iconColor="#FF7A00"
           />
           <StatsCard
             icon={AlertTriangle}
-            title="Pendências críticas"
+            title={t("dashboard.pendingCritical")}
             value={String(data.pendenciasCriticas)}
             growth={pendenciasGrowth}
             growthPositive={pendenciasPositive}
-            complement="Em relação à semana passada"
+            complement={t("dashboard.lastWeek")}
             iconBg="#FEF2F2"
             iconColor="#DC2626"
           />
           <StatsCard
             icon={ScrollText}
-            title="Certidões emitidas"
+            title={t("config.certidoes_emitidas")}
             value={String(data.certidoesEmitidas)}
             growth={certGrowth}
             growthPositive={true}
-            complement="Este mês"
+            complement={t("reports.periods.month")}
             iconBg="#ECFDF5"
             iconColor="#059669"
           />
           <StatsCard
             icon={CheckCircle2}
-            title="Taxa de conclusão"
+            title={t("dashboard.completionRate")}
             value={`${data.taxaConclusao}%`}
             growth={taxaGrowth}
             growthPositive={taxaDiff >= 0}
-            complement="Em relação ao período anterior"
+            complement={t("dashboard.previousPeriod")}
             iconBg="#ECFDF5"
             iconColor="#059669"
           />
@@ -410,8 +412,8 @@ export default function DashboardPage() {
                       onClick={() => setShowPeriodMenu(!showPeriodMenu)}
                       className="flex items-center gap-1.5 h-8 px-3 -mb-px rounded-[6px] text-[12px] font-medium transition-colors border border-transparent hover:border-[var(--border-default)]"
                     >
-                      <Calendar size={14} strokeWidth={1.5} className={isDark ? "text-white" : "text-muted"} />
-                      <span className={isDark ? "text-white" : "text-body"}>{PERIOD_LABELS[dossierPeriod]}</span>
+                      <Calendar size={14} strokeWidth={1.5} className={isDark ? "text-primary" : "text-muted"} />
+                      <span className={isDark ? "text-primary" : "text-body"}>{PERIOD_LABELS[dossierPeriod]}</span>
                     </button>
                     {showPeriodMenu && (
                       <>
@@ -626,7 +628,7 @@ export default function DashboardPage() {
                 data={data.distribution.map((d) => ({
                   label: priorityLabels[d.label] || d.label,
                   value: d.total,
-                  color: donutColors[d.label] || "#6B7280",
+                  color: donutColors[d.label] || "var(--text-secondary)",
                 }))}
                 total={donutTotal}
               />

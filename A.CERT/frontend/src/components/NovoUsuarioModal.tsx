@@ -1,16 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, UserPlus, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { X, UserPlus, Pencil, Loader2, Camera } from "lucide-react";
 import * as teamApi from "@/services/teamApi";
+import { useT } from "@/i18n/useT";
+import ConfirmModal from "./ConfirmModal";
+
+interface EnrichedUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  departmentId?: string;
+  positionId?: string;
+  contractType?: string;
+  registrationNumber?: string;
+  phone?: string;
+  weeklyHours?: number;
+  hireDate?: string;
+  isActive?: boolean;
+  avatar?: string | null;
+}
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  editUser?: EnrichedUser | null;
 }
 
-export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
+export default function NovoUsuarioModal({ open, onClose, onCreated, editUser }: Props) {
+  const { t } = useT();
+  const isEditing = !!editUser;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
@@ -21,16 +42,60 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
   const [weeklyHours, setWeeklyHours] = useState(40);
   const [contractType, setContractType] = useState("CLT");
   const [isActive, setIsActive] = useState(true);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [departments, setDepartments] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
+
+  // Store initial values for change detection
+  const initialRef = useRef({ name: "", email: "", cpf: "", phone: "" });
+
+  const hasChanges = useMemo(() => {
+    const init = initialRef.current;
+    return name !== init.name || email !== init.email || cpf !== init.cpf || phone !== init.phone;
+  }, [name, email, cpf, phone]);
+
+  function handleClose() {
+    if (hasChanges && !showConfirmCancel) { setShowConfirmCancel(true); return; }
+    onClose();
+  }
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
 
   useEffect(() => {
     if (open) {
       teamApi.departments().then(setDepartments).catch(() => {});
+      if (editUser) {
+        setName(editUser.name);
+        setEmail(editUser.email);
+        setCpf(editUser.registrationNumber || "");
+        setPhone(editUser.phone || "");
+        setRole(editUser.role);
+        setDepartmentId(editUser.departmentId || "");
+        setPositionId(editUser.positionId || "");
+        setWeeklyHours(editUser.weeklyHours || 40);
+        setContractType(editUser.contractType || "CLT");
+        setIsActive(editUser.isActive !== false);
+        initialRef.current = { name: editUser.name, email: editUser.email, cpf: editUser.registrationNumber || "", phone: editUser.phone || "" };
+      } else {
+        initialRef.current = { name: "", email: "", cpf: "", phone: "" };
+        setName(""); setEmail(""); setCpf(""); setPhone("");
+        setRole("EMPLOYEE"); setDepartmentId(""); setPositionId("");
+        setWeeklyHours(40); setContractType("CLT"); setIsActive(true);
+        setError(""); setPositions([]);
+      }
     }
-  }, [open]);
+  }, [open, editUser]);
 
   useEffect(() => {
     if (departmentId && open) {
@@ -47,23 +112,34 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
     setError("");
     setSending(true);
     try {
-      await teamApi.create({
-        name,
-        email,
-        registrationNumber: cpf,
-        phone,
-        role,
-        departmentId: departmentId || null,
-        positionId: positionId || null,
-        weeklyHours,
-        contractType,
-        hireDate: new Date().toISOString().split("T")[0],
-        isActive,
-      });
+      if (isEditing && editUser) {
+        if (avatarFile) {
+          await teamApi.uploadAvatar(editUser.id, avatarFile);
+        }
+        await teamApi.update(editUser.id, {
+          name, role,
+          departmentId: departmentId || null,
+          positionId: positionId || null,
+          contractType, weeklyHours, phone,
+        });
+      } else {
+        const result = await teamApi.create({
+          name, email,
+          registrationNumber: cpf, phone, role,
+          departmentId: departmentId || null,
+          positionId: positionId || null,
+          weeklyHours, contractType,
+          hireDate: new Date().toISOString().split("T")[0],
+          isActive,
+        });
+        if (avatarFile && result?.user?.id) {
+          await teamApi.uploadAvatar(result.user.id, avatarFile);
+        }
+      }
       onCreated();
       onClose();
     } catch (err: any) {
-      setError(err.message || "Erro ao criar usuário");
+      setError(err.message || "Erro ao salvar");
     } finally {
       setSending(false);
     }
@@ -86,8 +162,8 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={handleClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleClose}>
         <div
           className="w-full bg-surface flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
           style={{
@@ -104,26 +180,38 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
             style={{ padding: "24px 28px 20px", borderBottom: "1px solid var(--border-light)" }}
           >
             <div className="flex items-center gap-4">
-              <div
-                className="w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0"
-                style={{ background: "var(--badge-orange-bg)" }}
-              >
-                <UserPlus size={20} strokeWidth={1.5} color="#FF7A00" />
+              <div className="relative shrink-0">
+                <div
+                  className="w-11 h-11 rounded-[12px] flex items-center justify-center overflow-hidden"
+                  style={{ background: "var(--badge-orange-bg)" }}
+                >
+                  {avatarPreview || editUser?.avatar ? (
+                    <img src={avatarPreview || editUser?.avatar || ""} alt="" className="w-full h-full object-cover" />
+                  ) : isEditing ? (
+                    <Pencil size={20} strokeWidth={1.5} color="#FF7A00" />
+                  ) : (
+                    <UserPlus size={20} strokeWidth={1.5} color="#FF7A00" />
+                  )}
+                </div>
+                <label style={{ position: "absolute", bottom: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: "#FF7A00", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <Camera size={10} strokeWidth={2.5} color="#FFF" />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                </label>
               </div>
               <div>
                 <h2
                   className="text-[17px] font-bold tracking-tight"
                   style={{ color: "var(--text-primary)", lineHeight: 1.2 }}
                 >
-                  Novo Usuário
-                </h2>
-                <p className="text-[12px]" style={{ color: "var(--text-muted)", marginTop: "2px" }}>
-                  Cadastre um novo colaborador no sistema
-                </p>
+                    {isEditing ? "Editar Usuário" : "Novo Usuário"}
+                  </h2>
+                  <p className="text-[12px]" style={{ color: "var(--text-muted)", marginTop: "2px" }}>
+                    {isEditing ? "Edite as informações do vendedor" : "Cadastre um novo vendedor no sistema"}
+                  </p>
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="w-8 h-8 rounded-[8px] flex items-center justify-center text-muted transition-colors"
               style={{ border: "none", background: "transparent", cursor: "pointer" }}
               onMouseEnter={(e) => {
@@ -223,6 +311,8 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
                     onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
                   >
                     <option value="EMPLOYEE">Colaborador</option>
+                    <option value="VENDOR">Vendedor</option>
+                    <option value="SUPERVISOR">Supervisor</option>
                     <option value="RH">RH</option>
                     <option value="ADMIN">Administrador</option>
                     <option value="DEVELOPER">Desenvolvedor</option>
@@ -369,36 +459,39 @@ export default function NovoUsuarioModal({ open, onClose, onCreated }: Props) {
               <span style={{ color: "#DC2626" }}>*</span> Campos obrigatórios
             </span>
             <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-[38px] px-5 rounded-[8px] text-[13px] font-medium text-secondary border border-default transition-colors"
-                style={{ background: "transparent", cursor: "pointer" }}
+              <button onClick={handleClose}
+                style={{ height: "38px", padding: "0 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 500,
+                  color: "var(--text-secondary)", border: "1px solid var(--border-default)", background: "transparent", cursor: "pointer" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-              >
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
                 Cancelar
               </button>
-              <button
-                onClick={handleSubmit}
-                disabled={sending}
-                className="h-[38px] px-7 rounded-[8px] text-[13px] font-semibold text-white flex items-center gap-1.5 transition-colors"
-                style={{
-                  border: "none",
-                  cursor: sending ? "not-allowed" : "pointer",
-                  background: sending ? "var(--text-muted)" : "#FF7A00",
-                  opacity: sending ? 0.8 : 1,
-                }}
+              <button onClick={handleSubmit} disabled={sending}
+                style={{ height: "38px", padding: "0 28px", borderRadius: "8px", border: "none", fontSize: "13px",
+                  fontWeight: 600, color: "#FFF", cursor: sending ? "not-allowed" : "pointer",
+                  background: sending ? "var(--text-muted)" : "#FF7A00", display: "flex", alignItems: "center", gap: "6px",
+                  transition: "all 0.15s ease", opacity: sending ? 0.8 : 1 }}
                 onMouseEnter={(e) => { if (!sending) e.currentTarget.style.background = "#E06900"; }}
-                onMouseLeave={(e) => { if (!sending) e.currentTarget.style.background = "#FF7A00"; }}
-              >
+                onMouseLeave={(e) => { if (!sending) e.currentTarget.style.background = "#FF7A00"; }}>
                 {sending && <Loader2 size={15} strokeWidth={2} className="animate-spin" />}
-                {sending ? "Criando..." : "Criar Usuário"}
+                {sending ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={showConfirmCancel}
+        title="Descartar alterações?"
+        message="Você preencheu alguns campos. Tem certeza que deseja sair? As informações serão perdidas."
+        variant="warning"
+        confirmLabel="Sim, Descartar"
+        cancelLabel="Continuar Editando"
+        onConfirm={onClose}
+        onCancel={() => setShowConfirmCancel(false)}
+        onClose={() => setShowConfirmCancel(false)}
+      />
     </>
   );
 }

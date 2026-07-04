@@ -11,11 +11,18 @@ interface AuthResponse {
   user: User;
 }
 
-export async function register(name: string, email: string, password: string, captchaToken?: string): Promise<{ success: boolean; message: string }> {
+export async function register(
+  name: string, email: string, password: string,
+  type: 'pf' | 'pj' = 'pf', cpf?: string, cnpj?: string, phone?: string
+): Promise<{ success: boolean; message: string }> {
+  const body: Record<string, any> = { name, email, password, type };
+  if (cpf) body.cpf = cpf;
+  if (cnpj) body.cnpj = cnpj;
+  if (phone) body.phone = phone;
   const res = await fetch(`${BASE}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password, captchaToken }),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Erro ao criar conta');

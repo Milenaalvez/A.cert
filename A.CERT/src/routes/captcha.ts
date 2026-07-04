@@ -1,68 +1,48 @@
 import { Router } from 'express';
-import svgCaptcha from 'svg-captcha';
-import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-const store = new Map<string, { solution: string; expiresAt: number }>();
+const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET_KEY || '';
+const VERIFIED_TOKENS = new Set<string>();
 
-const TTL = 5 * 60 * 1000;
+router.post('/verify', async (req, res) => {
+  try {
+    const { token } = req.body;
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, entry] of store) {
-    if (entry.expiresAt < now) store.delete(token);
+    if (!token) {
+      res.status(400).json({ valid: false, error: 'Token é obrigatório' });
+      return;
+    }
+
+    const formData = new URLSearchParams();
+    formData.append('secret', TURNSTILE_SECRET);
+    formData.append('response', token);
+
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json() as { success: boolean; 'error-codes'?: string[] };
+
+    if (data.success) {
+      VERIFIED_TOKENS.add(token);
+      setTimeout(() => VERIFIED_TOKENS.delete(token), 120_000);
+      res.json({ valid: true });
+    } else {
+      res.json({ valid: false, error: (data['error-codes'] || ['verification-failed']).join(', ') });
+    }
+  } catch (err) {
+    console.error('[Turnstile] Erro na verificação:', err);
+    res.status(500).json({ valid: false, error: 'Erro ao verificar CAPTCHA' });
   }
-}, 60_000);
-
-router.post('/generate', (_req, res) => {
-  const captcha = svgCaptcha.createMathExpr({
-    mathMin: 1,
-    mathMax: 20,
-    mathOperator: '+',
-    noise: 3,
-    color: true,
-  });
-
-  const token = uuidv4();
-  store.set(token, { solution: captcha.text, expiresAt: Date.now() + TTL });
-
-  res.json({ svg: captcha.data, token });
-});
-
-router.post('/verify', (req, res) => {
-  const { token, answer } = req.body;
-
-  if (!token || !answer) {
-    res.status(400).json({ valid: false, error: 'Token e resposta são obrigatórios' });
-    return;
-  }
-
-  const entry = store.get(token);
-  if (!entry) {
-    res.status(400).json({ valid: false, error: 'CAPTCHA expirado ou já utilizado' });
-    return;
-  }
-
-  if (entry.solution !== String(answer).trim()) {
-    res.json({ valid: false, error: 'Resposta incorreta' });
-    return;
-  }
-
-  store.delete(token);
-
-  const verifiedToken = uuidv4();
-  store.set(verifiedToken, { solution: '__verified__', expiresAt: Date.now() + 120_000 });
-
-  res.json({ valid: true, verifiedToken });
 });
 
 export function checkCaptchaVerified(token: string | undefined): boolean {
   if (!token) return false;
-  const entry = store.get(token);
-  if (!entry || entry.solution !== '__verified__') return false;
-  store.delete(token);
-  return true;
+  const exists = VERIFIED_TOKENS.has(token);
+  if (exists) VERIFIED_TOKENS.delete(token);
+  return exists;
 }
 
 export default router;

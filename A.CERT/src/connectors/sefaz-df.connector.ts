@@ -1,50 +1,34 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
-import type { CaptchaManager } from '../services/captcha-manager.service.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
-import { wait } from '../utils/retry-manager.service.js';
+import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[SEFAZ-DF] ${msg}`);
-
-const CERTIDAO_URL = 'https://ww1.receita.fazenda.df.gov.br/ciadadao/certidoes/Certidao';
-const FINALIDADE = 'LAVRAR ESCRITURA PÚBLICA';
+const DEBUG = process.env.DEBUG;
 
 async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
   const info = await page.evaluate(() => {
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input')).map(el => ({
-      id: el.id,
-      name: el.name,
-      type: el.type,
-      placeholder: el.placeholder,
-      className: el.className.slice(0, 50),
+      id: el.id, name: el.name, type: el.type, placeholder: el.placeholder, className: el.className.slice(0, 50),
     }));
     const labels = Array.from(document.querySelectorAll('label')).map(el => ({
-      htmlFor: el.htmlFor,
-      text: (el.textContent || '').trim().slice(0, 80),
+      htmlFor: el.htmlFor, text: (el.textContent || '').trim().slice(0, 80),
     }));
     const buttons = Array.from(document.querySelectorAll('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]')).map(el => {
       const text = (el as HTMLElement).textContent?.trim() || (el as HTMLInputElement).value || '';
       return { tag: el.tagName, text: text.slice(0, 60), type: (el as HTMLInputElement).type || '', class: el.className.slice(0, 40) };
     });
     const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select')).map(el => ({
-      id: el.id,
-      name: el.name,
-      options: Array.from(el.options).map(o => ({ text: o.text.trim(), value: o.value })),
+      id: el.id, name: el.name, options: Array.from(el.options).map(o => ({ text: o.text.trim(), value: o.value })),
     }));
     const radios = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="radio"]')).map(el => ({
-      id: el.id,
-      name: el.name,
-      value: el.value,
-      label: document.querySelector<HTMLLabelElement>(`label[for="${el.id}"]`)?.textContent?.trim() || '',
+      id: el.id, name: el.name, value: el.value, label: document.querySelector<HTMLLabelElement>(`label[for="${el.id}"]`)?.textContent?.trim() || '',
     }));
     const checkboxes = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')).map(el => ({
-      id: el.id,
-      name: el.name,
-      value: el.value,
-      label: document.querySelector<HTMLLabelElement>(`label[for="${el.id}"]`)?.textContent?.trim() || '',
+      id: el.id, name: el.name, value: el.value, label: document.querySelector<HTMLLabelElement>(`label[for="${el.id}"]`)?.textContent?.trim() || '',
     }));
     const allText: string[] = [];
     document.querySelectorAll('h1, h2, h3, h4, h5, p, span, td, .mensagem, .alert, .panel, .content, .texto, strong').forEach(el => {
@@ -53,7 +37,6 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
     });
     return { inputs, labels, buttons, selects, radios, checkboxes, allText: allText.slice(0, 40) };
   });
-
   LOG(`Inputs (${info.inputs.length}):`);
   for (const i of info.inputs) LOG(`  id="${i.id}" name="${i.name}" type="${i.type}" placeholder="${i.placeholder}" class="${i.className}"`);
   LOG(`Labels (${info.labels.length}):`);
@@ -66,18 +49,8 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
   LOG(`Textos: ${info.allText.join(' | ')}`);
 }
 
-async function clicarBotaoPorTexto(page: import('puppeteer').Page, texto: string): Promise<boolean> {
-  return page.evaluate((txt) => {
-    const txtNorm = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const botoes = document.querySelectorAll('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]');
-    for (const b of botoes) {
-      const content = (b as HTMLElement).textContent?.trim() || (b as HTMLInputElement).value || '';
-      const norm = content.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (norm.includes(txtNorm)) { (b as HTMLElement).click(); return true; }
-    }
-    return false;
-  }, texto);
-}
+const CERTIDAO_URL = 'https://ww1.receita.fazenda.df.gov.br/ciadadao/certidoes/Certidao';
+const FINALIDADE = 'LAVRAR ESCRITURA PÚBLICA';
 
 async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto: string, valor: string): Promise<boolean> {
   const lblNorm = labelTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -98,18 +71,11 @@ async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto
   }, lblNorm);
 
   if (!sel) return false;
-  const el = await page.$(sel);
-  if (!el) return false;
-
-  await el.click();
-  await wait(100);
-  await page.keyboard.type(valor, { delay: 8 });
-  LOG(`Input "${labelTexto}"="${valor}" via ${sel}`);
-  return true;
+  return preencherInputRapido(page, sel, valor);
 }
 
 async function preencherInputFallback(page: import('puppeteer').Page, busca: string, valor: string): Promise<boolean> {
-  const result = await page.evaluate((b, v) => {
+  const sel = await page.evaluate((b) => {
     const lb = b.toLowerCase();
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input'));
     for (const inp of inputs) {
@@ -117,21 +83,13 @@ async function preencherInputFallback(page: import('puppeteer').Page, busca: str
       const name = (inp.name || '').toLowerCase();
       const ph = (inp.placeholder || '').toLowerCase();
       if (id.includes(lb) || name.includes(lb) || ph.includes(lb)) {
-        const proto = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-        const setter = proto?.set;
-        if (setter) {
-          setter.call(inp, v);
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          inp.value = v;
-        }
-        return inp.id || inp.name || 'unknown';
+        return inp.id ? `#${CSS.escape(inp.id)}` : inp.name ? `[name="${inp.name}"]` : 'input';
       }
     }
     return null;
-  }, busca, valor);
-  return result !== null;
+  }, busca);
+  if (!sel) return false;
+  return preencherInputRapido(page, sel, valor);
 }
 
 async function selecionarSelectPorTexto(page: import('puppeteer').Page, busca: string, valorTexto: string): Promise<boolean> {
@@ -182,10 +140,12 @@ async function marcarRadioPorLabel(page: import('puppeteer').Page, labelTexto: s
 export class SefazDFConnector implements IConnector {
   readonly nome = 'SEFAZ-DF';
 
+  readonly #throttle = criarRateLimit(3000);
+
   async consultar(
     dados: DadosProprietario,
-    captchaManager?: CaptchaManager,
     jobId?: string,
+    certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta SEFAZ-DF');
@@ -199,7 +159,7 @@ export class SefazDFConnector implements IConnector {
       await page.goto(CERTIDAO_URL, { waitUntil: 'networkidle2', timeout: 30000 });
       await wait(3000);
 
-      await diagnosticarFormulario(page);
+      if (DEBUG) await diagnosticarFormulario(page);
       await injectFillHelper(page);
 
       const cpfDigits = dados.cpf.replace(/\D/g, '');
@@ -237,18 +197,8 @@ export class SefazDFConnector implements IConnector {
       LOG(`Submit: ${submitOk}`);
 
       if (!submitOk) {
-        const genOk = await page.evaluate(() => {
-          const botoes = document.querySelectorAll('button, input[type="submit"], input[type="button"]');
-          for (const b of botoes) {
-            if ((b as HTMLElement).offsetParent !== null) { (b as HTMLElement).click(); return (b as HTMLElement).textContent?.trim() || 'generic'; }
-          }
-          return null;
-        });
-        LOG(`Submit generico: ${genOk}`);
-        if (!genOk) {
-          await page.close();
-          return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
-        }
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
       }
 
       await wait(2000);
@@ -258,32 +208,10 @@ export class SefazDFConnector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-
-        if (captchaManager && jobId) {
-          const chave = `${jobId}-${this.nome}`;
-          const img = await page.screenshot({ type: 'png' });
-
-          LOG('Aguardando resolucao CAPTCHA...');
-          const waitPromise = captchaManager.waitForSolution(chave, this.nome, img, captchaType, page.url());
-          esperarCaptchaInterativo(page, captchaType).then(ok => {
-            if (ok) captchaManager.resolveCaptcha(chave, 'resolved');
-          });
-          await Promise.race([
-            waitPromise,
-            new Promise((_, reject) => {
-              const check = () => {
-                if (pageClosed) reject(new Error('Pagina fechada'));
-                else page.once('close', check);
-              };
-              page.once('close', check);
-            }),
-          ]);
-          LOG('CAPTCHA resolvido');
-          await wait(3000);
-        } else {
-          await page.close();
-          return { status: 'captcha_required', orgao: this.nome, dataConsulta, error: 'CAPTCHA presente' };
-        }
+        LOG('CAPTCHA detectado - resolva na janela do navegador...');
+        await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA resolvido, continuando...');
+        await wait(3000);
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
@@ -301,12 +229,15 @@ export class SefazDFConnector implements IConnector {
         LOG(`Mensagem de erro: ${erroMsg.slice(0, 200)}`);
       }
 
-      await wait(2000);
-
       const protocolo = `SEFAZ-DF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      LOG('PDF capturado');
+      const pdfBuffer = await tentarBaixarPDF(page);
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
+      }
+      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
 
+      await this.#throttle();
       await page.close();
       return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };
     } catch (error) {

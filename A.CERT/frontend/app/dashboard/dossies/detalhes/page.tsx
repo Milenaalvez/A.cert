@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useT } from "@/i18n/useT";
 
 function DossierDetailContent() {
   const searchParams = useSearchParams();
@@ -25,6 +26,7 @@ function DossierDetailContent() {
 }
 
 export default function DossierDetailPage() {
+  const { t } = useT();
   return (
     <DashboardLayout>
       <div className="flex flex-col px-16 pt-12 pb-24 w-full gap-8">
