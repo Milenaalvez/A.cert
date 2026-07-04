@@ -106,6 +106,12 @@ export default function EmpresasPage() {
     setNewError(""); setLogoFile(null); setLogoPreview(null);
   }
 
+  function handleDismiss() {
+    setShowNew(false);
+    setNewName(""); setNewCnpj(""); setNewAdminName(""); setNewAdminEmail("");
+    setNewError(""); setLogoFile(null); setLogoPreview(null);
+  }
+
   const getHeaders = useCallback((): Record<string, string> => {
     const token = localStorage.getItem("acert_token");
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -407,8 +413,8 @@ export default function EmpresasPage() {
       {/* New Company Modal */}
       {showNew && (
         <>
-          <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={handleCloseNew} />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleCloseNew}>
+          <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={handleDismiss} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleDismiss}>
             <div className="w-full bg-surface flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
               style={{ maxWidth: "620px", borderRadius: "16px", border: "1px solid var(--border-default)", boxShadow: "0 25px 80px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}>
