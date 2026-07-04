@@ -166,12 +166,13 @@ export async function enviarEmailBoasVindas(email: string, name: string, tempPas
     const info = await transporter.sendMail({
       from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
       to: email,
-      subject: `Bem-vindo(a) à A.CERT, ${name}!`,
-      html: wrapEmail('Bem-vindo(a)!',
-        `<p style="margin:0 0 16px 0;">Que bom ter você conosco, <strong>${name}</strong>!</p>
-         <p style="margin:0 0 16px 0;">Sua empresa <strong>${companyName}</strong> já está na plataforma A.CERT.</p>
+      subject: `Bem-vindo(a) à ${companyName}, ${name}!`,
+      html: wrapEmail('Boas-vindas!',
+        `<p style="margin:0 0 16px 0;">Olá <strong>${name}</strong>,</p>
+         <p style="margin:0 0 16px 0;">Você foi cadastrado como <strong>administrador</strong> da empresa <strong>${companyName}</strong> na plataforma A.CERT.</p>
+         <p style="margin:0 0 16px 0;">Esta é sua conta de acesso inicial. Utilize as credenciais abaixo para entrar:</p>
          <div style="background:#F3F4F6;padding:16px;border-radius:8px;margin:18px 0;">
-           <p style="margin:0 0 8px 0;font-size:12px;color:#6B7280;">Seus dados de acesso:</p>
+           <p style="margin:0 0 8px 0;font-size:12px;color:#6B7280;">Dados de acesso:</p>
            <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#111827;">📧 ${email}</p>
            <p style="margin:0;font-size:14px;font-weight:700;color:#111827;">🔑 ${tempPassword}</p>
          </div>
