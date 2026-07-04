@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import prisma from '../lib/prisma.js';
+import { queryRaw, executeRaw } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
@@ -8,41 +8,60 @@ router.get('/', async (_req, res) => {
   try {
     const type = (_req.query.type as string) || '';
 
-    const personas = (!type || type === 'pessoas') ? await prisma.person.findMany({
-      where: { OR: [{ archivedAt: { not: null } }, { deletedAt: { not: null } }] },
-      select: { id: true, name: true, cpf: true, email: true, createdAt: true, archivedAt: true, deletedAt: true },
-      orderBy: { createdAt: 'desc' }, take: 100,
-    }).then(rows => rows.map(r => ({
-      id: r.id, title: r.name, subtitle1: r.cpf || '', subtitle2: r.email || '',
-      entityType: 'pessoas', entityLabel: 'Pessoa', archivedAt: r.archivedAt, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: {},
-    }))) : [];
+    const uuidRE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    const imoveis = (!type || type === 'imoveis') ? await prisma.property.findMany({
-      where: { OR: [{ deletedAt: { not: null } }] },
-      select: { id: true, identifier: true, address: true, registration: true, type: true, createdAt: true, deletedAt: true },
-      orderBy: { createdAt: 'desc' }, take: 100,
-    }).then(rows => rows.map(r => ({
-      id: r.id, title: r.identifier || '', subtitle1: r.address || '', subtitle2: r.registration || '',
-      entityType: 'imoveis', entityLabel: 'Imóvel', archivedAt: null, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: { type: r.type, registration: r.registration },
-    }))) : [];
+    const personas = (!type || type === 'pessoas')
+      ? (await queryRaw(
+          `SELECT id, name, cpf, email, created_at, archived_at, deleted_at
+           FROM persons WHERE deleted_at IS NOT NULL OR archived_at IS NOT NULL
+           ORDER BY COALESCE(deleted_at, archived_at) DESC LIMIT 100`
+        ) as any[]).map((r: any) => ({
+          id: r.id, title: r.name, subtitle1: r.cpf || '', subtitle2: r.email || '',
+          entityType: 'pessoas', entityLabel: 'Pessoa', archivedAt: r.archived_at, deletedAt: r.deleted_at, createdAt: r.created_at, extra: {},
+        }))
+      : [];
 
-    const dossies = (!type || type === 'dossies') ? await prisma.dossier.findMany({
-      where: { OR: [{ archivedAt: { not: null } }, { deletedAt: { not: null } }] },
-      select: { id: true, identifier: true, status: true, createdBy: true, createdAt: true, archivedAt: true, deletedAt: true },
-      orderBy: { createdAt: 'desc' }, take: 100,
-    }).then(rows => rows.map(r => ({
-      id: r.id, title: r.identifier || '', subtitle1: r.status || '', subtitle2: r.createdBy || '',
-      entityType: 'dossies', entityLabel: 'Dossiê', archivedAt: r.archivedAt, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: {},
-    }))) : [];
+    const imoveis = (!type || type === 'imoveis')
+      ? (await queryRaw(
+          `SELECT id, identifier, address, registration, type, created_at, deleted_at
+           FROM properties WHERE deleted_at IS NOT NULL
+           ORDER BY deleted_at DESC LIMIT 100`
+        ) as any[]).map((r: any) => {
+          const isUUID = uuidRE.test(r.identifier || '');
+          const title = isUUID || !r.identifier
+            ? (r.address ? r.address.split(',')[0].trim() : (r.type || 'Imóvel'))
+            : r.identifier;
+          return {
+            id: r.id, title,
+            subtitle1: isUUID ? `${r.type || 'Imóvel'} — ${r.address || 'Sem endereço'}` : (r.address || ''),
+            subtitle2: r.registration || '',
+            entityType: 'imoveis', entityLabel: 'Imóvel', archivedAt: null, deletedAt: r.deleted_at, createdAt: r.created_at,
+            extra: { type: r.type, registration: r.registration },
+          };
+        })
+      : [];
 
-    const usuarios = (!type || type === 'usuarios') ? await prisma.user.findMany({
-      where: { OR: [{ isActive: 0 }, { deletedAt: { not: null } }] },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, isActive: true, deletedAt: true },
-      orderBy: { createdAt: 'desc' }, take: 100,
-    }).then(rows => rows.map(r => ({
-      id: r.id, title: r.name, subtitle1: r.email, subtitle2: r.role || '',
-      entityType: 'usuarios', entityLabel: 'Usuário', archivedAt: null, deletedAt: r.deletedAt, createdAt: r.createdAt, extra: { isActive: r.isActive },
-    }))) : [];
+    const dossies = (!type || type === 'dossies')
+      ? (await queryRaw(
+          `SELECT id, identifier, status, created_by, created_at, archived_at, deleted_at
+           FROM dossiers WHERE deleted_at IS NOT NULL OR archived_at IS NOT NULL
+           ORDER BY COALESCE(deleted_at, archived_at) DESC LIMIT 100`
+        ) as any[]).map((r: any) => ({
+          id: r.id, title: r.identifier || '', subtitle1: r.status || '', subtitle2: r.created_by || '',
+          entityType: 'dossies', entityLabel: 'Dossiê', archivedAt: r.archived_at, deletedAt: r.deleted_at, createdAt: r.created_at, extra: {},
+        }))
+      : [];
+
+    const usuarios = (!type || type === 'usuarios')
+      ? (await queryRaw(
+          `SELECT id, name, email, role, created_at, is_active, deleted_at
+           FROM users WHERE is_active = 0 OR deleted_at IS NOT NULL
+           ORDER BY COALESCE(deleted_at, created_at) DESC LIMIT 100`
+        ) as any[]).map((r: any) => ({
+          id: r.id, title: r.name, subtitle1: r.email, subtitle2: r.role || '',
+          entityType: 'usuarios', entityLabel: 'Usuário', archivedAt: null, deletedAt: r.deleted_at, createdAt: r.created_at, extra: { isActive: r.is_active },
+        }))
+      : [];
 
     const results = [...personas, ...imoveis, ...dossies, ...usuarios];
     results.sort((a, b) => {
@@ -58,19 +77,45 @@ router.get('/', async (_req, res) => {
   }
 });
 
+router.get('/:entity/:id', async (req, res) => {
+  try {
+    const entity = req.params.entity as string;
+    const id = req.params.id as string;
+
+    if (entity === 'pessoas') {
+      const row = await queryRaw(`SELECT * FROM persons WHERE id = $1`, id);
+      res.json(row[0] || null);
+    } else if (entity === 'imoveis') {
+      const row = await queryRaw(`SELECT * FROM properties WHERE id = $1`, id);
+      res.json(row[0] || null);
+    } else if (entity === 'dossies') {
+      const row = await queryRaw(`SELECT * FROM dossiers WHERE id = $1`, id);
+      res.json(row[0] || null);
+    } else if (entity === 'usuarios') {
+      const row = await queryRaw(`SELECT id, name, email, role, department_id, position_id, is_active, last_access_at, created_at FROM users WHERE id = $1`, id);
+      res.json(row[0] || null);
+    } else {
+      res.status(400).json({ error: 'Entidade inválida' });
+    }
+  } catch (err) {
+    console.error('[Trash] Erro ao buscar detalhes:', err);
+    res.status(500).json({ error: 'Erro ao carregar detalhes' });
+  }
+});
+
 router.post('/:entity/:id/restore', authMiddleware, async (req, res) => {
   try {
     const entity = req.params.entity as string;
     const id = req.params.id as string;
 
     if (entity === 'usuarios') {
-      await prisma.user.update({ where: { id }, data: { isActive: 1, deletedAt: null } });
+      await executeRaw('UPDATE users SET is_active = 1, deleted_at = NULL WHERE id = $1', id);
     } else if (entity === 'pessoas') {
-      await prisma.person.update({ where: { id }, data: { archivedAt: null, deletedAt: null } });
+      await executeRaw('UPDATE persons SET archived_at = NULL, deleted_at = NULL WHERE id = $1', id);
     } else if (entity === 'imoveis') {
-      await prisma.property.update({ where: { id }, data: { deletedAt: null } });
+      await executeRaw('UPDATE properties SET deleted_at = NULL WHERE id = $1', id);
     } else if (entity === 'dossies') {
-      await prisma.dossier.update({ where: { id }, data: { archivedAt: null, deletedAt: null } });
+      await executeRaw('UPDATE dossiers SET archived_at = NULL, deleted_at = NULL WHERE id = $1', id);
     } else {
       res.status(400).json({ error: 'Entidade inválida' });
       return;
@@ -89,15 +134,22 @@ router.delete('/:entity/:id', authMiddleware, async (req, res) => {
     const id = req.params.id as string;
 
     if (entity === 'dossies') {
-      await prisma.certificate.deleteMany({ where: { dossierId: id } });
-      await prisma.activity.deleteMany({ where: { dossierRef: id } });
+      await executeRaw('DELETE FROM certificates WHERE dossier_id = $1', id);
+      await executeRaw('DELETE FROM activities WHERE dossier_ref = $1', id);
     }
 
-    if (entity === 'usuarios') await prisma.user.delete({ where: { id } });
-    else if (entity === 'pessoas') await prisma.person.delete({ where: { id } });
-    else if (entity === 'imoveis') await prisma.property.delete({ where: { id } });
-    else if (entity === 'dossies') await prisma.dossier.delete({ where: { id } });
-    else { res.status(400).json({ error: 'Entidade inválida' }); return; }
+    if (entity === 'usuarios') {
+      await executeRaw('DELETE FROM users WHERE id = $1', id);
+    } else if (entity === 'pessoas') {
+      await executeRaw('DELETE FROM persons WHERE id = $1', id);
+    } else if (entity === 'imoveis') {
+      await executeRaw('DELETE FROM properties WHERE id = $1', id);
+    } else if (entity === 'dossies') {
+      await executeRaw('DELETE FROM dossiers WHERE id = $1', id);
+    } else {
+      res.status(400).json({ error: 'Entidade inválida' });
+      return;
+    }
 
     res.json({ success: true });
   } catch (err) {

@@ -14,6 +14,7 @@ import { PersonDetailModal } from "@/components/PersonDetailModal";
 import { NovaPessoaModal } from "@/components/NovaPessoaModal";
 import VinculoParentalModal from "@/components/VinculoParentalModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useT } from "@/i18n/useT";
 
 interface PersonRow {
   id: string; name: string; cpf: string | null; cnpj: string | null;
@@ -216,6 +217,7 @@ async function fetchPersonDetails(ids: string[]): Promise<Map<string, any>> {
 
 export default function PessoasPage() {
   const router = useRouter();
+  const { t } = useT();
   const [allPeople, setAllPeople] = useState<PersonRow[]>([]);
   const [stats, setStats] = useState<ApiResponse["stats"] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -378,10 +380,10 @@ export default function PessoasPage() {
 
         {/* Stats Cards */}
         <div className="dashboard-stats" style={{ marginBottom: "16px" }}>
-          <StatsCard icon={Users} title="Pessoas cadastradas" value={String(stats?.total || 0)} complement={`${allPeople.filter(p => new Date(p.createdAt) > new Date(Date.now() - 30 * 86400000)).length} este mês`} iconBg="var(--badge-orange-bg)" iconColor="#FF7A00" />
-          <StatsCard icon={AlertCircle} title="Pendências documentais" value={String(stats?.pendenciasDocumentais || 0)} complement={stats?.pendenciasDocumentais ? `${Math.round(stats.pendenciasDocumentais / Math.max(allPeople.length, 1) * 100)}% do total` : "Nenhuma pendência"} iconBg="var(--badge-red-bg)" iconColor="#DC2626" />
-          <StatsCard icon={BadgeCheck} title="Documentação completa" value={String(stats?.documentacaoCompleta || 0)} complement={stats?.documentacaoCompleta ? `${Math.round(stats.documentacaoCompleta / Math.max(allPeople.length, 1) * 100)}% do total` : "—"} iconBg="var(--badge-green-bg)" iconColor="#059669" />
-          <StatsCard icon={TrendingUp} title="Pessoas vinculadas" value={String(stats?.vinculadas || 0)} complement="a dossiês ativos" iconBg="var(--badge-blue-bg)" iconColor="#2563EB" />
+          <StatsCard icon={Users} title={t("people.stats.total")} value={String(stats?.total || 0)} complement={`${allPeople.filter(p => new Date(p.createdAt) > new Date(Date.now() - 30 * 86400000)).length} este mês`} iconBg="var(--badge-orange-bg)" iconColor="#FF7A00" />
+          <StatsCard icon={AlertCircle} title={t("people.stats.pending")} value={String(stats?.pendenciasDocumentais || 0)} complement={stats?.pendenciasDocumentais ? `${Math.round(stats.pendenciasDocumentais / Math.max(allPeople.length, 1) * 100)}% do total` : "Nenhuma pendência"} iconBg="var(--badge-red-bg)" iconColor="#DC2626" />
+          <StatsCard icon={BadgeCheck} title={t("people.stats.complete")} value={String(stats?.documentacaoCompleta || 0)} complement={stats?.documentacaoCompleta ? `${Math.round(stats.documentacaoCompleta / Math.max(allPeople.length, 1) * 100)}% do total` : "—"} iconBg="var(--badge-green-bg)" iconColor="#059669" />
+          <StatsCard icon={TrendingUp} title={t("people.stats.linked")} value={String(stats?.vinculadas || 0)} complement="a dossiês ativos" iconBg="var(--badge-blue-bg)" iconColor="#2563EB" />
         </div>
 
         {/* Filter Tabs (dashboard style — local only, no reload) */}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
+import { enviarEmailBoasVindas } from '../services/email.service.js';
 
 /* ─── Helpers ─── */
 
@@ -184,6 +185,8 @@ teamRouter.post('/', async (req, res) => {
       INSERT INTO team_activities (id, user_id, user_name, action, description, entity_type, entity_id, timestamp)
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
     `, randomUUID(), id, name.trim(), 'CREATE_USER', `Criou o colaborador ${name.trim()}`, 'user', id);
+
+    enviarEmailBoasVindas(email.toLowerCase().trim(), name.trim(), tempPassword, 'A.CERT');
 
     res.status(201).json({
       tempPassword,

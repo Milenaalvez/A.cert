@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import SuccessModal from "./SuccessModal";
 import ErrorModal from "./ErrorModal";
+import { useT } from "@/i18n/useT";
 
 const inputBase: React.CSSProperties = {
   height: "42px", borderRadius: "6px", border: "1px solid var(--border-default)",
@@ -74,6 +75,7 @@ const STEPS = [
 ];
 
 export default function NovoDossieModal({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
+  const { t } = useT();
   const [step, setStep] = useState(1);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -462,7 +464,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                     {["Baixa", "Normal", "Alta", "Urgente"].map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </Field>
-                <Field label="Responsável">
+                <Field label={t("dossiers.columns.responsible")}>
                   {!selectedResp ? (
                     <div style={{ position: "relative" }}>
                       <div style={{ display: "flex", gap: 8 }}>
@@ -595,10 +597,10 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                     {cepError && <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#DC2626" }}><AlertTriangle size={11} strokeWidth={2} />{cepError}</span>}
                   </Field>
                   <Field label="Bairro"><input type="text" style={inputBase} placeholder="Bairro" value={bairro} onChange={(e) => setBairro(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                  <Field label="Cidade"><input type="text" style={inputBase} placeholder="Cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
-                  <Field label="Estado"><input type="text" style={inputBase} placeholder="UF" value={estado} onChange={(e) => setEstado(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
+                  <Field label={t("people.fields.city")}><input type="text" style={inputBase} placeholder={t("people.fields.city")} value={cidade} onChange={(e) => setCidade(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
+                  <Field label={t("people.fields.state")}><input type="text" style={inputBase} placeholder="UF" value={estado} onChange={(e) => setEstado(e.target.value)} onFocus={focusIn} onBlur={focusOut} /></Field>
                   <div style={{ gridColumn: "span 2" }}>
-                    <Field label="Endereço">
+                    <Field label={t("people.fields.address")}>
                       <input type="text" style={inputBase} placeholder="Endereço completo" value={endereco} onChange={(e) => setEndereco(e.target.value)} onFocus={focusIn} onBlur={focusOut} />
                     </Field>
                   </div>
@@ -741,7 +743,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                             </div>
                             <input type="date" placeholder="Data de Nascimento" value={preNasc} onChange={(e) => setPreNasc(e.target.value)}
                               style={{ ...inputBase, background: "var(--bg-surface)", color: preNasc ? "var(--text-primary)" : "var(--text-muted)" }} />
-                            <input type="email" placeholder="E-mail" value={preEmail} onChange={(e) => setPreEmail(e.target.value)}
+                            <input type="email" placeholder={t("people.fields.email")} value={preEmail} onChange={(e) => setPreEmail(e.target.value)}
                               style={{ ...inputBase, background: "var(--bg-surface)" }} />
                           </div>
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

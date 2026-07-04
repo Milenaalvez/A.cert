@@ -7,9 +7,11 @@ import AuthLayout from "./AuthLayout";
 import LoginTransition from "./LoginTransition";
 import Link from "next/link";
 import { login, salvarToken } from "@/lib/api";
+import { useT } from "@/i18n/useT";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useT();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");

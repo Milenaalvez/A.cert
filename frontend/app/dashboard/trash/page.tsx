@@ -10,6 +10,7 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import ConfirmModal from "@/components/ConfirmModal";
 import * as trashApi from "@/services/trashApi";
+import { useT } from "@/i18n/useT";
 
 interface TrashItem {
   id: string;
@@ -71,6 +72,7 @@ function DetailRow({ icon, label, value }: { icon: any; label: string; value: st
 }
 
 export default function TrashPage() {
+  const { t } = useT();
   const [items, setItems] = useState<TrashItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -154,11 +156,11 @@ export default function TrashPage() {
     if (entity === "pessoas") {
       return (
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-          <DetailRow icon={User} label="Nome" value={previewData.name} />
-          <DetailRow icon={Hash} label="CPF/CNPJ" value={previewData.cpf || previewData.cnpj} />
-          <DetailRow icon={Mail} label="E-mail" value={previewData.email} />
-          <DetailRow icon={Phone} label="Telefone" value={previewData.phone} />
-          <DetailRow icon={MapPin} label="Endereço" value={previewData.address} />
+          <DetailRow icon={User} label={t("people.table.name")} value={previewData.name} />
+          <DetailRow icon={Hash} label={t("people.table.cpf")} value={previewData.cpf || previewData.cnpj} />
+          <DetailRow icon={Mail} label={t("people.fields.email")} value={previewData.email} />
+          <DetailRow icon={Phone} label={t("people.fields.phone")} value={previewData.phone} />
+          <DetailRow icon={MapPin} label={t("people.fields.address")} value={previewData.address} />
           <DetailRow icon={Calendar} label="Data de Cadastro" value={formatDate(previewData.created_at)} />
         </div>
       );
@@ -167,9 +169,9 @@ export default function TrashPage() {
     if (entity === "imoveis") {
       return (
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-          <DetailRow icon={Building2} label="Tipo" value={previewData.type} />
-          <DetailRow icon={MapPin} label="Endereço" value={previewData.address} />
-          <DetailRow icon={Hash} label="Matrícula" value={previewData.registration} />
+          <DetailRow icon={Building2} label={t("trash.table.type")} value={previewData.type} />
+          <DetailRow icon={MapPin} label={t("people.fields.address")} value={previewData.address} />
+          <DetailRow icon={Hash} label={t("profile.registration")} value={previewData.registration} />
           <DetailRow icon={FileText} label="Inscrição" value={previewData.inscription} />
           <DetailRow icon={Hash} label="Registro" value={previewData.registration_number} />
           <DetailRow icon={Calendar} label="Data de Cadastro" value={formatDate(previewData.created_at)} />
@@ -180,11 +182,11 @@ export default function TrashPage() {
     if (entity === "dossies") {
       return (
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-          <DetailRow icon={FolderOpen} label="Identificador" value={previewData.identifier} />
-          <DetailRow icon={Shield} label="Status" value={previewData.status} />
+          <DetailRow icon={FolderOpen} label={t("dossiers.columns.id")} value={previewData.identifier} />
+          <DetailRow icon={Shield} label={t("trash.table.status")} value={previewData.status} />
           <DetailRow icon={User} label="Criado por" value={previewData.created_by} />
-          <DetailRow icon={Building2} label="Imóvel" value={previewData.property_id} />
-          <DetailRow icon={User} label="Pessoa" value={previewData.person_id} />
+          <DetailRow icon={Building2} label={t("trash.types.property")} value={previewData.property_id} />
+          <DetailRow icon={User} label={t("trash.types.person")} value={previewData.person_id} />
           <DetailRow icon={Calendar} label="Data de Criação" value={formatDate(previewData.created_at)} />
         </div>
       );
@@ -193,10 +195,10 @@ export default function TrashPage() {
     if (entity === "usuarios") {
       return (
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-          <DetailRow icon={UserCog} label="Nome" value={previewData.name} />
-          <DetailRow icon={Mail} label="E-mail" value={previewData.email} />
-          <DetailRow icon={Shield} label="Cargo" value={previewData.role} />
-          <DetailRow icon={Users} label="Departamento" value={previewData.department} />
+          <DetailRow icon={UserCog} label={t("people.table.name")} value={previewData.name} />
+          <DetailRow icon={Mail} label={t("people.fields.email")} value={previewData.email} />
+          <DetailRow icon={Shield} label={t("users.table.role")} value={previewData.role} />
+          <DetailRow icon={Users} label={t("users.table.department")} value={previewData.department} />
           <DetailRow icon={Clock} label="Último Acesso" value={formatDate(previewData.last_access_at)} />
           <DetailRow icon={Calendar} label="Data de Cadastro" value={formatDate(previewData.created_at)} />
         </div>
@@ -399,7 +401,7 @@ export default function TrashPage() {
                             <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                               <button
                                 onClick={() => handlePreview(item)}
-                                title="Visualizar detalhes"
+                                title={t("trash.viewDetails")}
                                 style={actionBtnStyle}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-muted)"; e.currentTarget.style.color = "var(--text-primary)" }}
                                 onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent" }}
@@ -408,7 +410,7 @@ export default function TrashPage() {
                               </button>
                               <button
                                 onClick={() => setRestoreConfirm(item)}
-                                title="Restaurar"
+                                title={t("trash.restore")}
                                 style={actionBtnStyle}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.1)"; e.currentTarget.style.color = "#10B981" }}
                                 onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent" }}
@@ -417,7 +419,7 @@ export default function TrashPage() {
                               </button>
                               <button
                                 onClick={() => setDeleteConfirm(item)}
-                                title="Excluir permanentemente"
+                                title={t("trash.deletePermanent")}
                                 style={actionBtnStyle}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#EF4444" }}
                                 onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent" }}
@@ -522,8 +524,8 @@ export default function TrashPage() {
         open={!!restoreConfirm}
         title="Restaurar item"
         message={`Tem certeza que deseja restaurar "${restoreConfirm?.title}"? Ele voltará a aparecer na listagem principal.`}
-        confirmLabel="Restaurar"
-        cancelLabel="Cancelar"
+        confirmLabel={t("trash.restore")}
+        cancelLabel={t("common.cancel")}
         variant="default"
         icon={<RotateCcw size={24} strokeWidth={2} color="#10B981" />}
         onConfirm={handleRestore}
@@ -533,10 +535,10 @@ export default function TrashPage() {
 
       <ConfirmModal
         open={!!deleteConfirm}
-        title="Excluir permanentemente"
+        title={t("trash.deletePermanent")}
         message={`Esta ação não pode ser desfeita. "${deleteConfirm?.title}" será excluído permanentemente.`}
-        confirmLabel="Excluir"
-        cancelLabel="Cancelar"
+        confirmLabel={t("config.excluir_backup")}
+        cancelLabel={t("common.cancel")}
         variant="danger"
         icon={<AlertTriangle size={24} strokeWidth={2} color="#DC2626" />}
         onConfirm={handlePermanentDelete}

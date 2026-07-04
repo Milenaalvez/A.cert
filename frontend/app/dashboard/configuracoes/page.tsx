@@ -4,23 +4,25 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, useCallback } from "react";
 import {
   User, Settings, Building2, FileText, Activity,
-  Save, Mail, CheckCircle2, XCircle, AlertTriangle, Clock, Plus,
+  Save, Mail, CheckCircle2, Check, XCircle, Clock, Plus,
   Server, Eye, Trash2, Search, RefreshCw,
   Camera, Phone, Calendar, FileSpreadsheet, FileCheck,
   Shield, HardDrive, Download,
-  Lock, Smartphone, Database, Pencil,
+  Lock, LogOut, Database, Pencil,
   LogIn, X,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import ConfirmModal from "@/components/ConfirmModal";
+import PasswordModal from "@/components/PasswordModal";
+import SessionsModal from "@/components/SessionsModal";
 import { useUser } from "@/contexts/UserContext";
+import { useT } from "@/i18n/useT";
 
 const apiBase = "";
 
 const TABS = [
   { key: "perfil", label: "Perfil", icon: User },
   { key: "geral", label: "Geral", icon: Settings },
-  { key: "seguranca", label: "Segurança", icon: Lock },
   { key: "orgaos", label: "Órgãos Integrados", icon: Building2 },
   { key: "email", label: "E-mail (SMTP)", icon: Mail },
   { key: "templates", label: "Templates PDF", icon: FileText },
@@ -50,39 +52,27 @@ const SWITCH_WRAP = "flex items-center justify-between py-6 border-b border-defa
 const SWITCH_LABEL = "text-[13px] text-body";
 const SWITCH_DESC = "text-[11px] text-muted mt-0.5";
 
-function FieldRow({ label, value, editing, onEdit, onCancel, onChange, readOnly, badge }: {
-  label: string; value: string; editing?: boolean; onEdit?: () => void; onCancel?: () => void; onChange?: (v: string) => void; readOnly?: boolean; badge?: boolean;
+function FieldRow({ icon: Icon, label, value, editing, onEdit, onCancel, onConfirm, onChange, readOnly, badge }: {
+  icon?: any; label: string; value: string; editing?: boolean; onEdit?: () => void; onCancel?: () => void; onConfirm?: () => void; onChange?: (v: string) => void; readOnly?: boolean; badge?: boolean;
 }) {
   if (editing) {
     return (
-      <div className="flex items-center justify-between py-2">
-        <span className="text-[12px] font-medium text-secondary">{label}</span>
+      <div className="flex items-center justify-between py-1.5">
+        <div className="flex items-center gap-2">{Icon && <Icon size={14} strokeWidth={1.5} className="text-muted shrink-0" />}<span className="text-[13px] font-medium text-secondary">{label}</span></div>
         <div className="flex items-center gap-2">
-          <input type="text" value={value} onChange={e => onChange?.(e.target.value)}
-            className="w-[200px] h-9 rounded-[6px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00]"
-            onKeyDown={e => { if (e.key === "Enter") onCancel?.(); }}
-            autoFocus />
-          <button onClick={onCancel} className="w-7 h-7 flex items-center justify-center text-muted hover:text-primary transition-colors">
-            <X size={14} />
-          </button>
+          <input type="text" value={value} onChange={e => onChange?.(e.target.value)} className="w-[240px] h-10 rounded-[8px] text-[14px] text-primary outline-none border border-[#FF7A00] bg-app px-3 shadow-[0_0_0_3px_rgba(255,122,0,0.15)]" onKeyDown={e => { if (e.key === "Enter") onConfirm?.(); if (e.key === "Escape") onCancel?.(); }} autoFocus />
+          <button onClick={onConfirm} className="w-8 h-8 flex items-center justify-center rounded-[6px] text-[#059669] hover:bg-[#059669]/10 transition-colors"><Check size={16} strokeWidth={2.5} /></button>
+          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-[6px] text-[#DC2626] hover:bg-[#DC2626]/10 transition-colors"><X size={16} strokeWidth={2.5} /></button>
         </div>
       </div>
     );
   }
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-[12px] font-medium text-secondary">{label}</span>
-      <div className="flex items-center gap-2">
-        {badge ? (
-          <span className="text-[12px] font-semibold text-[#059669] bg-[#059669]/10 px-2.5 py-0.5 rounded">{value}</span>
-        ) : (
-          <span className="text-[13px] text-primary">{value}</span>
-        )}
-        {!readOnly && (
-          <button onClick={onEdit} className="w-7 h-7 flex items-center justify-center text-muted hover:text-[#FF7A00] transition-colors">
-            <Pencil size={13} />
-          </button>
-        )}
+    <div className="flex items-center justify-between py-1.5">
+      <div className="flex items-center gap-2">{Icon && <Icon size={15} strokeWidth={1.5} className="text-[#FF7A00]/70 shrink-0" />}<span className="text-[13px] font-medium text-secondary">{label}</span></div>
+      <div className="flex items-center gap-1.5">
+        {badge ? (<span className="text-[13px] font-semibold text-[#059669] bg-[#059669]/10 px-2.5 py-0.5 rounded">{value}</span>) : (<span className="text-[14px] font-semibold text-right" style={{ color: "#D97706" }}>{value}</span>)}
+        {!readOnly && (<button onClick={onEdit} className="w-7 h-7 flex items-center justify-center text-muted hover:text-[#FF7A00] transition-colors"><Pencil size={13} /></button>)}
       </div>
     </div>
   );
@@ -136,6 +126,7 @@ export default function ConfiguracoesPage() {
 
 function ConfiguracoesContent() {
   const { setUser: setGlobalUser } = useUser();
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState("perfil");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -150,11 +141,11 @@ function ConfiguracoesContent() {
   const [themeMode, setThemeMode] = useState("system");
   const [density, setDensity] = useState("default");
 
-  // Segurança state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passError, setPassError] = useState("");
+  // Modals
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [showEndSessionsConfirm, setShowEndSessionsConfirm] = useState(false);
+  const [cardSessions, setCardSessions] = useState<any[]>([]);
 
   // Email state
   const [smtpHost, setSmtpHost] = useState("");
@@ -241,6 +232,18 @@ function ConfiguracoesContent() {
   }, [activeTab, getHeaders]);
 
   useEffect(() => {
+    if (activeTab !== "perfil") return;
+    const h = getHeaders();
+    (async () => {
+      try {
+        const r = await fetch(`${apiBase}/api/auth/me/sessions`, { headers: h });
+        const sessions = await r.json();
+        setCardSessions((sessions || []).slice(0, 3));
+      } catch {}
+    })();
+  }, [activeTab, getHeaders]);
+
+  useEffect(() => {
     if (activeTab !== "orgaos") return;
     const h = getHeaders();
     (async () => {
@@ -307,35 +310,6 @@ function ConfiguracoesContent() {
     })();
   }, [activeTab, getHeaders]);
 
-  async function saveSecurity() {
-    if (newPassword !== confirmPassword) {
-      setPassError("As senhas não conferem");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPassError("A senha deve ter no mínimo 6 caracteres");
-      return;
-    }
-    setSaving(true);
-    setPassError("");
-    const h = { "Content-Type": "application/json", ...getHeaders() };
-    try {
-      const r = await fetch(`${apiBase}/api/auth/me/password`, {
-        method: "PUT", headers: h,
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await r.json();
-      if (data.success) {
-        setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-        setSaved(true); setTimeout(() => setSaved(false), 2000);
-      } else {
-        setPassError(data.error || "Erro ao alterar senha");
-      }
-    } catch {
-      setPassError("Erro ao conectar com o servidor");
-    } finally { setSaving(false); }
-  }
-
   async function testSmtp() {
     setSmtpResult(null);
     const h = { "Content-Type": "application/json", ...getHeaders() };
@@ -348,6 +322,14 @@ function ConfiguracoesContent() {
     } catch {
       setSmtpResult({ success: false, message: "Erro ao conectar com o servidor" });
     }
+  }
+
+  async function endSessions() {
+    const h = getHeaders();
+    try {
+      await fetch(`${apiBase}/api/auth/me/sessions/end`, { method: "POST", headers: h });
+      setCardSessions([]);
+    } catch {}
   }
 
   async function generateBackup() {
@@ -504,6 +486,7 @@ function ConfiguracoesContent() {
   };
 
   return (
+    <>
       <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
         <div style={{ marginTop: 24, marginBottom: 28 }}>
           <div className="flex items-start justify-between gap-8">
@@ -520,11 +503,6 @@ function ConfiguracoesContent() {
               {activeTab === "geral" && (
                 <button onClick={saveGeneral} className={btnPrimary}>
                   <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Alterações"}
-                </button>
-              )}
-              {activeTab === "seguranca" && (
-                <button onClick={saveSecurity} className={btnPrimary}>
-                  <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Senha"}
                 </button>
               )}
               {activeTab === "templates" && (
@@ -558,56 +536,47 @@ function ConfiguracoesContent() {
           <div className="flex flex-col gap-6" style={{ paddingTop: 40 }}>
             <div className="flex gap-6">
               {/* Left: Perfil do Usuário (portrait) */}
-              <div className="w-[480px] shrink-0">
-                <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
-                  style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 44px 44px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "40px", paddingBottom: "24px", borderBottom: "1px solid var(--border-default)" }}>
+              <div className="flex-1 min-w-0">
+                <div className="relative w-full h-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+                  style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid var(--border-default)" }}>
                     <User size={18} className="text-[#FF7A00]" />
                     <h3 className="text-[16px] font-bold text-primary">Perfil do Usuário</h3>
                   </div>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", marginBottom: "80px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
                     <label className="relative group shrink-0 cursor-pointer">
-                      <div className="w-28 h-28 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
+                      <div className="w-40 h-40 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
                         {user?.avatar ? (
                           <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <User size={40} className="text-muted" />
+                          <User size={76} className="text-muted" />
                         )}
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-full transition-opacity">
-                        <Camera size={24} className="text-white" />
+                        <Camera size={40} className="text-white" />
                       </div>
                       <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     </label>
-                    <div className="min-w-0" style={{ paddingTop: "6px" }}>
-                      <h2 className="text-[18px] font-bold text-primary">{user?.name || "Carregando..."}</h2>
-                      <div style={{ marginTop: "8px" }}>{roleBadge(user?.role)}</div>
-                      <p style={{ marginTop: "6px" }} className="text-[13px] text-secondary">{user?.email}</p>
+                    <div className="min-w-0 flex-1">
+                      <FieldRow icon={User} label={t("people.fields.name")} value={user?.name || "—"} readOnly />
+                      <FieldRow icon={Shield} label={t("users.table.role")} value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
+                      <FieldRow icon={Building2} label={t("profile.company")} value="Bloco Imobiliária" readOnly />
+                      <FieldRow icon={Mail} label={t("profile.email")} value={user?.email || "—"} readOnly />
+                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} readOnly={false} />
                     </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <FieldRow label="Nome completo" value={user?.name || "—"} readOnly />
-                    <FieldRow label="Cargo" value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
-                    <FieldRow label="Empresa vinculada" value="Bloco Imobiliária" readOnly />
-                    <FieldRow label="E-mail corporativo" value={user?.email || "—"} readOnly />
-                    <FieldRow label="Telefone" value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} readOnly={false} />
-                  </div>
-                  <div style={{ height: "120px" }} />
-                  <div style={{ borderTop: "1px solid var(--border-default)", paddingTop: "48px" }}>
-                    <FieldRow label="Matrícula" value={user?.registration_number || "—"} readOnly />
                   </div>
                 </div>
               </div>
 
               {/* Right: Preferências do Usuário (square) */}
-              <div className="w-[480px] shrink-0">
-                <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
-                  style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 40px 40px" }}>
-                  <div className="flex items-center gap-3 mb-10 pb-6 border-b border-default">
+              <div className="flex-1 min-w-0">
+                <div className="relative w-full h-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+                  style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-default">
                     <Settings size={18} className="text-[#FF7A00]" />
                     <h3 className="text-[16px] font-bold text-primary">Preferências</h3>
                   </div>
-                  <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-4">
                     <div>
                       <label className={labelStyle}>Idioma</label>
                       <select value={lang} onChange={e => { setLang(e.target.value); setDirty(true); }} className={selectBase}
@@ -615,24 +584,6 @@ function ConfiguracoesContent() {
                         <option value="pt-BR">Português (Brasil)</option>
                         <option value="en">English</option>
                         <option value="es">Español</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelStyle}>Tema</label>
-                      <select value={themeMode} onChange={e => { setThemeMode(e.target.value); setDirty(true); }} className={selectBase}
-                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
-                        <option value="light">Claro</option>
-                        <option value="dark">Escuro</option>
-                        <option value="system">Automático</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelStyle}>Densidade</label>
-                      <select value={density} onChange={e => { setDensity(e.target.value); setDirty(true); }} className={selectBase}
-                        style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: "36px" }}>
-                        <option value="compact">Compacta</option>
-                        <option value="default">Padrão</option>
-                        <option value="comfortable">Confortável</option>
                       </select>
                     </div>
                     <div>
@@ -653,82 +604,108 @@ function ConfiguracoesContent() {
                         <option value="America/Recife">America/Recife (UTC-3)</option>
                       </select>
                     </div>
-                    <div className="border-t border-default pt-6 mt-2">
-                      <Switch checked={showNotifications !== false} onChange={v => { setShowNotifications(v); setDirty(true); }} label="Notificações" desc="Alertas e notificações do sistema" />
-                      <Switch checked={confirmDelete !== false} onChange={v => { setConfirmDelete(v); setDirty(true); }} label="Confirmar exclusão" desc="Exibir confirmação ao mover para lixeira" />
-                      <Switch checked={showNotifications !== false} onChange={v => { setExpiryWarnings(v); setDirty(true); }} label="Avisos de vencimento" desc="Alertar certidões próximas de expirar" />
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bloco 3: Segurança da Conta */}
-            <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
-              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 40px 40px" }}>
-              <div className="flex items-center gap-3 mb-10 pb-6 border-b border-default">
-                <Shield size={18} className="text-[#FF7A00]" />
-                <h3 className="text-[16px] font-bold text-primary">Segurança da Conta</h3>
+            {/* Card 3: Segurança da Conta */}
+            <div className="bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, borderBottom: "1px solid var(--border-default)", paddingBottom: 12 }}>
+                <Shield size={16} strokeWidth={2} color="#FF7A00" />
+                <h3 className="text-[14px] font-bold text-primary">Segurança da Conta</h3>
               </div>
-              <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <button onClick={() => setActiveTab("seguranca")} className={btnPrimary}><Lock size={14} /> Alterar Senha</button>
-                <button className={btnOutline}><Shield size={14} /> Configurar 2FA</button>
-                <button className={btnOutline}><Smartphone size={14} /> Encerrar sessões ativas</button>
-              </div>
-              <div className="border border-default rounded-[8px] overflow-hidden">
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="text-[10px] font-semibold text-muted uppercase tracking-wider border-b border-default bg-subtle">
-                      <th className="text-left px-4 py-3">Dispositivo</th>
-                      <th className="text-left px-4 py-3">Último acesso</th>
-                      <th className="text-left px-4 py-3">IP</th>
-                      <th className="text-right px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-default last:border-0">
-                      <td className="px-4 py-3 text-primary"><Smartphone size={13} className="inline mr-1.5" /> Chrome / Windows</td>
-                      <td className="px-4 py-3 text-secondary">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</td>
-                      <td className="px-4 py-3 text-secondary font-mono">—</td>
-                      <td className="px-4 py-3 text-right"><span className="text-[11px] font-semibold text-[#059669] bg-[#059669]/10 px-2 py-0.5 rounded">Ativo</span></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div style={{ display: "flex", gap: 32 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingRight: 32, borderRight: "1px solid var(--border-light)" }}>
+                  <button
+                    onClick={() => setShowPasswordModal(true)}
+                    className="flex items-center gap-2 h-9 px-4 rounded-[7px] text-[13px] font-medium text-secondary border border-default hover:border-[#FF7A00] hover:text-[#FF7A00] transition-colors bg-transparent cursor-pointer"
+                  >
+                    <Lock size={14} strokeWidth={1.5} />
+                    Alterar senha
+                  </button>
+                  <button
+                    onClick={() => setShowEndSessionsConfirm(true)}
+                    className="flex items-center gap-2 h-9 px-4 rounded-[7px] text-[13px] font-medium text-secondary border border-default hover:border-[#DC2626] hover:text-[#DC2626] transition-colors bg-transparent cursor-pointer"
+                  >
+                    <LogOut size={14} strokeWidth={1.5} />
+                    Encerrar sessões
+                  </button>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, paddingLeft: 32 }}>
+                  <h4 className="text-[12px] font-semibold text-muted uppercase tracking-[0.5px] mb-3">Últimos dispositivos autenticados</h4>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid var(--border-default)" }}>
+                        <th style={{ textAlign: "left", padding: "6px 10px", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Dispositivo</th>
+                        <th style={{ textAlign: "left", padding: "6px 10px", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Navegador</th>
+                        <th style={{ textAlign: "left", padding: "6px 10px", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Localização</th>
+                        <th style={{ textAlign: "right", padding: "6px 10px", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Último acesso</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cardSessions.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} style={{ padding: "16px 10px", fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>Nenhuma sessão registrada.</td>
+                        </tr>
+                      ) : (
+                        cardSessions.map((s: any, i: number) => (
+                          <tr key={s.id || i} style={{ borderBottom: i < cardSessions.length - 1 ? "1px solid var(--border-light)" : "none" }}>
+                            <td style={{ padding: "8px 10px", fontSize: 12, color: "var(--text-primary)" }}>{s.device || s.os || "—"}</td>
+                            <td style={{ padding: "8px 10px", fontSize: 12, color: "var(--text-primary)" }}>{s.browser || "—"}</td>
+                            <td style={{ padding: "8px 10px", fontSize: 12, color: "var(--text-secondary)" }}>{s.location || "—"}</td>
+                            <td style={{ padding: "8px 10px", fontSize: 12, color: "var(--text-secondary)", textAlign: "right" }}>{formatDate(s.created_at)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      onClick={() => setShowSessionsModal(true)}
+                      className="text-[12px] font-medium text-[#FF7A00] hover:underline bg-transparent border-0 cursor-pointer"
+                    >
+                      Ver todas as sessões →
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Bloco 4: Resumo da Atividade */}
-            <div className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
-              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "20px 40px 40px" }}>
-              <div className="flex items-center gap-3 mb-10 pb-6 border-b border-default">
-                <Activity size={18} className="text-[#FF7A00]" />
-                <h3 className="text-[16px] font-bold text-primary">Resumo da Atividade</h3>
+            <div className="flex gap-8">
+              {/* Card 4: Acesso à Conta */}
+              <div className="flex-1 min-w-0 bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+                style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--border-default)", paddingBottom: 12 }}>
+                  <LogIn size={16} strokeWidth={2} color="#FF7A00" />
+                  <h3 className="text-[14px] font-bold text-primary">Acesso à Conta</h3>
+                </div>
+                <div className="flex flex-col gap-0.5 text-[13px]">
+                  <div className="flex justify-between py-2"><span className="text-secondary">Último login</span><span className="text-primary font-medium">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Primeiro acesso</span><span className="text-primary font-medium">{user?.created_at ? formatDate(user.created_at) : "—"}</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Último IP utilizado</span><span className="text-primary font-medium">189.xxx.xxx.xx</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Navegador</span><span className="text-primary font-medium">Chrome 126</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Sistema operacional</span><span className="text-primary font-medium">Windows 11</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Dispositivo</span><span className="text-primary font-medium">Desktop</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Status da conta</span><span className="font-semibold text-[#059669] bg-[#059669]/10 px-2 py-0.5 rounded">Ativa</span></div>
+                </div>
               </div>
-              <div className="border border-default rounded-[8px] overflow-hidden">
-                <table className="w-full text-[13px]">
-                  <tbody>
-                    <tr className="border-b border-default">
-                      <td className="px-5 py-4 text-secondary w-1/2">Dossiês criados</td>
-                      <td className="px-5 py-4 text-primary font-semibold text-right">{stats?.dossiersEmAndamento ?? "—"}</td>
-                    </tr>
-                    <tr className="border-b border-default">
-                      <td className="px-5 py-4 text-secondary">Dossiês concluídos</td>
-                      <td className="px-5 py-4 text-primary font-semibold text-right">{stats?.dossiersConcluidos ?? "—"}</td>
-                    </tr>
-                    <tr className="border-b border-default">
-                      <td className="px-5 py-4 text-secondary">Certidões emitidas</td>
-                      <td className="px-5 py-4 text-primary font-semibold text-right">{stats?.totalCertidoes ?? "—"}</td>
-                    </tr>
-                    <tr className="border-b border-default">
-                      <td className="px-5 py-4 text-secondary">Último acesso</td>
-                      <td className="px-5 py-4 text-primary font-semibold text-right">{user?.last_access_at ? formatDate(user.last_access_at) : "—"}</td>
-                    </tr>
-                    <tr>
-                      <td className="px-5 py-4 text-secondary">Tempo médio de utilização</td>
-                      <td className="px-5 py-4 text-primary font-semibold text-right">—</td>
-                    </tr>
-                  </tbody>
-                </table>
+
+              {/* Card 5: Resumo da Atividade */}
+              <div className="flex-1 min-w-0 bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+                style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--border-default)", paddingBottom: 12 }}>
+                  <Activity size={16} strokeWidth={2} color="#FF7A00" />
+                  <h3 className="text-[14px] font-bold text-primary">Resumo da Atividade</h3>
+                </div>
+                <div className="flex flex-col gap-0.5 text-[13px]">
+                  <div className="flex justify-between py-2"><span className="text-secondary">Dossiês criados</span><span className="text-primary font-semibold">{stats?.dossiersEmAndamento ?? "—"} <span className="text-[11px] text-[#059669]">+12%</span></span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Dossiês concluídos</span><span className="text-primary font-semibold">{stats?.dossiersConcluidos ?? "—"} <span className="text-[11px] text-[#059669]">+8%</span></span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Certidões emitidas</span><span className="text-primary font-semibold">{stats?.totalCertidoes ?? "—"} <span className="text-[11px] text-[#059669]">+15%</span></span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Último acesso</span><span className="text-primary font-semibold">{user?.last_access_at ? formatTimeAgo(user.last_access_at) : "—"}</span></div>
+                  <div className="flex justify-between py-2"><span className="text-secondary">Tempo médio diário</span><span className="text-primary font-semibold">— <span className="text-[11px] text-[#059669]">+0,5h</span></span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -740,7 +717,7 @@ function ConfiguracoesContent() {
             title="Alterações não salvas"
             message="Você tem alterações não salvas. Deseja salvar antes de sair?"
             variant="warning"
-            confirmLabel="Salvar"
+            confirmLabel={t("common.save")}
             cancelLabel="Descartar"
             onConfirm={saveAndGo}
             onCancel={discardAndGo}
@@ -823,64 +800,10 @@ function ConfiguracoesContent() {
                 <div className="mb-5 pb-3 border-b border-default">
                   <h3 className="text-[15px] font-semibold text-primary">Preferências do Sistema</h3>
                 </div>
-                <Switch checked={showNotifications} onChange={setShowNotifications} label="Exibir notificações" desc="Alertas e notificações do sistema" />
-                <Switch checked={confirmDelete} onChange={setConfirmDelete} label="Confirmar antes de excluir" desc="Exibir confirmação ao mover para lixeira" />
-                <Switch checked={confirmFinalize} onChange={setConfirmFinalize} label="Confirmar finalização de dossiê" desc="Exibir confirmação ao concluir um dossiê" />
-                <Switch checked={expiryWarnings} onChange={setExpiryWarnings} label="Avisos de certidões próximas do vencimento" desc="Alertar quando certidões estiverem perto de expirar" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "seguranca" && (
-          <div>
-            <div className="flex gap-8">
-              <div className="flex-1 min-w-0">
-                <div className={sectionBox}>
-                  <div className="mb-6 pb-4 border-b border-default">
-                    <h3 className="text-[15px] font-semibold text-primary">Alterar Senha</h3>
-                  </div>
-                  <div className="flex flex-col gap-5 max-w-md">
-                    <div>
-                      <label className={labelStyle}>Senha atual</label>
-                      <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
-                        className={inputBase} placeholder="••••••••" />
-                    </div>
-                    <div>
-                      <label className={labelStyle}>Nova senha</label>
-                      <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                        className={inputBase} placeholder="Mínimo 6 caracteres" />
-                    </div>
-                    <div>
-                      <label className={labelStyle}>Confirmar nova senha</label>
-                      <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                        className={inputBase} placeholder="Repita a nova senha" />
-                    </div>
-                    {passError && (
-                      <div className="flex items-center gap-2 text-[13px] text-[#DC2626]">
-                        <AlertTriangle size={14} /> {passError}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div style={{ width: "320px", minWidth: "320px" }}>
-                <div className="bg-surface rounded-[10px] p-6">
-                  <div className="mb-5 pb-3 border-b border-default">
-                    <h3 className="text-[15px] font-semibold text-primary">Sessões Ativas</h3>
-                  </div>
-                  <p className="text-[13px] text-secondary">Você será desconectado dos outros dispositivos após alterar a senha.</p>
-                  <div className="mt-6 flex items-center gap-4 py-4 border-t border-default">
-                    <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(59,130,246,0.1)" }}>
-                      <Smartphone size={18} className="text-[#3B82F6]" />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-medium text-primary">Este dispositivo</p>
-                      <p className="text-[11px] text-secondary">Sessão atual</p>
-                    </div>
-                    <span className="ml-auto text-[11px] font-semibold text-[#059669] px-2 py-0.5 rounded" style={{ background: "rgba(5,150,105,0.1)" }}>Ativo</span>
-                  </div>
-                </div>
+                <Switch checked={showNotifications} onChange={setShowNotifications} label={t("config.exibir_notif")} desc="Alertas e notificações do sistema" />
+                <Switch checked={confirmDelete} onChange={setConfirmDelete} label={t("config.confirmar_excluir")} desc="Exibir confirmação ao mover para lixeira" />
+                <Switch checked={confirmFinalize} onChange={setConfirmFinalize} label={t("config.confirmar_finalizar")} desc="Exibir confirmação ao concluir um dossiê" />
+                <Switch checked={expiryWarnings} onChange={setExpiryWarnings} label={t("config.avisos_vencimento")} desc="Alertar quando certidões estiverem perto de expirar" />
               </div>
             </div>
           </div>
@@ -1291,5 +1214,25 @@ function ConfiguracoesContent() {
           </div>
         )}
       </div>
+      <PasswordModal
+        open={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
+      <SessionsModal
+        open={showSessionsModal}
+        onClose={() => setShowSessionsModal(false)}
+      />
+      <ConfirmModal
+        open={showEndSessionsConfirm}
+        title="Encerrar sessões ativas"
+        message="Tem certeza que deseja encerrar todas as sessões ativas? Você será desconectado de todos os outros dispositivos."
+        variant="warning"
+        confirmLabel="Sim, encerrar sessões"
+        cancelLabel="Não, voltar"
+        onConfirm={() => { endSessions(); setShowEndSessionsConfirm(false); }}
+        onCancel={() => setShowEndSessionsConfirm(false)}
+        onClose={() => setShowEndSessionsConfirm(false)}
+      />
+    </>
   );
 }

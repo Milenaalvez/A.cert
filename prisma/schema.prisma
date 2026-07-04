@@ -13,6 +13,7 @@ model User {
   email                  String   @unique
   passwordHash           String   @map("password_hash")
   phone                  String?
+  cpf                    String?
   uf                     String   @default("")
   emailConfirmed         Int      @default(0) @map("email_confirmed")
   confirmationToken      String?  @map("confirmation_token")
@@ -47,6 +48,7 @@ model User {
   userPermissions UserPermission[]
   teamActivities TeamActivity[]
   auditLogs      AuditLog[]
+  sessions       UserSession[]
 
   @@map("users")
 }
@@ -402,4 +404,20 @@ model AuditLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@map("audit_log")
+}
+
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  device    String   @default("")
+  browser   String   @default("")
+  os        String   @default("")
+  ipAddress String   @default("") @map("ip_address")
+  location  String   @default("")
+  isActive  Int      @default(1) @map("is_active")
+  createdAt String   @default("") @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_sessions")
 }

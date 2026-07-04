@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { useT } from "@/i18n/useT";
 
 /* ── Types ─────────────────────────────────────────── */
 interface DossierDetail { label: string; total: number; pct: number; avgHours: number; trend: string; }
@@ -55,6 +56,7 @@ function ChartTooltip({ active, payload, label }: any) {
 }
 
 export default function RelatoriosPage() {
+  const { t } = useT();
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("mes");
@@ -213,7 +215,7 @@ export default function RelatoriosPage() {
       <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ gap: 32 }}>
         <div style={{ marginTop: 24, marginBottom: 20 }}>
           <PageHeader
-            title="Relatórios"
+            title={t("reports.title")}
             subtitle="Análises operacionais, produtividade e desempenho da plataforma."
           />
         </div>

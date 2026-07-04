@@ -192,14 +192,14 @@ export class ONRConnector implements IConnector {
 
         // Check for CAPTCHA after login
         const captchaLogin = await detectarCaptcha(page);
-          if (captchaLogin) {
-            LOG(`CAPTCHA no login: ${captchaLogin}`);
-            await focusPageForCaptcha(page, captchaLogin);
-            LOG('CAPTCHA detectado - resolva na janela do navegador...');
-            await esperarCaptchaInterativo(page, captchaLogin);
-            LOG('CAPTCHA do login resolvido');
-            await wait(3000);
-          }
+        if (captchaLogin) {
+          LOG(`CAPTCHA no login: ${captchaLogin}`);
+          await focusPageForCaptcha(page, captchaLogin);
+          LOG('CAPTCHA detectado - resolva na janela do navegador...');
+          await esperarCaptchaInterativo(page, captchaLogin);
+          LOG('CAPTCHA do login resolvido');
+          await wait(3000);
+        }
       } else {
         LOG('Formulario de login nao encontrado, tentando navegar para /login');
         try {

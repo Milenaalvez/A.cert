@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import prisma, { queryRaw } from '../lib/prisma.js';
+import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { enviarEmailBoasVindas } from '../services/email.service.js';
 
@@ -150,6 +150,57 @@ router.post('/:id/resend-credentials', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao reenviar credenciais' });
+  }
+});
+
+router.get('/:id/users', authMiddleware, async (req, res) => {
+  try {
+    const users = await queryRaw(
+      `SELECT id, name, email, cpf, phone, role, is_active, created_at
+       FROM users WHERE company_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`,
+      req.params.id
+    );
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao carregar usuários' });
+  }
+});
+
+router.put('/:id/users/:userId/approve', authMiddleware, async (req, res) => {
+  try {
+    await executeRaw(
+      'UPDATE users SET is_active = 1, email_confirmed = 1 WHERE id = $1 AND company_id = $2',
+      req.params.userId, req.params.id
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao aprovar usuário' });
+  }
+});
+
+router.put('/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { license_status } = req.body;
+    if (!license_status) { res.status(400).json({ error: 'Status é obrigatório' }); return; }
+    const existing = await prisma.company.findUnique({ where: { id: req.params.id as string } });
+    if (!existing) { res.status(404).json({ error: 'Empresa não encontrada' }); return; }
+    await prisma.company.update({
+      where: { id: req.params.id as string },
+      data: { licenseStatus: license_status },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar status' });
+  }
+});
+
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    await executeRaw('UPDATE users SET deleted_at = NOW() WHERE company_id = $1', req.params.id as string);
+    await prisma.company.delete({ where: { id: req.params.id as string } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir empresa' });
   }
 });
 

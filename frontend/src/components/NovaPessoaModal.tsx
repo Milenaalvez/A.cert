@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { X, Plus, Loader2, Building2, User } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
+import { useT } from "@/i18n/useT";
 
 interface Props {
   onClose: () => void;
@@ -72,6 +73,7 @@ const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 
 const grid3: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" };
 
 export function NovaPessoaModal({ onClose, onCreated }: Props) {
+  const { t } = useT();
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
@@ -283,13 +285,13 @@ export function NovaPessoaModal({ onClose, onCreated }: Props) {
                   <label style={fieldLabel}>Nome da Mãe</label>
                   <input type="text" style={inputStyle("motherName")} value={(form as any).motherName || ""}
                     onChange={(e) => setForm(p => ({ ...p, motherName: e.target.value }))}
-                    onFocus={handleFocus} onBlur={(e) => handleBlur(e, "motherName")} placeholder="Nome da mãe" />
+                    onFocus={handleFocus} onBlur={(e) => handleBlur(e, "motherName")} placeholder={t("people.fields.motherName")} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Nome do Pai</label>
                   <input type="text" style={inputStyle("fatherName")} value={(form as any).fatherName || ""}
                     onChange={(e) => setForm(p => ({ ...p, fatherName: e.target.value }))}
-                    onFocus={handleFocus} onBlur={(e) => handleBlur(e, "fatherName")} placeholder="Nome do pai" />
+                    onFocus={handleFocus} onBlur={(e) => handleBlur(e, "fatherName")} placeholder={t("people.fields.fatherName")} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Estado Civil</label>
@@ -352,7 +354,7 @@ export function NovaPessoaModal({ onClose, onCreated }: Props) {
                   <div>
                     <label style={fieldLabel}>Cidade</label>
                     <input type="text" style={inputStyle("city")} value={form.city} onChange={(e) => set("city", e.target.value)}
-                      onFocus={handleFocus} onBlur={(e) => handleBlur(e, "city")} placeholder="Cidade" />
+                      onFocus={handleFocus} onBlur={(e) => handleBlur(e, "city")} placeholder={t("people.fields.city")} />
                   </div>
                   <div>
                     <label style={fieldLabel}>Estado</label>

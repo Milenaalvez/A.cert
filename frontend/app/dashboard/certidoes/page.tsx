@@ -8,6 +8,7 @@ import {
   Image, Users, ChevronRight,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useT } from "@/i18n/useT";
 
 const apiBase = "http://localhost:3001";
 
@@ -55,6 +56,7 @@ const CERT_CARDS = [
 ];
 
 export default function CertidoesPage() {
+  const { t } = useT();
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { X, Plus, Loader2, Building2, Home, Store, Trees, Warehouse, Castle, Mountain, MapPin } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
+import { useT } from "@/i18n/useT";
 
 interface Props {
   onClose: () => void;
@@ -32,6 +33,7 @@ const sectionLabel: React.CSSProperties = {
 };
 
 export function NovoImovelModal({ onClose, onCreated }: Props) {
+  const { t } = useT();
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
@@ -246,7 +248,7 @@ export function NovoImovelModal({ onClose, onCreated }: Props) {
                       onChange={(e) => set("city", e.target.value)}
                       onFocus={(e) => { e.currentTarget.style.borderColor = "#FF7A00" }}
                       onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)" }}
-                      placeholder="Cidade" />
+                      placeholder={t("people.fields.city")} />
                   </div>
                   <div>
                     <label style={fieldLabel}>Estado</label>

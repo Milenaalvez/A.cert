@@ -18,8 +18,10 @@ import {
   Archive,
   Trash2,
   Star,
+  Building2,
 } from "lucide-react"
 import { useTheme } from "@/contexts/ThemeContext"
+import { useT } from "@/i18n/useT"
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -77,6 +79,7 @@ function getInitials(name: string) {
 
 export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, sidebarOpen, onToggleSidebar, collapsed, onCollapseChange }: SidebarProps) {
   const { theme, toggleTheme } = useTheme()
+  const { t } = useT()
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarHover, setSidebarHover] = useState(false)
   const [dossieSubmenu, setDossieSubmenu] = useState(false)
@@ -111,30 +114,31 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
     {
       label: "GERENCIAMENTO",
       items: [
-        { label: "Dashboard", icon: LayoutDashboard, page: "dashboard" },
+        { label: t("sidebar.dashboard"), icon: LayoutDashboard, page: "dashboard" },
       ],
     },
     {
       label: "CADASTROS",
       items: [
-        { label: "Pessoas", icon: Users, page: "pessoas" },
+        { label: t("sidebar.people"), icon: Users, page: "pessoas" },
+        { label: "Empresas", icon: Building2, page: "empresas" },
       ],
     },
     {
       label: "DOCUMENTAÇÃO",
       items: [
-        { label: "Dossiês", icon: FolderOpen, page: "dossies" },
-        { label: "Certidões", icon: ScrollText, page: "certidoes" },
-        { label: "Relatórios", icon: BarChart3, page: "relatorios" },
+        { label: t("sidebar.dossiers"), icon: FolderOpen, page: "dossies" },
+        { label: t("sidebar.certificates"), icon: ScrollText, page: "certidoes" },
+        { label: t("sidebar.reports"), icon: BarChart3, page: "relatorios" },
       ],
     },
     {
       label: "SISTEMA",
       items: [
-        { label: "Usuários", icon: UserCog, page: "usuarios" },
-        { label: "Configurações", icon: Settings, page: "configuracoes" },
-        { label: "Suporte", icon: LifeBuoy, page: "suporte" },
-        { label: "Lixeira", icon: Trash2, page: "trash" },
+        { label: t("sidebar.users"), icon: UserCog, page: "usuarios" },
+        { label: t("sidebar.settings"), icon: Settings, page: "configuracoes" },
+        { label: t("sidebar.support"), icon: LifeBuoy, page: "suporte" },
+        { label: t("sidebar.trash"), icon: Trash2, page: "trash" },
       ],
     },
   ], [])
@@ -219,7 +223,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                   A.CERT
                 </span>
                 <span className="text-white/50 text-[10px] font-semibold uppercase tracking-[0.15em] mt-1.5 leading-none">
-                  Central de Certidões
+                  {t("sidebar.subtitle")}
                 </span>
               </div>
             </div>
@@ -256,7 +260,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
               style={{ borderRadius: collapsed ? "0" : "4px", fontSize: collapsed ? "18px" : "13px", gap: collapsed ? "0" : "8px" }}
             >
               <Plus size={collapsed ? 20 : 16} strokeWidth={2.5} />
-              {!collapsed && <span>Novo Dossiê</span>}
+              {!collapsed && <span>{t("sidebar.newDossier")}</span>}
             </button>
           </div>
 
@@ -357,7 +361,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
         <div className={`shrink-0 ${collapsed ? "flex flex-col items-center pt-4 pb-2" : "px-6 pt-4 pb-2"}`}>
           <button
             onClick={toggleTheme}
-            title={collapsed ? (theme === "light" ? "Modo claro" : "Modo escuro") : undefined}
+            title={collapsed ? (theme === "light" ? t("sidebar.lightMode") : t("sidebar.darkMode")) : undefined}
             className={`flex items-center gap-4 w-full h-11 rounded-xl text-[14px] font-medium text-[#F0F3FA] hover:text-[#FFFFFF] hover:bg-white/[0.06] transition-all duration-200 group ${
               collapsed ? "justify-center px-0" : "px-4"
             }`}
@@ -379,7 +383,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 )}
               </div>
             </div>
-            {!collapsed && <span>{!mounted || theme === "light" ? "Modo claro" : "Modo escuro"}</span>}
+            {!collapsed && <span>{!mounted || theme === "light" ? t("sidebar.lightMode") : t("sidebar.darkMode")}</span>}
           </button>
         </div>
 
@@ -468,7 +472,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                     className="flex items-center gap-3 w-full h-12 px-4 text-[13px] font-medium text-[#F0F3FA] hover:bg-[#D94A4A] hover:text-white transition-all duration-200"
                   >
                     <LogOut size={18} strokeWidth={2} className="shrink-0" />
-                    <span>Sair da conta</span>
+                    <span>{t("sidebar.logout")}</span>
                   </button>
                 </div>
               </>

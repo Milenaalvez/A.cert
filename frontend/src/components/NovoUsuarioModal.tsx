@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, UserPlus, Pencil, Loader2, Camera } from "lucide-react";
 import * as teamApi from "@/services/teamApi";
+import { useT } from "@/i18n/useT";
 import ConfirmModal from "./ConfirmModal";
 
 interface EnrichedUser {
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export default function NovoUsuarioModal({ open, onClose, onCreated, editUser }: Props) {
+  const { t } = useT();
   const isEditing = !!editUser;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

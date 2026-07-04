@@ -6,46 +6,51 @@ const router = Router();
 router.get('/', async (_req, res) => {
   try {
     const dossiersAndamento = await queryRawOne(
-      "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Em andamento'"
-    ) as { count: number };
-
-    const semanasPassada = new Date();
-    semanasPassada.setDate(semanasPassada.getDate() - 7);
-
-    const pendenciasCriticas = await queryRawOne(
-      "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Pendente'"
-    ) as { count: number };
-
-    const pendenciasSemanaPassada = await queryRawOne(
-      "SELECT COUNT(*) as count FROM dossiers WHERE status = 'Pendente' AND created_at < $1",
-      semanasPassada.toISOString()
-    ) as { count: number };
-
-    const certidoesEmitidas = await queryRawOne(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida'"
+      "SELECT COUNT(*)::int as count FROM dossiers WHERE status = 'Em andamento' AND (deleted_at IS NULL OR deleted_at = '')"
     ) as { count: number };
 
     const inicioMes = new Date();
     inicioMes.setDate(1);
     inicioMes.setHours(0, 0, 0, 0);
 
+    const dossiersAndamentoMesAnterior = await queryRawOne(
+      "SELECT COUNT(*)::int as count FROM dossiers WHERE status = 'Em andamento' AND created_at < $1 AND (deleted_at IS NULL OR deleted_at = '')",
+      inicioMes.toISOString()
+    ) as { count: number };
+
+    const semanasPassada = new Date();
+    semanasPassada.setDate(semanasPassada.getDate() - 7);
+
+    const pendenciasCriticas = await queryRawOne(
+      "SELECT COUNT(*)::int as count FROM dossiers WHERE status = 'Pendente' AND (deleted_at IS NULL OR deleted_at = '')"
+    ) as { count: number };
+
+    const pendenciasSemanaPassada = await queryRawOne(
+      "SELECT COUNT(*)::int as count FROM dossiers WHERE status = 'Pendente' AND created_at < $1 AND (deleted_at IS NULL OR deleted_at = '')",
+      semanasPassada.toISOString()
+    ) as { count: number };
+
+    const certidoesEmitidas = await queryRawOne(
+      "SELECT COUNT(*)::int as count FROM certificates WHERE status = 'Obtida'"
+    ) as { count: number };
+
     const certidoesEmitidasMes = await queryRawOne(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= $1",
+      "SELECT COUNT(*)::int as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= $1",
       inicioMes.toISOString()
     ) as { count: number };
 
     const certidoesEmitidasMesAnterior = await queryRawOne(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= $1 AND obtained_at < $2",
+      "SELECT COUNT(*)::int as count FROM certificates WHERE status = 'Obtida' AND obtained_at >= $1 AND obtained_at < $2",
       new Date(inicioMes.getTime() - 30 * 86400000).toISOString(),
       inicioMes.toISOString()
     ) as { count: number };
 
     const totalCertidoes = await queryRawOne(
-      'SELECT COUNT(*) as count FROM certificates'
+      'SELECT COUNT(*)::int as count FROM certificates'
     ) as { count: number };
 
     const totalCertidoesAnterior = await queryRawOne(
-      'SELECT COUNT(*) as count FROM certificates WHERE created_at < $1',
+      'SELECT COUNT(*)::int as count FROM certificates WHERE created_at < $1',
       inicioMes.toISOString()
     ) as { count: number };
 
@@ -55,13 +60,13 @@ router.get('/', async (_req, res) => {
 
     const taxaConclusaoAnterior = totalCertidoesAnterior.count > 0
       ? (await queryRawOne(
-          "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND created_at < $1",
+          "SELECT COUNT(*)::int as count FROM certificates WHERE status = 'Obtida' AND created_at < $1",
           inicioMes.toISOString()
         ) as { count: number }).count / totalCertidoesAnterior.count * 100
       : 0;
 
     const emissions = await queryRaw(`
-      SELECT TO_CHAR(obtained_at::timestamp, 'MM') as mes, COUNT(*) as total
+      SELECT TO_CHAR(obtained_at::timestamp, 'MM') as mes, COUNT(*)::int as total
       FROM certificates
       WHERE status = 'Obtida' AND obtained_at::timestamp >= NOW() - INTERVAL '6 months'
       GROUP BY TO_CHAR(obtained_at::timestamp, 'MM')
@@ -69,17 +74,27 @@ router.get('/', async (_req, res) => {
     `) as { mes: string; total: number }[];
 
     const distribution = await queryRaw(`
-      SELECT priority, COUNT(*) as total
-      FROM dossiers
-      GROUP BY priority
-    `) as { priority: string; total: number }[];
+      SELECT
+        CASE
+          WHEN d.status = 'Cancelado' THEN 'Cancelado'
+          WHEN d.status = 'Arquivado' THEN 'Cancelado'
+          WHEN (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') >= 9
+               AND p.cpf IS NOT NULL AND p.cpf != '' THEN 'Concluído'
+          ELSE 'Pendente'
+        END as label,
+        COUNT(*)::int as total
+      FROM dossiers d
+      LEFT JOIN persons p ON p.id = d.person_id
+      WHERE (d.deleted_at IS NULL OR d.deleted_at = '')
+      GROUP BY label
+    `) as { label: string; total: number }[];
 
     const totalDossiers = await queryRawOne(
-      'SELECT COUNT(*) as count FROM dossiers'
+      "SELECT COUNT(*)::int as count FROM dossiers WHERE deleted_at IS NULL OR deleted_at = ''"
     ) as { count: number };
 
     const certHoje = await queryRawOne(
-      "SELECT COUNT(*) as count FROM certificates WHERE status = 'Obtida' AND obtained_at::date = CURRENT_DATE"
+      "SELECT COUNT(*)::int as count FROM certificates WHERE status = 'Obtida' AND obtained_at::date = CURRENT_DATE"
     ) as { count: number };
 
     const tempoMedio = await queryRawOne(`
@@ -93,13 +108,18 @@ router.get('/', async (_req, res) => {
       : 0;
 
     const priorities = await queryRaw(`
-      SELECT d.identifier, c.name as tipo, d.updated_at
+      SELECT d.id, d.identifier, d.updated_at,
+        (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Pendente')::int as pendencias,
+        (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id)::int as total_certs,
+        CASE WHEN p.cpf IS NULL OR p.cpf = '' THEN true ELSE false END as missing_cpf
       FROM dossiers d
-      LEFT JOIN certificates c ON c.dossier_id = d.id
-      WHERE d.status = 'Pendente'
-      ORDER BY d.updated_at ASC
-      LIMIT 5
-    `) as { identifier: string; tipo: string; updated_at: string }[];
+      LEFT JOIN persons p ON p.id = d.person_id
+      WHERE ((SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') < 9
+        OR p.cpf IS NULL OR p.cpf = '')
+        AND (d.deleted_at IS NULL OR d.deleted_at = '')
+      ORDER BY pendencias DESC, d.updated_at ASC
+      LIMIT 8
+    `) as { id: string; identifier: string; updated_at: string; pendencias: number; total_certs: number; missing_cpf: boolean }[];
 
     const organs = await queryRaw(
       'SELECT name, status FROM organs ORDER BY name'
@@ -114,6 +134,7 @@ router.get('/', async (_req, res) => {
 
     res.json({
       dossiersAndamento: dossiersAndamento.count,
+      dossiersAndamentoMesAnterior: dossiersAndamentoMesAnterior.count,
       pendenciasCriticas: pendenciasCriticas.count,
       pendenciasSemanaPassada: pendenciasSemanaPassada.count,
       certidoesEmitidas: certidoesEmitidas.count,
@@ -127,7 +148,7 @@ router.get('/', async (_req, res) => {
       })),
       totalDossiers: totalDossiers.count,
       distribution: distribution.map(d => ({
-        label: d.priority,
+        label: d.label,
         total: d.total,
       })),
       resumo: {
@@ -136,13 +157,21 @@ router.get('/', async (_req, res) => {
         tempoMedio: Math.round(tempoMedio.avg_minutes / 60 * 10) / 10,
         taxaSucesso: Math.round(taxaSucesso * 10) / 10,
       },
-      priorities: priorities.map(p => ({
-        identifier: p.identifier,
-        tipo: p.tipo || 'Documentação',
-        diasSemAtualizar: Math.floor(
-          (Date.now() - new Date(p.updated_at).getTime()) / 86400000
-        ),
-      })),
+      priorities: priorities.map(p => {
+        const motivos: string[] = [];
+        if (p.pendencias > 0) motivos.push(`${p.pendencias} certidão${p.pendencias > 1 ? 'ões' : ''} pendente${p.pendencias > 1 ? 's' : ''}`);
+        if (p.missing_cpf) motivos.push('CPF não informado');
+        if (p.total_certs === 0) motivos.push('Nenhuma certidão solicitada');
+        return {
+          id: p.id,
+          identifier: p.identifier,
+          motivo: motivos.join(' · ') || 'Requer atenção',
+          pendencias: p.pendencias,
+          diasSemAtualizar: Math.floor(
+            (Date.now() - new Date(p.updated_at).getTime()) / 86400000
+          ),
+        };
+      }),
       organs,
       activities: activities.map(a => ({
         time: new Date(a.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),

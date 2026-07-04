@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Shield, Loader2 } from "lucide-react";
 import * as teamApi from "@/services/teamApi";
+import { useT } from "@/i18n/useT";
 
 interface Props {
   open: boolean;
@@ -44,6 +45,7 @@ const PERMISSION_GROUPS: Record<string, { key: string; label: string }[]> = {
 };
 
 export default function PermissoesModal({ open, onClose, userId, userName }: Props) {
+  const { t } = useT();
   const [granted, setGranted] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");

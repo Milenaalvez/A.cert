@@ -145,14 +145,23 @@ router.get('/', async (req, res) => {
     const period = (req.query.period as string) || '';
     const offset = (page - 1) * limit;
 
-    const conditions: string[] = [];
+    const conditions: string[] = ["(d.deleted_at IS NULL OR d.deleted_at = '')"];
     const params: any[] = [];
     let idx = 0;
 
     if (status) {
-      idx++;
-      conditions.push(`d.status = $${idx}`);
-      params.push(status);
+      if (status === 'Pendente') {
+        conditions.push(`(d.status = 'Pendente' OR d.status = 'Em andamento')`);
+      } else if (status === 'Concluído') {
+        conditions.push(`(d.status = 'Concluído' OR (
+          (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') >= 9
+          AND p.cpf IS NOT NULL AND p.cpf != ''
+        ))`);
+      } else {
+        idx++;
+        conditions.push(`d.status = $${idx}`);
+        params.push(status);
+      }
     }
 
     if (period === 'hoje') {
@@ -655,7 +664,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       res.status(404).json({ error: 'Dossiê não encontrado' });
       return;
     }
-    await executeRaw(`UPDATE dossiers SET deleted_at = NOW() WHERE id = $1`, id);
+    await executeRaw(`UPDATE dossiers SET deleted_at = $1 WHERE id = $2`, new Date().toISOString(), id);
     res.json({ success: true });
   } catch (error) {
     console.error('[Dossiers Delete] Erro:', error);

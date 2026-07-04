@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Mail, FolderOpen, BadgeCheck, AlertTriangle, Star, Building2, Home, Store, Trees, Warehouse, Castle, Mountain } from "lucide-react";
+import { useT } from "@/i18n/useT";
 import { useTheme } from "@/contexts/ThemeContext";
 
 function formatDoc(cpf: string | null, cnpj?: string | null): string {
@@ -119,7 +120,7 @@ export function PersonDetailModal({ personId, onClose }: Props) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
-
+  const { t } = useT();
   const [properties, setProperties] = useState<any[]>([]);
   const [propertiesLoaded, setPropertiesLoaded] = useState(false);
 
@@ -336,27 +337,27 @@ export function PersonDetailModal({ personId, onClose }: Props) {
                     <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
                       <div className="flex flex-col" style={{ gap: "16px" }}>
                         <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.06em]">Informações pessoais</label>
-                        <EditField label="Nome" value={editForm.name} onChange={(v) => setEditForm(f => ({ ...f, name: v }))} />
-                        <EditField label="CPF/CNPJ" value={editForm.rg.startsWith("CNPJ") ? editForm.rg : editForm.rg} onChange={(v) => setEditForm(f => ({ ...f, rg: v }))} />
+                        <EditField label={t("people.table.name")} value={editForm.name} onChange={(v) => setEditForm(f => ({ ...f, name: v }))} />
+                        <EditField label={t("people.table.cpf")} value={editForm.rg.startsWith("CNPJ") ? editForm.rg : editForm.rg} onChange={(v) => setEditForm(f => ({ ...f, rg: v }))} />
                         <EditField label="RG" value={editForm.rg} onChange={(v) => setEditForm(f => ({ ...f, rg: v }))} />
                         <EditField label="Nascimento" value={editForm.birthDate} onChange={(v) => setEditForm(f => ({ ...f, birthDate: v }))} type="date" />
-                        <EditField label="Nome da mãe" value={editForm.motherName} onChange={(v) => setEditForm(f => ({ ...f, motherName: v }))} />
-                        <EditField label="Nome do pai" value={editForm.fatherName} onChange={(v) => setEditForm(f => ({ ...f, fatherName: v }))} />
-                        <EditField label="Estado civil" value={editForm.maritalStatus} onChange={(v) => setEditForm(f => ({ ...f, maritalStatus: v }))} />
-                        <EditField label="Nacionalidade" value={editForm.nationality} onChange={(v) => setEditForm(f => ({ ...f, nationality: v }))} />
+                        <EditField label={t("people.fields.motherName")} value={editForm.motherName} onChange={(v) => setEditForm(f => ({ ...f, motherName: v }))} />
+                        <EditField label={t("people.fields.fatherName")} value={editForm.fatherName} onChange={(v) => setEditForm(f => ({ ...f, fatherName: v }))} />
+                        <EditField label={t("people.fields.maritalStatus")} value={editForm.maritalStatus} onChange={(v) => setEditForm(f => ({ ...f, maritalStatus: v }))} />
+                        <EditField label={t("people.fields.nationality")} value={editForm.nationality} onChange={(v) => setEditForm(f => ({ ...f, nationality: v }))} />
                       </div>
                       <div className="flex flex-col" style={{ gap: "16px" }}>
                         <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.06em]">Contato</label>
-                        <EditField label="E-mail" value={editForm.email} onChange={(v) => setEditForm(f => ({ ...f, email: v }))} />
-                        <EditField label="Telefone" value={editForm.phone} onChange={(v) => setEditForm(f => ({ ...f, phone: v }))} />
-                        <EditField label="Celular" value={editForm.cellPhone} onChange={(v) => setEditForm(f => ({ ...f, cellPhone: v }))} />
+                        <EditField label={t("people.fields.email")} value={editForm.email} onChange={(v) => setEditForm(f => ({ ...f, email: v }))} />
+                        <EditField label={t("people.fields.phone")} value={editForm.phone} onChange={(v) => setEditForm(f => ({ ...f, phone: v }))} />
+                        <EditField label={t("people.fields.cellPhone")} value={editForm.cellPhone} onChange={(v) => setEditForm(f => ({ ...f, cellPhone: v }))} />
                         <div style={{ marginTop: "8px" }}>
                           <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.06em]" style={{ marginBottom: "8px" }}>Endereço</label>
                           <div className="flex flex-col" style={{ gap: "8px" }}>
                             <EditField label="Logradouro" value={editForm.address} onChange={(v) => setEditForm(f => ({ ...f, address: v }))} />
                             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 60px", gap: "8px" }}>
-                              <EditField label="Cidade" value={editForm.city} onChange={(v) => setEditForm(f => ({ ...f, city: v }))} />
-                              <EditField label="Estado" value={editForm.state} onChange={(v) => setEditForm(f => ({ ...f, state: v }))} />
+                              <EditField label={t("people.fields.city")} value={editForm.city} onChange={(v) => setEditForm(f => ({ ...f, city: v }))} />
+                              <EditField label={t("people.fields.state")} value={editForm.state} onChange={(v) => setEditForm(f => ({ ...f, state: v }))} />
                               <EditField label="CEP" value={editForm.zipCode} onChange={(v) => setEditForm(f => ({ ...f, zipCode: v }))} />
                             </div>
                           </div>
@@ -404,22 +405,22 @@ export function PersonDetailModal({ personId, onClose }: Props) {
                       <div>
                         <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.06em]" style={{ marginBottom: "12px" }}>Informações pessoais</label>
                         <div className="flex flex-col" style={{ gap: "8px" }}>
-                          <InfoRow label="Nome" value={person.name} />
-                          <InfoRow label="CPF/CNPJ" value={formatDoc(person.cpf, null)} />
+                          <InfoRow label={t("people.table.name")} value={person.name} />
+                          <InfoRow label={t("people.table.cpf")} value={formatDoc(person.cpf, null)} />
                           <InfoRow label="RG" value={person.rg || "—"} />
                           <InfoRow label="Nascimento" value={person.birthDate ? formatDateShort(person.birthDate) : "—"} />
-                          <InfoRow label="Nome da mãe" value={person.motherName || "—"} />
-                          <InfoRow label="Nome do pai" value={person.fatherName || "—"} />
-                          <InfoRow label="Estado civil" value={person.maritalStatus || "—"} />
-                          <InfoRow label="Nacionalidade" value={person.nationality || "—"} />
+                          <InfoRow label={t("people.fields.motherName")} value={person.motherName || "—"} />
+                          <InfoRow label={t("people.fields.fatherName")} value={person.fatherName || "—"} />
+                          <InfoRow label={t("people.fields.maritalStatus")} value={person.maritalStatus || "—"} />
+                          <InfoRow label={t("people.fields.nationality")} value={person.nationality || "—"} />
                         </div>
                       </div>
                       <div>
                         <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.06em]" style={{ marginBottom: "12px" }}>Contato</label>
                         <div className="flex flex-col" style={{ gap: "8px" }}>
-                          <InfoRow label="E-mail" value={person.email || "—"} />
-                          <InfoRow label="Telefone" value={person.phone || "—"} />
-                          <InfoRow label="Celular" value={person.cellPhone || "—"} />
+                          <InfoRow label={t("people.fields.email")} value={person.email || "—"} />
+                          <InfoRow label={t("people.fields.phone")} value={person.phone || "—"} />
+                          <InfoRow label={t("people.fields.cellPhone")} value={person.cellPhone || "—"} />
                         </div>
                       </div>
                     </div>
@@ -428,8 +429,8 @@ export function PersonDetailModal({ personId, onClose }: Props) {
                         <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.06em]" style={{ marginBottom: "12px" }}>Endereço</label>
                         <div className="flex flex-col" style={{ gap: "8px" }}>
                           <InfoRow label="Logradouro" value={person.address || "—"} />
-                          <InfoRow label="Cidade" value={person.city || "—"} />
-                          <InfoRow label="Estado" value={person.state || "—"} />
+                          <InfoRow label={t("people.fields.city")} value={person.city || "—"} />
+                          <InfoRow label={t("people.fields.state")} value={person.state || "—"} />
                           <InfoRow label="CEP" value={person.zipCode || "—"} />
                         </div>
                       </div>

@@ -5,8 +5,10 @@ import { Mail, ArrowLeft, Loader2, MailCheck } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import Link from "next/link";
 import { esqueciSenha } from "@/lib/api";
+import { useT } from "@/i18n/useT";
 
 export default function RecuperarSenhaPage() {
+  const { t } = useT();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);

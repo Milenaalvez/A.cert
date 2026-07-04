@@ -9,6 +9,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Search,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useT } from "@/i18n/useT";
 
 const apiBase = "";
 
@@ -71,6 +72,7 @@ const btnBase = "flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13
 const btnOutline = `${btnBase} bg-transparent text-muted border border-default hover:border-[#FF7A00] hover:text-[#FF7A00]`;
 
 export default function SuportePage() {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const [systemInfo, setSystemInfo] = useState<any>(null);
   const [organs, setOrgans] = useState<any[]>([]);
@@ -136,12 +138,12 @@ Uptime: ${systemInfo.uptime}`;
           <div className={card} style={{ width: "280px", minWidth: "280px" }}>
             <h3 className="text-[14px] font-semibold text-primary mb-4">Informações do Sistema</h3>
             <div className="flex flex-col gap-3">
-              <InfoRow icon={Monitor} label="Versão" value={systemInfo?.version || "—"} />
-              <InfoRow icon={Globe} label="Ambiente" value={systemInfo?.environment || "—"} />
-              <InfoRow icon={Clock} label="Atualização" value={systemInfo?.lastUpdate || "—"} />
-              <InfoRow icon={Server} label="Servidor" value={systemInfo?.server || "—"} />
-              <InfoRow icon={Database} label="Banco" value={systemInfo?.database || "—"} />
-              <InfoRow icon={Activity} label="Uptime" value={systemInfo?.uptime || "—"} />
+              <InfoRow icon={Monitor} label={t("config.versao")} value={systemInfo?.version || "—"} />
+              <InfoRow icon={Globe} label={t("config.ambiente")} value={systemInfo?.environment || "—"} />
+              <InfoRow icon={Clock} label={t("config.atualizacao")} value={systemInfo?.lastUpdate || "—"} />
+              <InfoRow icon={Server} label={t("config.servidor")} value={systemInfo?.server || "—"} />
+              <InfoRow icon={Database} label={t("config.banco")} value={systemInfo?.database || "—"} />
+              <InfoRow icon={Activity} label={t("config.uptime")} value={systemInfo?.uptime || "—"} />
             </div>
             <button onClick={copyInfo} className={`${btnOutline} w-full mt-4`}>
               {copied ? <CheckCheck size={14} color="#059669" /> : <Copy size={14} />}

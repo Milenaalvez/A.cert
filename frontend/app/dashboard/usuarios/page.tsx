@@ -12,6 +12,7 @@ import PermissoesModal from "@/components/PermissoesModal";
 import UserSidePanel from "@/components/UserSidePanel";
 import ConfirmModal from "@/components/ConfirmModal";
 import * as teamApi from "@/services/teamApi";
+import { useT } from "@/i18n/useT";
 
 interface EnrichedUser {
   id: string;
@@ -103,6 +104,7 @@ const sectionBox = "border border-default bg-surface p-8";
 const btnBase = "flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold cursor-pointer transition-all duration-150";
 
 export default function UsuariosPage() {
+  const { t } = useT();
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -223,7 +225,7 @@ export default function UsuariosPage() {
           <div className="flex items-center gap-3 shrink-0">
             <div className="relative">
               <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-              <input ref={searchRef} type="text" placeholder="Buscar por nome, e-mail ou telefone..." value={search}
+              <input ref={searchRef} type="text" placeholder={t("users.search")} value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", paddingLeft: "42px", paddingRight: "16px", width: "340px", outline: "none" }} />
             </div>
@@ -432,7 +434,7 @@ export default function UsuariosPage() {
         message={`Deseja mover "${deleteConfirm?.name}" para a Lixeira? Você poderá restaurar ou excluir permanentemente depois.`}
         variant="warning"
         confirmLabel="Mover para lixeira"
-        cancelLabel="Cancelar"
+        cancelLabel={t("common.cancel")}
         onConfirm={handleDeleteUser}
         onCancel={() => setDeleteConfirm(null)}
         onClose={() => setDeleteConfirm(null)}

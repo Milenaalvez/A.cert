@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { LocaleProvider } from "@/i18n/LocaleContext";
+import IntlWrapper from "./IntlWrapper";
 
 export const metadata: Metadata = {
   title: "A.CERT — Central de Certidões Imobiliárias",
@@ -28,7 +30,11 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ThemeProvider initialTheme="light">{children}</ThemeProvider>
+        <LocaleProvider>
+          <IntlWrapper>
+            <ThemeProvider initialTheme="light">{children}</ThemeProvider>
+          </IntlWrapper>
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import NovoDossieModal from "./NovoDossieModal";
 import PageLoadingOverlay from "./PageLoadingOverlay";
 import ElectronTitleBar from "./ElectronTitleBar";
 import { UserProvider, useUser } from "@/contexts/UserContext";
+import { useT } from "@/i18n/useT";
 
 function pathToPage(pathname: string): string {
   if (pathname === "/dashboard") return "dashboard";
@@ -19,12 +20,14 @@ const PAGE_HREF: Record<string, string> = {
   dossies: "/dashboard/dossies",
   "dossies/novo": "/dashboard/dossies/novo",
   pessoas: "/dashboard/pessoas",
+  empresas: "/dashboard/empresas",
   imoveis: "/dashboard/imoveis",
   certidoes: "/dashboard/certidoes",
   relatorios: "/dashboard/relatorios",
   usuarios: "/dashboard/usuarios",
   configuracoes: "/dashboard/configuracoes",
   suporte: "/dashboard/suporte",
+  trash: "/dashboard/trash",
 };
 
 export default function DashboardLayoutClient({
@@ -36,6 +39,7 @@ export default function DashboardLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useT();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);

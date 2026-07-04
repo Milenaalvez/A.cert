@@ -7,6 +7,7 @@ import {
   FileText, FolderOpen, CheckCircle2, XCircle, Activity,
   ExternalLink, Star,
 } from "lucide-react";
+import { useT } from "@/i18n/useT";
 
 interface EnrichedUser {
   id: string; name: string; email: string; role: string;
@@ -57,6 +58,7 @@ const TABS = [
 ];
 
 export default function UserSidePanel({ user, onClose, onEdit, onPermissions, onToggleStatus }: Props) {
+  const { t } = useT();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("perfil");
   const [activities, setActivities] = useState<any[]>([]);
@@ -164,10 +166,10 @@ export default function UserSidePanel({ user, onClose, onEdit, onPermissions, on
                 <div className="border border-default rounded-[10px] p-4 bg-surface">
                   <h3 className="text-[12px] font-semibold text-muted uppercase tracking-[0.6px] mb-4">Resumo</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <StatBox label="Dossiês criados" value={String(user.stats?.dossiersCreated || 0)} />
-                    <StatBox label="Concluídos" value={String(user.stats?.dossiersCompleted || 0)} />
+                    <StatBox label={t("config.dossies_criados")} value={String(user.stats?.dossiersCreated || 0)} />
+                    <StatBox label={t("dossiers.tabs.completed")} value={String(user.stats?.dossiersCompleted || 0)} />
                     <StatBox label="Clientes" value={String(user.stats?.clientsRegistered || 0)} />
-                    <StatBox label="Imóveis" value={String(user.stats?.propertiesLinked || 0)} />
+                    <StatBox label={t("trash.filters.properties")} value={String(user.stats?.propertiesLinked || 0)} />
                   </div>
                 </div>
 
@@ -175,8 +177,8 @@ export default function UserSidePanel({ user, onClose, onEdit, onPermissions, on
                 <div className="border border-default rounded-[10px] p-4 bg-surface">
                   <h3 className="text-[12px] font-semibold text-muted uppercase tracking-[0.6px] mb-4">Dados Cadastrais</h3>
                   <div className="flex flex-col gap-3">
-                    <ProfileRow icon={Mail} label="Email" value={user.email} />
-                    <ProfileRow icon={Phone} label="Telefone" value={user.phone || "—"} />
+                    <ProfileRow icon={Mail} label={t("people.table.email")} value={user.email} />
+                    <ProfileRow icon={Phone} label={t("people.fields.phone")} value={user.phone || "—"} />
                     {user.registrationNumber && <ProfileRow icon={FileText} label="Registro" value={user.registrationNumber} />}
                     {user.birthDate && <ProfileRow icon={Calendar} label="Nascimento" value={formatDate(user.birthDate)} />}
                     {user.hireDate && <ProfileRow icon={Calendar} label="Contratação" value={formatDate(user.hireDate)} />}
@@ -191,7 +193,7 @@ export default function UserSidePanel({ user, onClose, onEdit, onPermissions, on
                     <div className="flex flex-col gap-2">
                       {user.lastSession.date && <ProfileRow icon={Clock} label="Data" value={formatDate(user.lastSession.date)} />}
                       <GlobeRow label="IP" value={user.lastSession.ip || "—"} />
-                      <MonitorRow label="Dispositivo" value={user.lastSession.device || "—"} />
+                      <MonitorRow label={t("config.dispositivo")} value={user.lastSession.device || "—"} />
                     </div>
                   </div>
                 )}
