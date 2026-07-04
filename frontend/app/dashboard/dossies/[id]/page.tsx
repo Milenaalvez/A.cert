@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import DossierDetailClient from "./DossierDetailClient";
 
 export function generateStaticParams() {
@@ -5,5 +6,9 @@ export function generateStaticParams() {
 }
 
 export default function DossierDetailPage() {
-  return <DossierDetailClient />;
+  return (
+    <Suspense fallback={null}>
+      <DossierDetailClient />
+    </Suspense>
+  );
 }
