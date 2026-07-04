@@ -123,12 +123,20 @@ app.post('/api/upload/company-logo', logoUpload.single('logotipo'), async (req, 
   res.json({ logoUrl });
 });
 
+// Serve frontend (Next.js static export)
+const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
+app.use(express.static(frontendOut));
+
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
 app.use(express.static(publicPath));
 
 const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPublicPath));
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'index.html'));
+});
 
 const documentos = new Map<string, Uint8Array>();
 
@@ -329,13 +337,6 @@ app.get('/api/dossie/:jobId', async (req, res) => {
     console.error('Erro ao gerar dossiê:', error);
     res.status(500).json({ error: 'Erro ao gerar dossiê' });
   }
-});
-
-// Serve frontend (Electron production mode)
-const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
-app.use(express.static(frontendOut));
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(frontendOut, 'index.html'));
 });
 
 process.on('SIGINT', async () => {
