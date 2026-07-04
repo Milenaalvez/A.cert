@@ -33,9 +33,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  active: { bg: "rgba(5,150,105,0.12)", text: "#059669" },
-  pending: { bg: "rgba(217,119,6,0.12)", text: "#D97706" },
-  cancelled: { bg: "rgba(220,38,38,0.12)", text: "#DC2626" },
+  active: { bg: "rgba(5,150,105,0.18)", text: "#059669" },
+  pending: { bg: "rgba(217,119,6,0.18)", text: "#D97706" },
+  cancelled: { bg: "rgba(220,38,38,0.18)", text: "#DC2626" },
 };
 
 const FILTERS = [
@@ -329,7 +329,7 @@ export default function EmpresasPage() {
                       </td>
                       <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
                         <button onClick={() => loadUsers(c)} className="bg-transparent border-0 cursor-pointer p-0">
-                          <span className="inline-block text-[12px] font-semibold text-[#FF7A00] px-2 py-1" style={{ background: "rgba(255,122,0,0.12)" }}>{c.user_count}</span>
+                          <span className="inline-block text-[12px] font-semibold text-[#FF7A00] px-2 py-1">{c.user_count}</span>
                         </button>
                       </td>
                       <td style={{ padding: "14px 14px", borderBottom: "1px solid var(--border-default)" }}>
