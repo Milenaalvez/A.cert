@@ -44,23 +44,8 @@ function Field({
   );
 }
 
-function maskCPF(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  return d.replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-function maskCNPJ(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 14);
-  return d.replace(/(\d{2})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1/$2")
-    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-}
-function maskPhone(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  return d.replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2");
+function rawDigits(v: string, max: number): string {
+  return v.replace(/\D/g, "").slice(0, max);
 }
 
 export default function RegisterPage() {
@@ -381,8 +366,8 @@ export default function RegisterPage() {
                 <IdCard size={20} strokeWidth={1.5} className="text-white/60 shrink-0" />
                 <input
                   type="text" value={cpf}
-                  onChange={(e) => { setCpf(maskCPF(e.target.value)); setErrors((p) => ({ ...p, cpf: "" })); }}
-                  placeholder="000.000.000-00" className={inputBase} autoComplete="off"
+                  onChange={(e) => { setCpf(rawDigits(e.target.value, 11)); setErrors((p) => ({ ...p, cpf: "" })); }}
+                  placeholder="Apenas números" className={inputBase} autoComplete="off"
                 />
               </div>
             </Field>
@@ -392,8 +377,8 @@ export default function RegisterPage() {
                 <Building2 size={20} strokeWidth={1.5} className="text-white/60 shrink-0" />
                 <input
                   type="text" value={cnpj}
-                  onChange={(e) => { setCnpj(maskCNPJ(e.target.value)); setErrors((p) => ({ ...p, cnpj: "" })); }}
-                  placeholder="00.000.000/0001-00" className={inputBase} autoComplete="off"
+                  onChange={(e) => { setCnpj(rawDigits(e.target.value, 14)); setErrors((p) => ({ ...p, cnpj: "" })); }}
+                  placeholder="Apenas números" className={inputBase} autoComplete="off"
                 />
               </div>
             </Field>
@@ -405,8 +390,8 @@ export default function RegisterPage() {
                 <Phone size={20} strokeWidth={1.5} className="text-white/60 shrink-0" />
                 <input
                   type="text" value={phone}
-                  onChange={(e) => { setPhone(maskPhone(e.target.value)); setErrors((p) => ({ ...p, phone: "" })); }}
-                  placeholder="(61) 99999-9999" className={inputBase} autoComplete="tel"
+                  onChange={(e) => { setPhone(rawDigits(e.target.value, 11)); setErrors((p) => ({ ...p, phone: "" })); }}
+                  placeholder="Apenas números" className={inputBase} autoComplete="tel"
                 />
               </div>
             </Field>
