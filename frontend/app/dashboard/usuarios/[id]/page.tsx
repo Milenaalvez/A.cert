@@ -1,8 +1,11 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+
+export function generateStaticParams() {
+  return [];
+}
 
 export default function UsuarioDetalheRedirect() {
   const router = useRouter();

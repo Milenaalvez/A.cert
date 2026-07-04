@@ -1,8 +1,11 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+
+export function generateStaticParams() {
+  return [];
+}
 import Link from "next/link";
 import {
   FileText, Clock, User, AlertCircle, ArrowLeft, Building2, ScrollText, Calendar,
@@ -12,6 +15,7 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import DossierEditModal from "@/components/DossierEditModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useT } from "@/i18n/useT";
 
 interface DossierDetail {
   id: string; identifier: string; status: string; priority: string; responsible: string;
@@ -42,6 +46,7 @@ const TABS = [
 ];
 
 export default function DossierDetailPage() {
+  const { t } = useT();
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const emitir = searchParams.get("emitir") === "true";
@@ -385,7 +390,7 @@ export default function DossierDetailPage() {
         title="Arquivar dossiê"
         message={`Tem certeza que deseja arquivar o dossiê ${dossier?.identifier}? Ele ficará inativo e poderá ser restaurado depois.`}
         confirmLabel="Sim, Arquivar"
-        cancelLabel="Cancelar"
+        cancelLabel={t("common.cancel")}
         variant="warning"
         onConfirm={async () => {
           if (!dossier) return;

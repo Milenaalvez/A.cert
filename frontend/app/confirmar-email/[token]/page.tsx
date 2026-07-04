@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import { Loader2, CheckCircle2, ShieldAlert, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
+export function generateStaticParams() {
+  return [];
+}
+
 export default function ConfirmarEmailPage() {
   const params = useParams();
   const token = params.token as string;
