@@ -25,7 +25,7 @@ import trashRoutes from './routes/trash.js';
 import companiesRoutes from './routes/companies.js';
 import prisma, { executeRaw, queryRawOne } from './lib/prisma.js';
 
-const LOG = (msg: string) => console.log(`[Server] ${msg}`);
+const LOG = (msg: string) => console.log(`[A.CERT] ${msg}`);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
