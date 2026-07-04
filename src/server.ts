@@ -25,7 +25,7 @@ import trashRoutes from './routes/trash.js';
 import companiesRoutes from './routes/companies.js';
 import prisma, { executeRaw, queryRawOne } from './lib/prisma.js';
 
-const LOG = (msg: string) => console.log(`[Server] ${msg}`);
+const LOG = (msg: string) => console.log(`[A.CERT] ${msg}`);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +54,7 @@ app.use('/api/trash', trashRoutes);
 app.use('/api/companies', companiesRoutes);
 
 app.get('/api/test-email', async (req, res) => {
-  const to = (req.query.to as string) || 'contato@acert.online';
+  const to = (req.query.to as string) || 'contato@acert.tech';
   try {
     await enviarEmailConfirmacao(to, 'Teste A.CERT', 'test-token');
     res.json({ success: true, message: `Email enviado para ${to}. Verifique a caixa de entrada e o spam.` });
@@ -91,6 +91,36 @@ app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
   const avatarUrl = `/uploads/avatars/${req.file.filename}`;
   await executeRaw('UPDATE users SET avatar = $1 WHERE id = $2', avatarUrl, userId);
   res.json({ avatarUrl });
+});
+
+const logosDir = path.join(__dirname, '..', 'uploads', 'company-logos');
+if (!fs.existsSync(logosDir)) { fs.mkdirSync(logosDir, { recursive: true }); }
+
+const logoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, logosDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `logo-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Apenas imagens são permitidas'));
+  },
+});
+
+app.post('/api/upload/company-logo', logoUpload.single('logotipo'), async (req, res) => {
+  const companyId = req.body.companyId;
+  if (!companyId || !req.file) {
+    res.status(400).json({ error: 'companyId e logotipo são obrigatórios' });
+    return;
+  }
+  const logoUrl = `/uploads/company-logos/${req.file.filename}`;
+  await executeRaw('UPDATE companies SET logo_url = $1 WHERE id = $2', logoUrl, companyId);
+  res.json({ logoUrl });
 });
 
 const publicPath = path.join(__dirname, '..', 'public');
