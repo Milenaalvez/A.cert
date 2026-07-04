@@ -76,8 +76,6 @@ export default function RegisterPage() {
   const [timer, setTimer] = useState(60);
   const [reenviando, setReenviando] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [termsViewed, setTermsViewed] = useState(false);
-  const [privacyViewed, setPrivacyViewed] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
@@ -473,8 +471,6 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (!termsViewed) { setShowTermsModal(true); return; }
-                  if (!privacyViewed) { setShowPrivacyModal(true); return; }
                   setAcceptTerms(!acceptTerms);
                   setErrors((p) => ({ ...p, terms: "" }));
                 }}
@@ -528,7 +524,7 @@ export default function RegisterPage() {
               <section><h3 className="text-white font-semibold text-base mb-1">6. Propriedade Intelectual</h3><p>Todos os direitos da plataforma pertencem à A.CERT.</p></section>
               <section><h3 className="text-white font-semibold text-base mb-1">7. Contato</h3><p>Dúvidas podem ser encaminhadas ao suporte da plataforma.</p></section>
             </div>
-            <button type="button" onClick={() => { setTermsViewed(true); setShowTermsModal(false); if (!privacyViewed) { setTimeout(() => setShowPrivacyModal(true), 300); } else { setAcceptTerms(true); } }} className="w-full h-[52px] rounded-[14px] bg-accent font-semibold text-white hover:bg-accent-hover transition-all">Li e Aceito os Termos de Uso</button>
+            <button type="button" onClick={() => { setShowTermsModal(false); setAcceptTerms(true); setErrors((p) => ({ ...p, terms: "" })); }} className="w-full h-[52px] rounded-[14px] bg-accent font-semibold text-white hover:bg-accent-hover transition-all">Li e Aceito os Termos de Uso</button>
           </div>
         </div>
       )}
@@ -549,7 +545,7 @@ export default function RegisterPage() {
               <section><h3 className="text-white font-semibold text-base mb-1">6. Seus Direitos (LGPD)</h3><p>Você pode acessar, corrigir, excluir ou solicitar portabilidade dos seus dados.</p></section>
               <section><h3 className="text-white font-semibold text-base mb-1">7. Contato</h3><p>Dúvidas podem ser encaminhadas ao suporte da plataforma.</p></section>
             </div>
-            <button type="button" onClick={() => { setPrivacyViewed(true); setShowPrivacyModal(false); setAcceptTerms(true); }} className="w-full h-[52px] rounded-[14px] bg-accent font-semibold text-white hover:bg-accent-hover transition-all">Li e Aceito a Política de Privacidade</button>
+            <button type="button" onClick={() => { setShowPrivacyModal(false); setAcceptTerms(true); setErrors((p) => ({ ...p, terms: "" })); }} className="w-full h-[52px] rounded-[14px] bg-accent font-semibold text-white hover:bg-accent-hover transition-all">Li e Aceito a Política de Privacidade</button>
           </div>
         </div>
       )}
