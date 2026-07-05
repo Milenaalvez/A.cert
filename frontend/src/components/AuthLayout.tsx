@@ -17,7 +17,6 @@ export default function AuthLayout({
   highlightWord,
   description,
   badge,
-  titleSize = "text-[72px]",
   tagline,
   children,
 }: AuthLayoutProps) {
@@ -40,48 +39,57 @@ export default function AuthLayout({
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black">
-      <Image src="/images/login-bg.png" alt="Background" fill className="object-cover object-[center_30%]" priority />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.25) 100%)" }} />
+    <div className="relative w-screen h-screen overflow-auto bg-black">
+      {/* Background */}
+      <Image src="/images/login-bg.png" alt="" fill className="object-cover object-center fixed inset-0" priority />
+      <div className="fixed inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/30" />
 
-      {/* LEFT SIDE — Branding — hidden on mobile */}
-      <div className="hidden sm:block absolute left-0 top-0 w-[55%] h-screen">
-        <div style={{ position: "absolute", top: "120px", left: "80px" }}>
-          <div className="flex items-center gap-4">
-            <Image src="/images/logo.png" alt="A.CERT" width={72} height={72} className="object-contain" />
-            <div className="flex flex-col">
-              <span className="text-white text-[48px] font-bold tracking-tight block leading-none">A.CERT</span>
-              <span className="text-white/80 text-[14px] mt-1.5 block whitespace-nowrap">Central de Certidões</span>
-            </div>
-          </div>
-        </div>
-        <div style={{ position: "absolute", top: "46%", left: "80px", transform: "translateY(-50%)" }}>
-          <div className="animate-slide-up">
-            {badge && (
-              <div style={{ display: "inline-flex", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", padding: "10px 18px", borderRadius: "999px", marginBottom: "53px" }}>
-                <span className="text-accent text-sm font-medium">{badge}</span>
+      {/* Main grid */}
+      <div className="relative z-10 flex min-h-screen">
+        {/* LEFT — Branding — hidden on mobile, simplified on tablet */}
+        <div className="hidden md:flex flex-1 flex-col justify-center px-8 lg:px-14 xl:px-20">
+          <div className="max-w-[600px]">
+            {/* Logo */}
+            <div className="flex items-center gap-3 md:gap-4 mb-12 lg:mb-16">
+              <Image src="/images/logo.png" alt="A.CERT" width={48} height={48} className="md:w-[56px] md:h-[56px] lg:w-[72px] lg:h-[72px] object-contain" />
+              <div>
+                <span className="text-white font-bold tracking-tight block leading-none" style={{ fontSize: "clamp(28px, 4vw, 48px)" }}>A.CERT</span>
+                <span className="text-white/60 block mt-1" style={{ fontSize: "clamp(10px, 1.2vw, 14px)" }}>Central de Certidões</span>
               </div>
-            )}
-            <div className={`text-white font-extrabold leading-[1.05] mb-6 ${titleSize}`} style={{ maxWidth: "650px" }}>
-              {typeof title === "string" ? highlightTitle(title, highlightWord) : title}
             </div>
-            <div style={{ width: "48px", height: "4px", background: "#F97316", borderRadius: "999px", marginBottom: "32px" }} />
-            <p className="text-white/75" style={{ fontSize: "24px", lineHeight: "1.7", maxWidth: "520px", marginBottom: "32px" }}>{description}</p>
+
+            <div className="animate-slide-up">
+              {badge && (
+                <span className="inline-block px-4 py-2 rounded-full border border-accent/25 bg-accent/10 text-accent font-medium mb-8 lg:mb-12" style={{ fontSize: "clamp(10px, 1.2vw, 14px)" }}>
+                  {badge}
+                </span>
+              )}
+
+              <h1 className="text-white font-extrabold leading-[1.05] mb-6" style={{ fontSize: "clamp(24px, 4.5vw, 64px)", maxWidth: "650px" }}>
+                {typeof title === "string" ? highlightTitle(title, highlightWord) : title}
+              </h1>
+
+              <div className="w-10 h-1 bg-accent rounded-full mb-6 lg:mb-8" />
+
+              <p className="text-white/70 leading-relaxed max-w-[480px]" style={{ fontSize: "clamp(13px, 1.6vw, 22px)" }}>
+                {description}
+              </p>
+            </div>
+
+            {tagline && <div className="mt-10">{tagline}</div>}
           </div>
         </div>
-        {tagline && <div style={{ position: "absolute", bottom: "100px", left: "80px" }}>{tagline}</div>}
-      </div>
 
-      {/* Mobile-only logo */}
-      <div className="sm:hidden absolute top-6 left-5 z-10 flex items-center gap-3">
-        <Image src="/images/logo.png" alt="A.CERT" width={36} height={36} className="object-contain" />
-        <span className="text-white text-[22px] font-bold tracking-tight">A.CERT</span>
-      </div>
+        {/* RIGHT — Form */}
+        <div className="w-full md:w-[420px] lg:w-[460px] xl:w-[500px] flex-shrink-0 flex flex-col justify-center px-5 sm:px-8 md:px-6 lg:px-8">
+          {/* Mobile logo */}
+          <div className="md:hidden flex items-center gap-3 mb-8">
+            <Image src="/images/logo.png" alt="A.CERT" width={36} height={36} className="object-contain" />
+            <span className="text-white font-bold tracking-tight" style={{ fontSize: "clamp(18px, 5vw, 24px)" }}>A.CERT</span>
+          </div>
 
-      {/* RIGHT SIDE — Form — 45% on desktop, full-width on mobile */}
-      <div className="auth-right absolute right-0 top-0 w-full sm:w-[45%] h-screen">
-        <div className="auth-form-inner" style={{ position: "absolute", right: "120px", top: "50%", transform: "translateY(-50%)", maxWidth: "520px", width: "calc(100% - 180px)" }}>
-          <div className="animate-fade-in" style={{ padding: "40px", borderRadius: "32px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
+          <div className="animate-fade-in w-full rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-10"
+            style={{ background: "rgba(18,18,18,0.45)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {children}
           </div>
         </div>
