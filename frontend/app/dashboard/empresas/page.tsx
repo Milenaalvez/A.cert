@@ -71,6 +71,8 @@ export default function EmpresasPage() {
   const [showDelete, setShowDelete] = useState<Company | null>(null);
   const [showUsers, setShowUsers] = useState<Company | null>(null);
   const [showProfile, setShowProfile] = useState<Company | null>(null);
+  const [profileUsers, setProfileUsers] = useState<UserRow[]>([]);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [modalUsers, setModalUsers] = useState<UserRow[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [contextOpen, setContextOpen] = useState<string | null>(null);
@@ -124,6 +126,17 @@ export default function EmpresasPage() {
   }, [getHeaders]);
 
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
+
+  useEffect(() => {
+    if (!showProfile) return;
+    setLoadingProfile(true);
+    const token = localStorage.getItem("acert_token");
+    fetch(`/api/companies/${showProfile.id}/users`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(setProfileUsers)
+      .catch(() => {})
+      .finally(() => setLoadingProfile(false));
+  }, [showProfile]);
 
   useEffect(() => {
     if (!contextOpen) return;
@@ -545,8 +558,8 @@ export default function EmpresasPage() {
         <>
           <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={() => setShowProfile(null)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowProfile(null)}>
-            <div className="w-full bg-surface animate-in fade-in zoom-in-95 duration-200"
-              style={{ maxWidth: "460px", borderRadius: "16px", border: "1px solid var(--border-default)", boxShadow: "0 25px 80px rgba(0,0,0,0.18)" }}
+            <div className="w-full bg-surface flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+              style={{ maxWidth: "560px", borderRadius: "16px", border: "1px solid var(--border-default)", boxShadow: "0 25px 80px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}>
               <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid var(--border-light)" }}>
                 <div className="flex items-center justify-between">
@@ -568,15 +581,20 @@ export default function EmpresasPage() {
                   </button>
                 </div>
               </div>
-              <div style={{ padding: "24px 28px" }}>
-                <div className="flex flex-col gap-4">
+              <div className="flex-1 overflow-y-auto" style={{ padding: "24px 28px" }}>
+                <div className="flex flex-col gap-5">
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] font-semibold text-muted uppercase tracking-[0.4px]">CNPJ</span>
                     <span className="text-[13px] text-primary font-medium">{showProfile.cnpj ? formatCNPJ(showProfile.cnpj) : "Não informado"}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] font-semibold text-muted uppercase tracking-[0.4px]">Plano</span>
-                    <span className="text-[13px] text-primary font-medium">{showProfile.plan === "trial" ? "Trial" : showProfile.plan || "—"}</span>
+                    <div className="text-right">
+                      <span className="text-[13px] text-primary font-semibold">{showProfile.plan === "trial" ? "Trial" : showProfile.plan || "—"}</span>
+                      {showProfile.plan === "trial" && (
+                        <p className="text-[11px] text-muted mt-0.5">Período de testes — 15 dias</p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] font-semibold text-muted uppercase tracking-[0.4px]">Status</span>
@@ -585,12 +603,36 @@ export default function EmpresasPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-muted uppercase tracking-[0.4px]">Colaboradores</span>
-                    <span className="inline-block text-[12px] font-semibold text-[#FF7A00] px-2 py-1" style={{ background: "rgba(255,122,0,0.12)" }}>{showProfile.user_count}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-[12px] font-semibold text-muted uppercase tracking-[0.4px]">Desde</span>
                     <span className="text-[13px] text-primary font-medium">{formatDate(showProfile.created_at)}</span>
+                  </div>
+
+                  <div style={{ height: "1px", background: "var(--border-light)", margin: "4px 0" }} />
+
+                  <div>
+                    <span className="text-[12px] font-semibold text-muted uppercase tracking-[0.4px]">Colaboradores</span>
+
+                    {loadingProfile ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 size={18} className="animate-spin" style={{ color: "var(--text-muted)" }} />
+                      </div>
+                    ) : profileUsers.length === 0 ? (
+                      <div className="text-[12px] text-secondary italic text-center py-6">Nenhum colaborador encontrado.</div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5 mt-3">
+                        {profileUsers.map(u => (
+                          <div key={u.id} className="flex items-center justify-between py-2.5 px-3" style={{ borderRadius: "8px", background: "var(--bg-app)" }}>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[13px] font-medium text-primary block truncate">{u.name}</span>
+                              <span className="text-[11px] text-secondary">{u.email}</span>
+                            </div>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded shrink-0 ml-2 ${u.is_active ? "text-[#059669] bg-[#059669]/10" : "text-[#D97706] bg-[#D97706]/10"}`}>
+                              {u.is_active ? "Ativo" : "Pendente"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
