@@ -1,18 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, ShieldAlert, AlertTriangle, Mail } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ConfirmarEmailClient() {
-  const params = useParams();
   const searchParams = useSearchParams();
-  const token = params.token as string;
+  const [token, setToken] = useState("");
   const email = searchParams.get("email") || "";
   const [status, setStatus] = useState<"loading" | "ok" | "ja_confirmado" | "invalido" | "erro">("loading");
   const [reenviando, setReenviando] = useState(false);
   const [reenviado, setReenviado] = useState(false);
+
+  useEffect(() => {
+    const parts = window.location.pathname.split("/");
+    const t = parts[parts.length - 1];
+    if (t && t !== "_") setToken(t);
+  }, []);
 
   async function handleReenviar() {
     if (!email || reenviando) return;
