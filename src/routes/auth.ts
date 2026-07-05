@@ -45,9 +45,11 @@ router.post('/register', async (req, res) => {
         return;
       }
 
+      const cnpjDigits = cnpj.replace(/\D/g, '');
+
       const company = await queryRawOne(
-        'SELECT id, name FROM companies WHERE cnpj = $1',
-        cnpj.replace(/\D/g, '')
+        'SELECT id, name FROM companies WHERE regexp_replace(cnpj, \'[^0-9]\', \'\', \'g\') = $1',
+        cnpjDigits
       );
 
       if (!company) {

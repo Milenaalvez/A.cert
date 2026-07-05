@@ -31,7 +31,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const companyId = randomUUID();
     await prisma.company.create({
       data: {
-        id: companyId, name: name.trim(), cnpj: cnpj || null,
+        id: companyId, name: name.trim(), cnpj: cnpj ? cnpj.replace(/\D/g, '') : null,
         plan: plan || 'trial', licenseStatus: 'active',
         licenseExpiresAt: license_expires_at || null,
         createdAt: new Date().toISOString(),
