@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -495,7 +495,7 @@ function ConfiguracoesContent() {
 
   return (
     <>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
         <div style={{ marginTop: 24, marginBottom: 28 }}>
           <div className="flex items-start justify-between gap-8">
             <div className="flex flex-col gap-1.5 min-w-0">
@@ -542,7 +542,7 @@ function ConfiguracoesContent() {
 
         {activeTab === "perfil" && (
           <div className="flex flex-col gap-6" style={{ paddingTop: 40 }}>
-            <div className="flex gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Left: Perfil do Usuário (portrait) */}
               <div className="flex-1 min-w-0">
                 <div className="relative w-full h-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
@@ -553,7 +553,7 @@ function ConfiguracoesContent() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
                     <label className="relative group shrink-0 cursor-pointer">
-                      <div className="w-40 h-40 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
+                      <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                         ) : (

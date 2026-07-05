@@ -118,6 +118,19 @@ function DashboardInner({
     <div className="min-h-screen overflow-x-hidden bg-app">
       <ElectronTitleBar />
       <div style={{ display: "flex" }}>
+      {/* Mobile hamburger */}
+      <button
+        onClick={() => setSidebarOpen((v) => !v)}
+        className="lg:hidden fixed top-3 left-3 z-[60] w-9 h-9 flex items-center justify-center rounded-lg bg-surface border border-default text-secondary hover:text-primary"
+        style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+      >
+        {sidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+      </button>
+
+      {/* Sidebar overlay for mobile */}
+      {sidebarOpen && <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setSidebarOpen(false)} />}
+
+      <div className={`lg:relative ${sidebarOpen ? 'fixed z-50' : 'hidden lg:block'}`}>
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -129,15 +142,18 @@ function DashboardInner({
         onCollapseChange={handleCollapseChange}
         onNovoDossie={() => setShowNovoDossie(true)}
       />
+      </div>
+
       <div
         suppressHydrationWarning
         className="min-h-screen flex flex-col transition-all duration-250 ease-out bg-app"
         style={{
-          marginLeft: `${sidebarWidth + 24}px`,
+          marginLeft: `var(--sidebar-ml, ${sidebarWidth + 24}px)`,
           marginRight: "24px",
-          width: `calc(100% - ${sidebarWidth + 48}px)`,
+          width: `calc(100% - var(--sidebar-ml, ${sidebarWidth + 48}px))`,
         }}
       >
+        <style>{`@media (max-width: 1023px) { :root { --sidebar-ml: 0px; } }`}</style>
         {children}
       </div>
       {showNovoDossie && (

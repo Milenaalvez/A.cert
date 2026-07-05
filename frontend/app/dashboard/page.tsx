@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -332,7 +332,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full">
 
         <div style={{ marginBottom: 32 }}>
           <div style={{ marginTop: 24 }}>
@@ -621,7 +621,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="w-full lg:w-[32%] min-w-0 flex flex-col gap-6" style={{ marginTop: 40 }}>
+        <div className="w-full lg:w-[32%] min-w-0 flex flex-col gap-6" style={{ marginTop: "clamp(16px, 5vw, 40px)" }}>
             <div className="bg-surface px-8 pb-6">
               <h3 className="text-[15px] font-semibold text-primary" style={{ marginBottom: 28 }}>Distribuição dos dossiês</h3>
               <DonutChart

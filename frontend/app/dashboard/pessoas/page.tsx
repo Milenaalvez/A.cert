@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -358,7 +358,7 @@ export default function PessoasPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full">
 
         {/* Header */}
         <div style={{ marginTop: 24, marginBottom: 20 }}>

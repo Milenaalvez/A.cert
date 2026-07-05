@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -211,7 +211,7 @@ export default function RelatoriosPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ gap: 32 }}>
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ gap: 32 }}>
         <div style={{ marginTop: 24, marginBottom: 20 }}>
           <PageHeader
             title={t("reports.title")}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -101,7 +101,7 @@ Uptime: ${systemInfo.uptime}`;
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
         {/* Header */}
         <div style={{ marginTop: 24, marginBottom: 28 }}>
           <div className="flex items-start justify-between gap-8">
