@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { randomUUID, randomBytes } from 'node:crypto';
 import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 import { gerarToken, authMiddleware } from '../middleware/auth.js';
-import { enviarEmailConfirmacao, enviarEmailRedefinirSenha } from '../services/email.service.js';
+import { enviarEmailConfirmacao, enviarEmailRedefinirSenha, enviarEmailBoasVindas } from '../services/email.service.js';
 import { validarSenhaForte, validarEmail } from '../utils/validation.js';
 
 const router = Router();
@@ -71,6 +71,7 @@ router.post('/register', async (req, res) => {
       );
 
       enviarEmailConfirmacao(email.trim(), name.trim(), confirmation_token);
+      enviarEmailBoasVindas(email.trim(), name.trim(), '', company.name);
 
       res.status(201).json({
         success: true,

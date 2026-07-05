@@ -168,14 +168,18 @@ export async function enviarEmailBoasVindas(email: string, name: string, tempPas
       subject: `Bem-vindo(a) à ${companyName}, ${name}!`,
       html: wrapEmail('Boas-vindas!',
         `<p style="margin:0 0 16px 0;">Olá <strong>${name}</strong>,</p>
-         <p style="margin:0 0 16px 0;">Você foi cadastrado como <strong>administrador</strong> da empresa <strong>${companyName}</strong> na plataforma A.CERT.</p>
-         <p style="margin:0 0 16px 0;">Esta é sua conta de acesso inicial. Utilize as credenciais abaixo para entrar:</p>
+         <p style="margin:0 0 16px 0;">Sua conta na <strong>${companyName}</strong> foi criada com sucesso na plataforma A.CERT.</p>
+         ${tempPassword ? `
+         <p style="margin:0 0 16px 0;">Utilize as credenciais abaixo para seu primeiro acesso:</p>
          <div style="background:#F3F4F6;padding:16px;border-radius:8px;margin:18px 0;">
            <p style="margin:0 0 8px 0;font-size:12px;color:#6B7280;">Dados de acesso:</p>
            <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#111827;">📧 ${email}</p>
            <p style="margin:0;font-size:14px;font-weight:700;color:#111827;">🔑 ${tempPassword}</p>
          </div>
          <p style="margin:0 0 20px 0;color:#D97706;font-size:13px;font-weight:600;">⚠ No primeiro login, você precisará trocar sua senha.</p>
+         ` : `
+         <p style="margin:0 0 16px 0;">Confirme seu email para ativar sua conta e começar a usar a plataforma.</p>
+         `}
          ${buttonHtml('Acessar Plataforma', `${FRONTEND_URL}/login`)}
          <p style="margin:20px 0 0 0;color:#9CA3AF;font-size:12px;">Dúvidas? Responda este email ou entre em contato pelo suporte.</p>`),
     });

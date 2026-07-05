@@ -54,8 +54,6 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [showTransition, setShowTransition] = useState(false);
   const [confirmationLink, setConfirmationLink] = useState("");
   const [timer, setTimer] = useState(60);
   const [reenviando, setReenviando] = useState(false);
@@ -114,7 +112,7 @@ export default function RegisterPage() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
-    setShowTransition(true);
+    setRegistered(true);
     try {
       const res = await register(
         nome.trim(), email.trim(), password,
@@ -129,7 +127,7 @@ export default function RegisterPage() {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
       }
     } catch (err) {
-      setShowTransition(false);
+      setRegistered(false);
       setErrors({ form: err instanceof Error ? err.message : 'Erro inesperado' });
     } finally {
       setLoading(false);
@@ -168,32 +166,6 @@ export default function RegisterPage() {
     transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
     boxShadow: active ? "0 4px 16px rgba(249,115,22,0.3)" : "none",
   } as React.CSSProperties);
-
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
-    if (showTransition) {
-      t = setTimeout(() => {
-        setShowTransition(false);
-        setRegistered(true);
-      }, 2000);
-    }
-    return () => { if (t) clearTimeout(t); };
-  }, [showTransition]);
-
-  if (showTransition) {
-    return (
-      <AuthLayout
-        title={<span><span className="text-accent">Aguarde</span>...</span>}
-        highlightWord="Aguarde"
-        description="Estamos preparando seu acesso."
-      >
-        <div className="flex flex-col items-center justify-center py-16 gap-6">
-          <Loader2 size={40} strokeWidth={2} className="animate-spin text-accent" />
-          <p className="text-white/60 text-[15px]">Redirecionando...</p>
-        </div>
-      </AuthLayout>
-    );
-  }
 
   if (registered) {
     return (
