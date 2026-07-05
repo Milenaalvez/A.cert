@@ -39,7 +39,7 @@ export default function AuthLayout({
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-auto bg-black">
+    <div className="relative w-screen h-screen overflow-hidden bg-black">
       {/* Background */}
       <Image src="/images/login-bg.png" alt="" fill className="object-cover object-center fixed inset-0" priority />
       <div className="fixed inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/30" />
