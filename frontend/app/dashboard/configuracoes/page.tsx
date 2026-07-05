@@ -589,11 +589,11 @@ function ConfiguracoesContent() {
                       <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     </label>
                     <div className="min-w-0 flex-1">
-                      <FieldRow icon={User} label={t("people.fields.name")} value={name || "—"} editing={editing} onCancel={() => { setName(user?.name || ""); }} onConfirm={saveProfile} onChange={(v) => { setName(v); setDirty(true); }} />
+                      <FieldRow icon={User} label={t("people.fields.name")} value={editing ? name : (name || "—")} editing={editing} onCancel={() => { setName(user?.name || ""); }} onConfirm={saveProfile} onChange={(v) => { setName(v); setDirty(true); }} />
                       <FieldRow icon={Shield} label={t("users.table.role")} value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
                       <FieldRow icon={Building2} label={t("profile.company")} value="—" readOnly />
-                      <FieldRow icon={Mail} label={t("profile.email")} value={email || "—"} editing={editing} onCancel={() => { setEmail(user?.email || ""); }} onConfirm={saveProfile} onChange={(v) => { setEmail(v); setDirty(true); }} />
-                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editing} onCancel={() => { setPhone(user?.phone || ""); }} onConfirm={saveProfile} onChange={(v) => { setPhone(v); setDirty(true); }} />
+                      <FieldRow icon={Mail} label={t("profile.email")} value={editing ? email : (email || "—")} editing={editing} onCancel={() => { setEmail(user?.email || ""); }} onConfirm={saveProfile} onChange={(v) => { setEmail(v); setDirty(true); }} />
+                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={editing ? phone : (phone || "—")} editing={editing} onCancel={() => { setPhone(user?.phone || ""); }} onConfirm={saveProfile} onChange={(v) => { setPhone(v); setDirty(true); }} />
                     </div>
                   </div>
                 </div>
