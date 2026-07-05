@@ -131,7 +131,7 @@ router.get('/confirmar/:token', async (req, res) => {
       return;
     }
 
-    await executeRaw('UPDATE users SET email_confirmed = 1, confirmation_token = NULL WHERE id = $1', user.id);
+    await executeRaw('UPDATE users SET email_confirmed = 1 WHERE id = $1', user.id);
 
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?confirmacao=ok`);
   } catch (error) {
@@ -565,7 +565,7 @@ router.get('/confirmar-status/:token', async (req, res) => {
       return;
     }
 
-    await executeRaw('UPDATE users SET email_confirmed = 1, confirmation_token = NULL WHERE id = $1', user.id);
+    await executeRaw('UPDATE users SET email_confirmed = 1 WHERE id = $1', user.id);
 
     res.json({ status: 'ok' });
   } catch (error) {
