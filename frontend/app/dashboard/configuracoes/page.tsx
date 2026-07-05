@@ -135,8 +135,9 @@ function ConfiguracoesContent() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [themeMode, setThemeMode] = useState("system");
@@ -205,6 +206,7 @@ function ConfiguracoesContent() {
           setPhone(meData.user.phone || "");
           setName(meData.user.name || "");
           setEmail(meData.user.email || "");
+          setAvatarUrl(meData.user.avatar || null);
         }
         const sData = await sRes.json();
         setTimezone(sData.timezone || "America/Sao_Paulo");
@@ -382,7 +384,7 @@ function ConfiguracoesContent() {
       const data = await r.json();
       if (data.user) { setUser(data.user); setGlobalUser(data.user); }
       setDirty(false);
-      setEditingField(null);
+      setEditing(false);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch {} finally { setSaving(false); }
   }
@@ -465,7 +467,7 @@ function ConfiguracoesContent() {
   async function saveAndGo() {
     await saveProfile();
     setDirty(false);
-    setEditingField(null);
+    setEditing(false);
     if (pendingTab) setActiveTab(pendingTab);
     setShowConfirmExit(false);
     setPendingTab(null);
@@ -486,6 +488,7 @@ function ConfiguracoesContent() {
       });
       const data = await r.json();
       if (data.avatarUrl) {
+        setAvatarUrl(data.avatarUrl);
         setUser((prev: any) => prev ? { ...prev, avatar: data.avatarUrl } : prev);
         const updated = { ...user, avatar: data.avatarUrl };
         setGlobalUser(updated);
@@ -548,15 +551,34 @@ function ConfiguracoesContent() {
               <div className="flex-1 min-w-0">
                 <div className="relative w-full h-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
                   style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid var(--border-default)" }}>
-                    <User size={18} className="text-[#FF7A00]" />
-                    <h3 className="text-[16px] font-bold text-primary">Perfil do Usuário</h3>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid var(--border-default)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <User size={18} className="text-[#FF7A00]" />
+                      <h3 className="text-[16px] font-bold text-primary">Perfil do Usuário</h3>
+                    </div>
+                    {editing ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => { setEditing(false); setName(user?.name || ""); setEmail(user?.email || ""); setPhone(user?.phone || ""); }}
+                          className="h-8 px-4 rounded-[8px] text-[12px] font-medium text-secondary border border-default hover:bg-subtle transition-colors bg-transparent cursor-pointer">
+                          Cancelar
+                        </button>
+                        <button onClick={saveProfile} disabled={saving}
+                          className="h-8 px-4 rounded-[8px] text-[12px] font-semibold text-white bg-[#FF7A00] hover:bg-[#E06900] transition-colors border-0 cursor-pointer disabled:opacity-50">
+                          {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setEditing(true)}
+                        className="h-8 px-4 rounded-[8px] text-[12px] font-medium text-secondary border border-default hover:bg-subtle transition-colors bg-transparent cursor-pointer flex items-center gap-1.5">
+                        <Pencil size={13} /> Editar dados
+                      </button>
+                    )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
                     <label className="relative group shrink-0 cursor-pointer">
                       <div className="w-40 h-40 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
-                        {user?.avatar ? (
-                          <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <User size={76} className="text-muted" />
                         )}
@@ -567,11 +589,11 @@ function ConfiguracoesContent() {
                       <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     </label>
                     <div className="min-w-0 flex-1">
-                      <FieldRow icon={User} label={t("people.fields.name")} value={name || "—"} editing={editingField === "name"} onEdit={() => setEditingField("name")} onCancel={() => { setEditingField(null); setName(user?.name || ""); }} onChange={(v) => { setName(v); setDirty(true); }} />
+                      <FieldRow icon={User} label={t("people.fields.name")} value={name || "—"} editing={editing} onCancel={() => { setName(user?.name || ""); }} onConfirm={saveProfile} onChange={(v) => { setName(v); setDirty(true); }} />
                       <FieldRow icon={Shield} label={t("users.table.role")} value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
-                      <FieldRow icon={Building2} label={t("profile.company")} value="Bloco Imobiliária" readOnly />
-                      <FieldRow icon={Mail} label={t("profile.email")} value={email || "—"} editing={editingField === "email"} onEdit={() => setEditingField("email")} onCancel={() => { setEditingField(null); setEmail(user?.email || ""); }} onChange={(v) => { setEmail(v); setDirty(true); }} />
-                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} />
+                      <FieldRow icon={Building2} label={t("profile.company")} value="—" readOnly />
+                      <FieldRow icon={Mail} label={t("profile.email")} value={email || "—"} editing={editing} onCancel={() => { setEmail(user?.email || ""); }} onConfirm={saveProfile} onChange={(v) => { setEmail(v); setDirty(true); }} />
+                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editing} onCancel={() => { setPhone(user?.phone || ""); }} onConfirm={saveProfile} onChange={(v) => { setPhone(v); setDirty(true); }} />
                     </div>
                   </div>
                 </div>
