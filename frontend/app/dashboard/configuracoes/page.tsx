@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   User, Settings, Building2, FileText, Activity,
   Save, Mail, CheckCircle2, Check, XCircle, Clock, Plus,
@@ -140,6 +140,16 @@ function ConfiguracoesContent() {
   const [dirty, setDirty] = useState(false);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editSaved, setEditSaved] = useState(false);
+  const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
+  const editInitialRef = useRef({ name: "", email: "", phone: "" });
   const [themeMode, setThemeMode] = useState("system");
   const [density, setDensity] = useState("default");
 
@@ -458,7 +468,6 @@ function ConfiguracoesContent() {
 
   function discardAndGo() {
     setDirty(false);
-    setEditingField(null);
     if (pendingTab) setActiveTab(pendingTab);
     setShowConfirmExit(false);
     setPendingTab(null);
@@ -556,23 +565,10 @@ function ConfiguracoesContent() {
                       <User size={18} className="text-[#FF7A00]" />
                       <h3 className="text-[16px] font-bold text-primary">Perfil do Usuário</h3>
                     </div>
-                    {editing ? (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => { setEditing(false); setName(user?.name || ""); setEmail(user?.email || ""); setPhone(user?.phone || ""); }}
-                          className="h-8 px-4 rounded-[8px] text-[12px] font-medium text-secondary border border-default hover:bg-subtle transition-colors bg-transparent cursor-pointer">
-                          Cancelar
-                        </button>
-                        <button onClick={saveProfile} disabled={saving}
-                          className="h-8 px-4 rounded-[8px] text-[12px] font-semibold text-white bg-[#FF7A00] hover:bg-[#E06900] transition-colors border-0 cursor-pointer disabled:opacity-50">
-                          {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar"}
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setEditing(true)}
-                        className="h-8 px-4 rounded-[8px] text-[12px] font-medium text-secondary border border-default hover:bg-subtle transition-colors bg-transparent cursor-pointer flex items-center gap-1.5">
-                        <Pencil size={13} /> Editar dados
-                      </button>
-                    )}
+                    <button onClick={() => { setEditName(name); setEditEmail(email); setEditPhone(phone); setEditAvatarFile(null); setEditAvatarPreview(avatarUrl); editInitialRef.current = { name, email, phone }; setEditSaved(false); setShowEditProfile(true); }}
+                      className="h-8 px-4 rounded-[8px] text-[12px] font-medium text-secondary border border-default hover:bg-subtle transition-colors bg-transparent cursor-pointer flex items-center gap-1.5">
+                      <Pencil size={13} /> Editar dados
+                    </button>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
                     <label className="relative group shrink-0 cursor-pointer">
@@ -589,11 +585,11 @@ function ConfiguracoesContent() {
                       <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     </label>
                     <div className="min-w-0 flex-1">
-                      <FieldRow icon={User} label={t("people.fields.name")} value={editing ? name : (name || "—")} editing={editing} onCancel={() => { setName(user?.name || ""); }} onConfirm={saveProfile} onChange={(v) => { setName(v); setDirty(true); }} />
+                      <FieldRow icon={User} label={t("people.fields.name")} value={name || "—"} readOnly />
                       <FieldRow icon={Shield} label={t("users.table.role")} value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
                       <FieldRow icon={Building2} label={t("profile.company")} value="—" readOnly />
-                      <FieldRow icon={Mail} label={t("profile.email")} value={editing ? email : (email || "—")} editing={editing} onCancel={() => { setEmail(user?.email || ""); }} onConfirm={saveProfile} onChange={(v) => { setEmail(v); setDirty(true); }} />
-                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={editing ? phone : (phone || "—")} editing={editing} onCancel={() => { setPhone(user?.phone || ""); }} onConfirm={saveProfile} onChange={(v) => { setPhone(v); setDirty(true); }} />
+                      <FieldRow icon={Mail} label={t("profile.email")} value={email || "—"} readOnly />
+                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} readOnly />
                     </div>
                   </div>
                 </div>
@@ -1263,6 +1259,157 @@ function ConfiguracoesContent() {
         onConfirm={() => { endSessions(); setShowEndSessionsConfirm(false); }}
         onCancel={() => setShowEndSessionsConfirm(false)}
         onClose={() => setShowEndSessionsConfirm(false)}
+      />
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" onClick={() => {
+            const changed = editName !== editInitialRef.current.name || editEmail !== editInitialRef.current.email || editPhone !== editInitialRef.current.phone || editAvatarFile !== null;
+            if (changed) { setShowConfirmDiscard(true); } else { setShowEditProfile(false); }
+          }} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => {
+            const changed = editName !== editInitialRef.current.name || editEmail !== editInitialRef.current.email || editPhone !== editInitialRef.current.phone || editAvatarFile !== null;
+            if (changed) { setShowConfirmDiscard(true); } else { setShowEditProfile(false); }
+          }}>
+            <div className="w-full bg-surface flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+              style={{ maxWidth: "520px", borderRadius: "16px", border: "1px solid var(--border-default)", boxShadow: "0 25px 80px rgba(0,0,0,0.18)" }}
+              onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between shrink-0" style={{ padding: "24px 28px 20px", borderBottom: "1px solid var(--border-light)" }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0" style={{ background: "var(--badge-orange-bg)" }}>
+                    <Pencil size={20} strokeWidth={1.5} color="#FF7A00" />
+                  </div>
+                  <div>
+                    <h2 className="text-[17px] font-bold tracking-tight" style={{ color: "var(--text-primary)", lineHeight: 1.2 }}>Editar dados do perfil</h2>
+                    <p className="text-[12px]" style={{ color: "var(--text-muted)", marginTop: "2px" }}>Atualize suas informações pessoais</p>
+                  </div>
+                </div>
+                <button onClick={() => {
+                  const changed = editName !== editInitialRef.current.name || editEmail !== editInitialRef.current.email || editPhone !== editInitialRef.current.phone || editAvatarFile !== null;
+                  if (changed) { setShowConfirmDiscard(true); } else { setShowEditProfile(false); }
+                }}
+                  className="w-8 h-8 rounded-[8px] flex items-center justify-center text-muted transition-colors"
+                  style={{ border: "none", background: "transparent", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}>
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto" style={{ padding: "24px 28px" }}>
+                <div className="flex flex-col gap-5">
+                  <div className="flex justify-center">
+                    <label className="relative group shrink-0 cursor-pointer">
+                      <div className="w-28 h-28 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
+                        {editAvatarPreview ? (
+                          <img src={editAvatarPreview} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={52} className="text-muted" />
+                        )}
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-full transition-opacity">
+                        <Camera size={28} className="text-white" />
+                      </div>
+                      <input type="file" accept="image/*" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setEditAvatarFile(file);
+                        const reader = new FileReader();
+                        reader.onload = () => setEditAvatarPreview(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }} className="hidden" />
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.4px] mb-1.5">Nome completo</label>
+                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                      className="w-full h-10 rounded-[8px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00] font-inherit box-border"
+                      placeholder="Seu nome" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.4px] mb-1.5">Email</label>
+                    <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)}
+                      className="w-full h-10 rounded-[8px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00] font-inherit box-border"
+                      placeholder="seu@email.com" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted uppercase tracking-[0.4px] mb-1.5">Telefone</label>
+                    <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)}
+                      className="w-full h-10 rounded-[8px] text-[13px] text-primary outline-none border border-default bg-app px-3 focus:border-[#FF7A00] font-inherit box-border"
+                      placeholder="(00) 00000-0000" />
+                  </div>
+                  {editSaved && (
+                    <div className="flex items-center gap-2 p-3 rounded-[8px]" style={{ background: "rgba(5,150,105,0.08)", color: "#059669" }}>
+                      <Check size={16} /> Dados atualizados com sucesso!
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-end shrink-0 gap-2.5" style={{ padding: "16px 28px 20px", borderTop: "1px solid var(--border-light)" }}>
+                <button onClick={() => {
+                  const changed = editName !== editInitialRef.current.name || editEmail !== editInitialRef.current.email || editPhone !== editInitialRef.current.phone || editAvatarFile !== null;
+                  if (changed) { setShowConfirmDiscard(true); } else { setShowEditProfile(false); }
+                }}
+                  style={{ height: "38px", padding: "0 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "var(--text-secondary)", border: "1px solid var(--border-default)", background: "transparent", cursor: "pointer" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                  Cancelar
+                </button>
+                <button onClick={async () => {
+                  setEditSaving(true);
+                  try {
+                    const token = localStorage.getItem("acert_token");
+                    const h: Record<string, string> = { "Content-Type": "application/json" };
+                    if (token) h.Authorization = `Bearer ${token}`;
+
+                    if (editAvatarFile && user?.id) {
+                      const fd = new FormData();
+                      fd.append("avatar", editAvatarFile);
+                      fd.append("userId", user.id);
+                      const ar = await fetch("/api/upload/avatar", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+                      const ad = await ar.json();
+                      if (ad.avatarUrl) setAvatarUrl(ad.avatarUrl);
+                    }
+
+                    const r = await fetch("/api/auth/me", { method: "PUT", headers: h, body: JSON.stringify({ name: editName, email: editEmail, phone: editPhone }) });
+                    const data = await r.json();
+                    if (data.user) {
+                      setUser(data.user);
+                      setGlobalUser(data.user);
+                      setName(data.user.name || "");
+                      setEmail(data.user.email || "");
+                      setPhone(data.user.phone || "");
+                      setAvatarUrl(data.user.avatar || null);
+                    }
+                    editInitialRef.current = { name: editName, email: editEmail, phone: editPhone };
+                    setEditSaved(true);
+                    setTimeout(() => setShowEditProfile(false), 1200);
+                  } catch {} finally {
+                    setEditSaving(false);
+                  }
+                }} disabled={editSaving}
+                  style={{ height: "38px", padding: "0 28px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: 600, color: "#FFF", cursor: editSaving ? "not-allowed" : "pointer", background: editSaving ? "var(--text-muted)" : "#FF7A00", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.15s ease", opacity: editSaving ? 0.8 : 1 }}
+                  onMouseEnter={(e) => { if (!editSaving) e.currentTarget.style.background = "#E06900"; }}
+                  onMouseLeave={(e) => { if (!editSaving) e.currentTarget.style.background = "#FF7A00"; }}>
+                  {editSaving && <Loader2 size={15} strokeWidth={2} className="animate-spin" />}
+                  {editSaving ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <ConfirmModal
+        open={showConfirmDiscard}
+        title="Descartar alterações?"
+        message="Você alterou alguns dados. Tem certeza que deseja descartar?"
+        variant="warning"
+        confirmLabel="Sim, Descartar"
+        cancelLabel="Continuar Editando"
+        onConfirm={() => { setShowConfirmDiscard(false); setShowEditProfile(false); }}
+        onCancel={() => setShowConfirmDiscard(false)}
+        onClose={() => setShowConfirmDiscard(false)}
       />
     </>
   );
