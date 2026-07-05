@@ -76,7 +76,7 @@ export default function ConfirmarEmailClient() {
               O link de confirmação é inválido ou já foi utilizado.
             </p>
             <a href="/cadastro" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 32px", background: "#F97316", color: "#FFF", borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: "none" }}>
-              Criar nova conta
+              Solicitar novo link
             </a>
           </>
         )}
