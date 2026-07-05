@@ -147,14 +147,13 @@ function DashboardInner({
 
       <div
         suppressHydrationWarning
-        className="min-h-screen flex flex-col transition-all duration-250 ease-out bg-app dashboard-content"
+        className="min-h-screen flex flex-col transition-all duration-250 ease-out bg-app"
         style={{
           marginLeft: `${sidebarWidth + 24}px`,
           marginRight: "24px",
           width: `calc(100% - ${sidebarWidth + 48}px)`,
         }}
       >
-        <style>{`@media (max-width: 1023px) { .dashboard-content { margin-left: 0 !important; margin-right: 0 !important; width: 100% !important; } }`}</style>
         {children}
       </div>
       {showNovoDossie && (
