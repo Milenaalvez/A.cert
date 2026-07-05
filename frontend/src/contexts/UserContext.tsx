@@ -30,7 +30,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("acert_token") : null;
+      let token = typeof window !== "undefined" ? localStorage.getItem("acert_token") : null;
+      if (!token && typeof window !== "undefined") {
+        const match = document.cookie.match(/acert_token=([^;]+)/);
+        if (match) token = match[1];
+      }
       if (!token) { setLoading(false); return; }
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;

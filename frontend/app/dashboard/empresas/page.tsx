@@ -107,7 +107,11 @@ export default function EmpresasPage() {
   }
 
   const getHeaders = useCallback((): Record<string, string> => {
-    const token = localStorage.getItem("acert_token");
+    let token = localStorage.getItem("acert_token");
+    if (!token) {
+      const match = document.cookie.match(/acert_token=([^;]+)/);
+      if (match) token = match[1];
+    }
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
