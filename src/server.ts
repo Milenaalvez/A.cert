@@ -125,7 +125,7 @@ app.post('/api/upload/company-logo', logoUpload.single('logotipo'), async (req, 
 
 // Serve frontend (Next.js static export)
 const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
-app.use(express.static(frontendOut));
+app.use(express.static(frontendOut, { extensions: ['html'] }));
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
