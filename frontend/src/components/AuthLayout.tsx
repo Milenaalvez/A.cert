@@ -44,7 +44,7 @@ export default function AuthLayout({
       <Image src="/images/login-bg.png" alt="Background" fill className="object-cover object-[center_30%]" priority />
       <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.25) 100%)" }} />
 
-      {/* LEFT SIDE — 55% — hidden on mobile */}
+      {/* LEFT SIDE — Branding — hidden on mobile */}
       <div className="hidden sm:block absolute left-0 top-0 w-[55%] h-screen">
         <div style={{ position: "absolute", top: "120px", left: "80px" }}>
           <div className="flex items-center gap-4">
@@ -78,15 +78,16 @@ export default function AuthLayout({
         <span className="text-white text-[22px] font-bold tracking-tight">A.CERT</span>
       </div>
 
-      {/* RIGHT SIDE — 45% — full width on mobile */}
-      <div className="absolute right-0 top-0 w-full sm:w-[45%] h-screen">
-        <div className="flex items-center justify-center h-full px-4 sm:block sm:absolute sm:right-[120px] sm:top-1/2 sm:-translate-y-1/2 sm:max-w-[520px] sm:w-[calc(100%-180px)] sm:px-0 sm:h-auto">
-          <div className="animate-fade-in w-full sm:w-auto" style={{ padding: "40px", borderRadius: "32px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
+      {/* RIGHT SIDE — Form — 45% on desktop, full-width on mobile */}
+      <div className="auth-right absolute right-0 top-0 w-full sm:w-[45%] h-screen">
+        <div className="auth-form-inner" style={{ position: "absolute", right: "120px", top: "50%", transform: "translateY(-50%)", maxWidth: "520px", width: "calc(100% - 180px)" }}>
+          <div className="animate-fade-in" style={{ padding: "40px", borderRadius: "32px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
             {children}
           </div>
         </div>
       </div>
+
+      <style>{`@media (max-width: 639px) { .auth-form-inner { right: 0 !important; left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 0 12px !important; transform: translateY(-50%) !important; } }`}</style>
     </div>
   );
-}
 }
