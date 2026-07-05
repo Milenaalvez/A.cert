@@ -61,7 +61,7 @@ export default function AuthLayout({
       />
 
       {/* LEFT SIDE — Branding — visible from tablet (sm) up */}
-      <div className="hidden sm:flex absolute left-0 top-0 w-[42%] lg:w-[50%] xl:w-[55%] h-screen flex-col justify-center">
+      <div className="hidden sm:flex absolute left-0 top-0 sm:w-[55%] md:w-[65%] lg:w-[70%] xl:w-[75%] h-screen flex-col justify-center">
         {/* Logo */}
         <div className="absolute top-[50px] sm:top-[70px] lg:top-[120px] left-[28px] lg:left-[80px]">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -99,7 +99,7 @@ export default function AuthLayout({
       </div>
 
       {/* RIGHT SIDE — Form */}
-      <div className="absolute right-0 top-0 w-full sm:w-[58%] lg:w-[50%] xl:w-[45%] h-screen">
+      <div className="absolute right-0 top-0 w-full sm:w-[45%] md:w-[35%] lg:w-[30%] xl:w-[25%] h-screen">
         <div className="auth-form-wrap flex items-center justify-center h-full px-3 sm:px-6 lg:px-8 xl:block xl:absolute xl:right-[120px] xl:top-1/2 xl:-translate-y-1/2 xl:max-w-[520px] xl:w-[calc(100%-180px)] xl:px-0 xl:h-auto">
           <div className="animate-fade-in w-full xl:w-auto" style={{ padding: "24px 20px", borderRadius: "20px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
             {children}
