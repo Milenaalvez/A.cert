@@ -383,7 +383,6 @@ function ConfiguracoesContent() {
       const data = await r.json();
       if (data.user) { setUser(data.user); setGlobalUser(data.user); }
       setDirty(false);
-      setEditing(false);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch {} finally { setSaving(false); }
   }
@@ -465,7 +464,6 @@ function ConfiguracoesContent() {
   async function saveAndGo() {
     await saveProfile();
     setDirty(false);
-    setEditing(false);
     if (pendingTab) setActiveTab(pendingTab);
     setShowConfirmExit(false);
     setPendingTab(null);
