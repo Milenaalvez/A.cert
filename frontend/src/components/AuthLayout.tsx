@@ -86,8 +86,6 @@ export default function AuthLayout({
           </div>
         </div>
       </div>
-
-      <style>{`@media (max-width: 639px) { .auth-form-inner { right: 0 !important; left: 0 !important; width: 100% !important; max-width: 100% !important; padding: 0 12px !important; transform: translateY(-50%) !important; } }`}</style>
     </div>
   );
 }
