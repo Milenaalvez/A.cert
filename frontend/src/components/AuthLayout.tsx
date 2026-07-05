@@ -61,49 +61,47 @@ export default function AuthLayout({
       />
 
       {/* LEFT SIDE — Branding — visible from tablet (sm) up */}
-      <div className="hidden sm:block absolute left-0 top-0 sm:w-[45%] lg:w-[55%] h-screen">
+      <div className="hidden sm:flex absolute left-0 top-0 w-[42%] lg:w-[50%] xl:w-[55%] h-screen flex-col justify-center">
         {/* Logo */}
-        <div className="absolute top-[60px] sm:top-[80px] lg:top-[120px] left-[32px] lg:left-[80px]">
+        <div className="absolute top-[50px] sm:top-[70px] lg:top-[120px] left-[28px] lg:left-[80px]">
           <div className="flex items-center gap-3 sm:gap-4">
-            <Image src="/images/logo.png" alt="A.CERT" width={48} height={48} className="sm:w-[56px] sm:h-[56px] lg:w-[72px] lg:h-[72px] object-contain" priority />
+            <Image src="/images/logo.png" alt="A.CERT" width={44} height={44} className="sm:w-[52px] sm:h-[52px] lg:w-[72px] lg:h-[72px] object-contain" priority />
             <div className="flex flex-col">
-              <span className="text-white text-[28px] sm:text-[36px] lg:text-[48px] font-bold tracking-tight block leading-none">A.CERT</span>
-              <span className="text-white/80 text-[11px] sm:text-[13px] lg:text-[14px] mt-1 sm:mt-1.5 block whitespace-nowrap">Central de Certidões</span>
+              <span className="text-white text-[26px] sm:text-[34px] lg:text-[48px] font-bold tracking-tight block leading-none">A.CERT</span>
+              <span className="text-white/80 text-[10px] sm:text-[12px] lg:text-[14px] mt-0.5 sm:mt-1.5 block whitespace-nowrap">Central de Certidões</span>
             </div>
           </div>
         </div>
         {/* Content */}
-        <div className="absolute top-[46%] left-[32px] lg:left-[80px] -translate-y-1/2">
+        <div className="px-[28px] lg:px-[80px]">
           <div className="animate-slide-up">
             {badge && (
-              <div style={{ display: "inline-flex", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", padding: "6px 14px", borderRadius: "999px", marginBottom: "40px" }} className="sm:p-[8px_16px] lg:p-[10px_18px] lg:mb-[53px]">
+              <div style={{ display: "inline-flex", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", padding: "6px 14px", borderRadius: "999px", marginBottom: "32px" }} className="sm:mb-[40px] lg:mb-[53px]">
                 <span className="text-accent text-xs sm:text-sm font-medium">{badge}</span>
               </div>
             )}
-            <div className="text-white font-extrabold leading-[1.05] mb-4 sm:mb-6 text-[24px] sm:text-[40px] lg:text-[72px]" style={{ maxWidth: "650px" }}>
+            <div className={`text-white font-extrabold leading-[1.05] mb-4 sm:mb-6 ${titleSize}`} style={{ maxWidth: "650px" }}>
               {typeof title === "string" ? highlightTitle(title, highlightWord) : title}
             </div>
-            <div style={{ width: "36px", height: "3px", background: "#F97316", borderRadius: "999px", marginBottom: "24px" }} className="sm:w-[48px] sm:h-[4px] sm:mb-[32px]" />
-            <p className="text-white/75 text-[15px] sm:text-[18px] lg:text-[24px] leading-[1.7] max-w-[520px] mb-[24px] sm:mb-[32px]">
+            <div style={{ width: "32px", height: "3px", background: "#F97316", borderRadius: "999px", marginBottom: "20px" }} className="sm:w-[40px] sm:h-[3px] sm:mb-[24px] lg:w-[48px] lg:h-[4px] lg:mb-[32px]" />
+            <p className="text-white/75 text-[14px] sm:text-[16px] lg:text-[24px] leading-[1.7] max-w-[520px] mb-[20px] sm:mb-[32px]">
               {description}
             </p>
           </div>
+          {tagline && <div className="mt-4">{tagline}</div>}
         </div>
-        {tagline && (
-          <div className="absolute bottom-[60px] sm:bottom-[80px] lg:bottom-[100px] left-[32px] lg:left-[80px]">{tagline}</div>
-        )}
       </div>
 
       {/* Mobile-only logo */}
-      <div className="sm:hidden absolute top-6 left-5 z-10 flex items-center gap-3">
-        <Image src="/images/logo.png" alt="A.CERT" width={36} height={36} className="object-contain" priority />
-        <span className="text-white text-[22px] font-bold tracking-tight">A.CERT</span>
+      <div className="sm:hidden absolute top-5 left-4 z-10 flex items-center gap-2.5">
+        <Image src="/images/logo.png" alt="A.CERT" width={32} height={32} className="object-contain" />
+        <span className="text-white text-[20px] font-bold tracking-tight">A.CERT</span>
       </div>
 
       {/* RIGHT SIDE — Form */}
-      <div className="absolute right-0 top-0 w-full sm:w-[55%] lg:w-[45%] h-screen">
-        <div className="auth-form-wrap flex items-center justify-center h-full px-4 sm:px-8 lg:block lg:absolute lg:right-[120px] lg:top-1/2 lg:-translate-y-1/2 lg:max-w-[520px] lg:w-[calc(100%-180px)] lg:px-0 lg:h-auto">
-          <div className="animate-fade-in w-full lg:w-auto" style={{ padding: "28px 24px", borderRadius: "24px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
+      <div className="absolute right-0 top-0 w-full sm:w-[58%] lg:w-[50%] xl:w-[45%] h-screen">
+        <div className="auth-form-wrap flex items-center justify-center h-full px-3 sm:px-6 lg:px-8 xl:block xl:absolute xl:right-[120px] xl:top-1/2 xl:-translate-y-1/2 xl:max-w-[520px] xl:w-[calc(100%-180px)] xl:px-0 xl:h-auto">
+          <div className="animate-fade-in w-full xl:w-auto" style={{ padding: "24px 20px", borderRadius: "20px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
             {children}
           </div>
         </div>
