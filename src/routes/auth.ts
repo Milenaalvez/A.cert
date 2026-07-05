@@ -60,7 +60,7 @@ router.post('/register', async (req, res) => {
       const confirmation_token = randomBytes(32).toString('hex');
       await executeRaw(
         'INSERT INTO users (id, name, email, cpf, phone, password_hash, role, company_id, is_active, email_confirmed, password_change_required, confirmation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
-        id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, 'EMPLOYEE', company.id, 0, 0, 1, confirmation_token, created_at
+        id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, 'EMPLOYEE', company.id, 1, 0, 1, confirmation_token, created_at
       );
 
       enviarEmailConfirmacao(email.trim(), name.trim(), confirmation_token);
