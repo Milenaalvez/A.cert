@@ -123,7 +123,6 @@ export default function RegisterPage() {
         phone
       );
       setRegisteredEmail(email.trim());
-      setRegisteredType(accountType);
       if ((res as Record<string, unknown>).confirmationLink) {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
       }
