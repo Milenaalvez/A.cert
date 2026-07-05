@@ -487,7 +487,8 @@ function ConfiguracoesContent() {
       const data = await r.json();
       if (data.avatarUrl) {
         setUser((prev: any) => prev ? { ...prev, avatar: data.avatarUrl } : prev);
-        setGlobalUser((prev: any) => ({ ...prev, avatar: data.avatarUrl }));
+        const updated = { ...user, avatar: data.avatarUrl };
+        setGlobalUser(updated);
       }
     } catch {}
     e.target.value = "";
