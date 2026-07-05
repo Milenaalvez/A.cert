@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -34,6 +35,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
@@ -125,14 +127,14 @@ app.post('/api/upload/company-logo', logoUpload.single('logotipo'), async (req, 
 
 // Serve frontend (Next.js static export)
 const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
-app.use(express.static(frontendOut, { extensions: ['html'] }));
+app.use(express.static(frontendOut, { extensions: ['html'], maxAge: '7d' }));
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
-app.use(express.static(publicPath));
+app.use(express.static(publicPath, { maxAge: '30d' }));
 
 const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
-app.use('/uploads', express.static(uploadsPublicPath));
+app.use('/uploads', express.static(uploadsPublicPath, { maxAge: '30d' }));
 
 // Dynamic routes — serve generated placeholder HTML
 app.get('/confirmar-email/:token', (_req, res) => {
