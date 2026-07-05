@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import NovoDossieModal from "./NovoDossieModal";
 import PageLoadingOverlay from "./PageLoadingOverlay";
 import ElectronTitleBar from "./ElectronTitleBar";
