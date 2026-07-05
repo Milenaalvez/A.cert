@@ -361,10 +361,10 @@ router.post('/login', async (req, res) => {
     );
 
     if (user.password_change_required) {
-      const changeToken = gerarToken({ userId: user.id, email: user.email });
+      const token = gerarToken({ userId: user.id, email: user.email });
       res.json({
+        token,
         precisaTrocarSenha: true,
-        changeToken,
         user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
       });
       return;
