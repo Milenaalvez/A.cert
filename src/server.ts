@@ -134,6 +134,17 @@ app.use(express.static(publicPath));
 const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPublicPath));
 
+// Dynamic routes — serve generated placeholder HTML
+app.get('/confirmar-email/:token', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html'));
+});
+app.get('/dashboard/usuarios/:id', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html'));
+});
+app.get('/dashboard/dossies/:id', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html'));
+});
+
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'index.html'));
 });

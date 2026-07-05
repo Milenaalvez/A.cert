@@ -19,7 +19,6 @@ import {
   IdCard,
 } from "lucide-react";
 import AuthLayout from "./AuthLayout";
-import LoginTransition from "./LoginTransition";
 import Link from "next/link";
 import { register } from "@/lib/api";
 import { useT } from "@/i18n/useT";
@@ -63,8 +62,7 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState(false);
-  const [registeredType, setRegisteredType] = useState<"pf" | "pj">("pf");
+  const [confirmLink, setConfirmLink] = useState("");
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -97,11 +95,11 @@ export default function RegisterPage() {
     (accountType === "pf" ? cpfRaw.length === 11 : cnpj.replace(/\D/g, "").length >= 8);
 
   useEffect(() => {
-    if (!registered && !pendingApproval) return;
+    if (!registered) return;
     if (timer <= 0) return;
     const id = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(id);
-  }, [registered, pendingApproval, timer]);
+  }, [registered, timer]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -171,18 +169,33 @@ export default function RegisterPage() {
     boxShadow: active ? "0 4px 16px rgba(249,115,22,0.3)" : "none",
   } as React.CSSProperties);
 
-  if (showTransition) {
-    return <LoginTransition onComplete={() => {
-      setShowTransition(false);
-      if (registeredType === "pj") {
-        setPendingApproval(true);
-      } else {
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    if (showTransition) {
+      t = setTimeout(() => {
+        setShowTransition(false);
         setRegistered(true);
-      }
-    }} />;
+      }, 2000);
+    }
+    return () => { if (t) clearTimeout(t); };
+  }, [showTransition]);
+
+  if (showTransition) {
+    return (
+      <AuthLayout
+        title={<span><span className="text-accent">Aguarde</span>...</span>}
+        highlightWord="Aguarde"
+        description="Estamos preparando seu acesso."
+      >
+        <div className="flex flex-col items-center justify-center py-16 gap-6">
+          <Loader2 size={40} strokeWidth={2} className="animate-spin text-accent" />
+          <p className="text-white/60 text-[15px]">Redirecionando...</p>
+        </div>
+      </AuthLayout>
+    );
   }
 
-  if (pendingApproval) {
+  if (registered) {
     return (
       <AuthLayout
         title={

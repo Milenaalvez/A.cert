@@ -58,9 +58,16 @@ router.post('/register', async (req, res) => {
       }
 
       const confirmation_token = randomBytes(32).toString('hex');
+
+      const adminCount = await queryRawOne(
+        'SELECT COUNT(*)::int as count FROM users WHERE company_id = $1 AND role = \'ADMIN\'',
+        company.id
+      );
+      const role = (adminCount?.count || 0) === 0 ? 'ADMIN' : 'EMPLOYEE';
+
       await executeRaw(
         'INSERT INTO users (id, name, email, cpf, phone, password_hash, role, company_id, is_active, email_confirmed, password_change_required, confirmation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
-        id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, 'EMPLOYEE', company.id, 1, 0, 1, confirmation_token, created_at
+        id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, role, company.id, 1, 0, 1, confirmation_token, created_at
       );
 
       enviarEmailConfirmacao(email.trim(), name.trim(), confirmation_token);
