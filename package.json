@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "dev:frontend": "cd frontend && npx next dev --port 3000",
     "dev:all": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev\" \"npm run dev:frontend\"",
-    "build": "npx prisma generate && tsc && cd frontend && rm -rf .next out && npm install && NEXT_EXPORT=1 npx next build",
+    "build": "npx prisma generate && tsc && cd frontend && rm -rf .next out node_modules && npm install && NEXT_EXPORT=1 npx next build",
     "start": "node dist/server.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
