@@ -132,6 +132,8 @@ function ConfiguracoesContent() {
 
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [dirty, setDirty] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -201,6 +203,8 @@ function ConfiguracoesContent() {
         if (meData.user) {
           setUser(meData.user);
           setPhone(meData.user.phone || "");
+          setName(meData.user.name || "");
+          setEmail(meData.user.email || "");
         }
         const sData = await sRes.json();
         setTimezone(sData.timezone || "America/Sao_Paulo");
@@ -374,9 +378,9 @@ function ConfiguracoesContent() {
     setSaving(true);
     const h = { "Content-Type": "application/json", ...getHeaders() };
     try {
-      const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ phone }) });
+      const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ name, email, phone }) });
       const data = await r.json();
-      if (data.user) setUser(data.user);
+      if (data.user) { setUser(data.user); setGlobalUser(data.user); }
       setDirty(false);
       setEditingField(null);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
@@ -469,18 +473,23 @@ function ConfiguracoesContent() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      const h = { "Content-Type": "application/json", ...getHeaders() };
-      try {
-        const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ avatar: base64 }) });
-        const data = await r.json();
-        if (data.user) { setUser(data.user); setGlobalUser(data.user); }
-      } catch {}
-    };
-    reader.readAsDataURL(file);
+    if (!file || !user?.id) return;
+    const formData = new FormData();
+    formData.append("avatar", file);
+    formData.append("userId", user.id);
+    try {
+      const token = localStorage.getItem("acert_token");
+      const r = await fetch(`/api/upload/avatar`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const data = await r.json();
+      if (data.avatarUrl) {
+        setUser((prev: any) => prev ? { ...prev, avatar: data.avatarUrl } : prev);
+        setGlobalUser((prev: any) => ({ ...prev, avatar: data.avatarUrl }));
+      }
+    } catch {}
     e.target.value = "";
   };
 
@@ -557,11 +566,11 @@ function ConfiguracoesContent() {
                       <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     </label>
                     <div className="min-w-0 flex-1">
-                      <FieldRow icon={User} label={t("people.fields.name")} value={user?.name || "—"} readOnly />
+                      <FieldRow icon={User} label={t("people.fields.name")} value={name || "—"} editing={editingField === "name"} onEdit={() => setEditingField("name")} onCancel={() => { setEditingField(null); setName(user?.name || ""); }} onChange={(v) => { setName(v); setDirty(true); }} />
                       <FieldRow icon={Shield} label={t("users.table.role")} value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
                       <FieldRow icon={Building2} label={t("profile.company")} value="Bloco Imobiliária" readOnly />
-                      <FieldRow icon={Mail} label={t("profile.email")} value={user?.email || "—"} readOnly />
-                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} readOnly={false} />
+                      <FieldRow icon={Mail} label={t("profile.email")} value={email || "—"} editing={editingField === "email"} onEdit={() => setEditingField("email")} onCancel={() => { setEditingField(null); setEmail(user?.email || ""); }} onChange={(v) => { setEmail(v); setDirty(true); }} />
+                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} />
                     </div>
                   </div>
                 </div>
