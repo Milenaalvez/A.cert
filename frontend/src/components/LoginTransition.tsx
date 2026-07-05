@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 
-export default function LoginTransition() {
+export default function LoginTransition({ onComplete }: { onComplete?: () => void }) {
   const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"entering" | "ready">("entering");
@@ -18,14 +18,20 @@ export default function LoginTransition() {
     }, 200);
 
     const t1 = setTimeout(() => setPhase("ready"), 1200);
-    const t2 = setTimeout(() => router.replace("/dashboard"), 1800);
+    const t2 = setTimeout(() => {
+      if (onComplete) {
+        onComplete();
+      } else {
+        router.replace("/dashboard");
+      }
+    }, 1800);
 
     return () => {
       clearInterval(p);
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [router]);
+  }, [router, onComplete]);
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black">

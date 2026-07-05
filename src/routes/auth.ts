@@ -63,6 +63,8 @@ router.post('/register', async (req, res) => {
         id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, 'EMPLOYEE', company.id, 0, 0, 1, confirmation_token, created_at
       );
 
+      enviarEmailConfirmacao(email.trim(), name.trim(), confirmation_token);
+
       res.status(201).json({
         success: true,
         message: 'Solicitação enviada! Aguarde a aprovação do administrador.',

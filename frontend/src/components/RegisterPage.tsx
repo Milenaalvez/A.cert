@@ -64,6 +64,7 @@ export default function RegisterPage() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [registeredType, setRegisteredType] = useState<"pf" | "pj">("pf");
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -125,17 +126,10 @@ export default function RegisterPage() {
         phone
       );
       setRegisteredEmail(email.trim());
+      setRegisteredType(accountType);
       if ((res as Record<string, unknown>).confirmationLink) {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
       }
-      setTimeout(() => {
-        setShowTransition(false);
-        if (accountType === "pj") {
-          setPendingApproval(true);
-        } else {
-          setRegistered(true);
-        }
-      }, 1800);
     } catch (err) {
       setShowTransition(false);
       setErrors({ form: err instanceof Error ? err.message : 'Erro inesperado' });
@@ -178,7 +172,14 @@ export default function RegisterPage() {
   } as React.CSSProperties);
 
   if (showTransition) {
-    return <LoginTransition />;
+    return <LoginTransition onComplete={() => {
+      setShowTransition(false);
+      if (registeredType === "pj") {
+        setPendingApproval(true);
+      } else {
+        setRegistered(true);
+      }
+    }} />;
   }
 
   if (pendingApproval) {
