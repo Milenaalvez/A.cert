@@ -250,13 +250,11 @@ input:-webkit-autofill:focus {
   caret-color: #FF7A00 !important;
 }
 
-/* Responsive: mobile/tablet auth form */
-@media (max-width: 1279px) {
-  .auth-form-wrap {
-    right: 0 !important;
-    left: 0 !important;
+/* Responsive: dashboard content on mobile */
+@media (max-width: 1023px) {
+  .dashboard-content-mobile {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 12px !important;
   }
 }

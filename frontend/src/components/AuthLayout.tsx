@@ -60,48 +60,45 @@ export default function AuthLayout({
         }}
       />
 
-      {/* LEFT SIDE — Branding — visible from tablet (sm) up */}
-      <div className="hidden sm:flex absolute left-0 top-0 sm:w-[55%] md:w-[65%] lg:w-[70%] xl:w-[75%] h-screen flex-col justify-center">
-        {/* Logo */}
-        <div className="absolute top-[50px] sm:top-[70px] lg:top-[120px] left-[28px] lg:left-[80px]">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Image src="/images/logo.png" alt="A.CERT" width={44} height={44} className="sm:w-[52px] sm:h-[52px] lg:w-[72px] lg:h-[72px] object-contain" priority />
-            <div className="flex flex-col">
-              <span className="text-white text-[26px] sm:text-[34px] lg:text-[48px] font-bold tracking-tight block leading-none">A.CERT</span>
-              <span className="text-white/80 text-[10px] sm:text-[12px] lg:text-[14px] mt-0.5 sm:mt-1.5 block whitespace-nowrap">Central de Certidões</span>
+      <div className="relative z-10 flex h-full">
+        {/* LEFT SIDE — Branding — fills available space */}
+        <div className="hidden sm:flex flex-1 flex-col justify-center min-w-0 px-8 md:px-12 lg:px-20 xl:px-[80px]">
+          {/* Logo */}
+          <div className="absolute top-8 md:top-12 lg:top-[80px] xl:top-[120px] left-8 md:left-12 lg:left-20 xl:left-[80px]">
+            <div className="flex items-center gap-3 md:gap-4">
+              <Image src="/images/logo.png" alt="A.CERT" width={48} height={48} className="md:w-[60px] md:h-[60px] lg:w-[72px] lg:h-[72px] object-contain" priority />
+              <div className="flex flex-col">
+                <span className="text-white text-[28px] md:text-[36px] lg:text-[48px] font-bold tracking-tight block leading-none">A.CERT</span>
+                <span className="text-white/80 text-[11px] md:text-[13px] lg:text-[14px] mt-0.5 md:mt-1.5 block whitespace-nowrap">Central de Certidões</span>
+              </div>
             </div>
           </div>
-        </div>
-        {/* Content */}
-        <div className="px-[28px] lg:px-[80px]">
-          <div className="animate-slide-up">
+          {/* Content */}
+          <div className="animate-slide-up max-w-[700px]">
             {badge && (
-              <div style={{ display: "inline-flex", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", padding: "6px 14px", borderRadius: "999px", marginBottom: "32px" }} className="sm:mb-[40px] lg:mb-[53px]">
-                <span className="text-accent text-xs sm:text-sm font-medium">{badge}</span>
+              <div style={{ display: "inline-flex", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", padding: "7px 16px", borderRadius: "999px", marginBottom: "36px" }} className="lg:mb-[48px]">
+                <span className="text-accent text-xs lg:text-sm font-medium">{badge}</span>
               </div>
             )}
-            <div className={`text-white font-extrabold leading-[1.05] mb-4 sm:mb-6 ${titleSize}`} style={{ maxWidth: "650px" }}>
+            <div className="text-white font-extrabold leading-[1.05] mb-5 lg:mb-6 text-[28px] md:text-[40px] lg:text-[56px] xl:text-[72px]">
               {typeof title === "string" ? highlightTitle(title, highlightWord) : title}
             </div>
-            <div style={{ width: "32px", height: "3px", background: "#F97316", borderRadius: "999px", marginBottom: "20px" }} className="sm:w-[40px] sm:h-[3px] sm:mb-[24px] lg:w-[48px] lg:h-[4px] lg:mb-[32px]" />
-            <p className="text-white/75 text-[14px] sm:text-[16px] lg:text-[24px] leading-[1.7] max-w-[520px] mb-[20px] sm:mb-[32px]">
+            <div style={{ width: "40px", height: "3px", background: "#F97316", borderRadius: "999px", marginBottom: "24px" }} className="lg:w-[48px] lg:h-[4px] lg:mb-[32px]" />
+            <p className="text-white/75 text-[15px] md:text-[18px] lg:text-[24px] leading-[1.7] max-w-[520px]">
               {description}
             </p>
           </div>
-          {tagline && <div className="mt-4">{tagline}</div>}
+          {tagline && <div className="mt-8">{tagline}</div>}
         </div>
-      </div>
 
-      {/* Mobile-only logo */}
-      <div className="sm:hidden absolute top-5 left-4 z-10 flex items-center gap-2.5">
-        <Image src="/images/logo.png" alt="A.CERT" width={32} height={32} className="object-contain" />
-        <span className="text-white text-[20px] font-bold tracking-tight">A.CERT</span>
-      </div>
-
-      {/* RIGHT SIDE — Form */}
-      <div className="absolute right-0 top-0 w-full sm:w-[45%] md:w-[35%] lg:w-[30%] xl:w-[25%] h-screen">
-        <div className="auth-form-wrap flex items-center justify-center h-full px-3 sm:px-6 lg:px-8 xl:block xl:absolute xl:right-[120px] xl:top-1/2 xl:-translate-y-1/2 xl:max-w-[520px] xl:w-[calc(100%-180px)] xl:px-0 xl:h-auto">
-          <div className="animate-fade-in w-full xl:w-auto" style={{ padding: "24px 20px", borderRadius: "20px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
+        {/* RIGHT SIDE — Form — fixed max width */}
+        <div className="w-full sm:w-[440px] md:w-[460px] lg:w-[480px] xl:w-[520px] flex-shrink-0 flex items-center justify-center px-4 sm:px-6 md:pr-12 lg:pr-16 xl:pr-[120px]">
+          {/* Mobile logo (inside form area) */}
+          <div className="sm:hidden absolute top-5 left-5 z-10 flex items-center gap-2.5">
+            <Image src="/images/logo.png" alt="A.CERT" width={32} height={32} className="object-contain" />
+            <span className="text-white text-[20px] font-bold tracking-tight">A.CERT</span>
+          </div>
+          <div className="animate-fade-in w-full" style={{ padding: "28px 24px", borderRadius: "20px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
             {children}
           </div>
         </div>
