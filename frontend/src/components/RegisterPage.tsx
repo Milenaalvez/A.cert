@@ -60,6 +60,7 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const [confirmLink, setConfirmLink] = useState("");
 
   const [nome, setNome] = useState("");
