@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ConfirmarEmailClient from "./ConfirmarEmailClient";
 
 export function generateStaticParams() {
@@ -5,5 +6,9 @@ export function generateStaticParams() {
 }
 
 export default function ConfirmarEmailPage() {
-  return <ConfirmarEmailClient />;
+  return (
+    <Suspense fallback={null}>
+      <ConfirmarEmailClient />
+    </Suspense>
+  );
 }
