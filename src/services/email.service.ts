@@ -74,7 +74,7 @@ function buttonHtml(text: string, url: string): string {
 }
 
 export async function enviarEmailConfirmacao(email: string, name: string, token: string): Promise<void> {
-  const link = `${FRONTEND_URL}/confirmar-email/${token}`;
+  const link = `${FRONTEND_URL}/confirmar-email/${token}?email=${encodeURIComponent(email)}`;
   console.log('───────────────────────────────────────────');
   console.log('  EMAIL DE CONFIRMAÇÃO → ' + email);
 

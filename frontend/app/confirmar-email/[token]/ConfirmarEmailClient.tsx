@@ -1,14 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Loader2, CheckCircle2, ShieldAlert, AlertTriangle } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Loader2, CheckCircle2, ShieldAlert, AlertTriangle, Mail } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ConfirmarEmailClient() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const token = params.token as string;
+  const email = searchParams.get("email") || "";
   const [status, setStatus] = useState<"loading" | "ok" | "ja_confirmado" | "invalido" | "erro">("loading");
+  const [reenviando, setReenviando] = useState(false);
+  const [reenviado, setReenviado] = useState(false);
+
+  async function handleReenviar() {
+    if (!email || reenviando) return;
+    setReenviando(true);
+    try {
+      const r = await fetch("/api/auth/reenviar-confirmacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (r.ok) setReenviado(true);
+    } catch {} finally {
+      setReenviando(false);
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -72,12 +91,33 @@ export default function ConfirmarEmailClient() {
         {status === "invalido" && (
           <>
             <ShieldAlert size={44} style={{ color: "#EF4444", margin: "8px 0 24px 0" }} />
-            <p style={{ color: "#E5E7EB", fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
+            <p style={{ color: "#E5E7EB", fontSize: 15, lineHeight: 1.6, marginBottom: 12 }}>
               O link de confirmação é inválido ou já foi utilizado.
             </p>
-            <a href="/cadastro" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 32px", background: "#F97316", color: "#FFF", borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: "none" }}>
-              Solicitar novo link
-            </a>
+            {email && (
+              <p style={{ color: "#9CA3AF", fontSize: 13, lineHeight: 1.5, marginBottom: 24 }}>
+                {email}
+              </p>
+            )}
+            {reenviado ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                <CheckCircle2 size={28} style={{ color: "#10B981" }} />
+                <p style={{ color: "#10B981", fontSize: 14, fontWeight: 600 }}>Novo link enviado!</p>
+                <p style={{ color: "#9CA3AF", fontSize: 13, lineHeight: 1.5 }}>Verifique sua caixa de entrada.</p>
+              </div>
+            ) : (
+              <button
+                onClick={handleReenviar}
+                disabled={!email || reenviando}
+                style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 32px", background: "#F97316", color: "#FFF", borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: reenviando ? "not-allowed" : "pointer", border: "none", opacity: reenviando ? 0.7 : 1 }}
+              >
+                {reenviando ? (
+                  <><Loader2 size={16} className="animate-spin" /> Reenviando...</>
+                ) : (
+                  <><Mail size={16} /> Solicitar novo link</>
+                )}
+              </button>
+            )}
           </>
         )}
 
