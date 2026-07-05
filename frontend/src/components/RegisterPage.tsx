@@ -172,43 +172,6 @@ export default function RegisterPage() {
       <AuthLayout
         title={
           <div className="flex flex-col">
-            <span className="whitespace-nowrap"><span className="text-accent">Solicitação</span> enviada!</span>
-          </div>
-        }
-        highlightWord="Solicitação"
-        description="Aguarde a aprovação do administrador da sua empresa."
-        titleSize="text-[48px]"
-      >
-        <div className="flex flex-col items-center text-center">
-          <div className="w-[72px] h-[72px] rounded-full bg-accent/20 flex items-center justify-center mb-6">
-            <Building2 size={36} strokeWidth={1.5} className="text-accent" />
-          </div>
-          <h2 className="text-[24px] font-bold text-white tracking-tight mb-2">
-            Aguardando aprovação
-          </h2>
-          <p className="text-white/70 text-[15px] mb-8 max-w-[320px]">
-            Sua solicitação foi enviada para o administrador da empresa. Você receberá um email quando sua conta for ativada.
-          </p>
-          <div className="flex items-center gap-2 text-white/50 text-sm mb-8">
-            <Loader2 size={16} className="animate-spin" />
-            <span>Status: pendente</span>
-          </div>
-          <p className="text-sm text-center text-white/65 mt-8">
-            Já tem uma conta?{" "}
-            <Link href="/" className="font-semibold text-accent hover:text-accent-hover transition-colors">
-              Fazer login
-            </Link>
-          </p>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  if (registered) {
-    return (
-      <AuthLayout
-        title={
-          <div className="flex flex-col">
             <span className="whitespace-nowrap">Quase lá!</span>
             <span className="whitespace-nowrap"><span className="text-accent">Confirme</span> seu email</span>
           </div>
