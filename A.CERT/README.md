@@ -192,11 +192,11 @@ npm run build
 ## Variáveis de Ambiente
 
 ```env
-DATABASE_URL=postgresql://acert:senha@localhost:5432/acert?schema=public
+DATABASE_URL=postgresql://usuario:senha@host:porta/banco?schema=public
 PORT=3001
 PUPPETEER_HEADLESS=true
 CONNECTOR_TIMEOUT_MS=60000
-JWT_SECRET=acert-dev-secret-change-in-production
+JWT_SECRET=sua-chave-secreta-aqui
 FRONTEND_URL=http://localhost:3000
 ```
 

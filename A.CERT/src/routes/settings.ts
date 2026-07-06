@@ -123,6 +123,112 @@ router.delete('/organs/:id', authMiddleware, async (req, res) => {
   }
 });
 
+const BUILTIN_CONNECTORS = [
+  { id: "rf", name: "Receita Federal", icon: "FileSearch" },
+  { id: "trf1", name: "TRF1", icon: "Building2" },
+  { id: "tjdft", name: "TJDFT", icon: "Building2" },
+  { id: "trt", name: "TRT", icon: "Briefcase" },
+  { id: "tst", name: "TST", icon: "Briefcase" },
+  { id: "sefaz", name: "SEFAZ-DF", icon: "Landmark" },
+  { id: "onr", name: "Certidão de Ônus (ONR)", icon: "Home" },
+];
+
+router.get('/connectors-status', authMiddleware, async (_req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const stats = await queryRaw(`
+      SELECT
+        organ,
+        COUNT(*)::int as total,
+        COUNT(*) FILTER (WHERE status = 'Obtida')::int as obtidas,
+        COUNT(*) FILTER (WHERE status = 'Obtida' AND obtained_at::timestamp::date = $1::date)::int as hoje,
+        MAX(obtained_at) as ultima_consulta,
+        AVG(EXTRACT(EPOCH FROM (obtained_at::timestamp - created_at::timestamp))) as tempo_medio_seg
+      FROM certificates
+      WHERE organ IS NOT NULL AND organ != ''
+      GROUP BY organ
+    `, today) as { organ: string; total: number; obtidas: number; hoje: number; ultima_consulta: string | null; tempo_medio_seg: number | null }[];
+
+    const statsMap = new Map(stats.map(s => [s.organ, s]));
+
+    const result = BUILTIN_CONNECTORS.map(c => {
+      const s = statsMap.get(c.name);
+      const obtidas = s?.obtidas ?? 0;
+      const total = s?.total ?? 0;
+      const taxaSucesso = total > 0 ? Math.round((obtidas / total) * 100) : 0;
+      const ultima = s?.ultima_consulta || null;
+      const tempoMedio = s?.tempo_medio_seg ? `${(s.tempo_medio_seg / 60).toFixed(1)} min` : "—";
+
+      let status: "online" | "offline" | "unstable" = "offline";
+      if (obtidas > 0 && ultima) {
+        const diasDesdeUltima = Math.floor((Date.now() - new Date(ultima).getTime()) / 86400000);
+        status = diasDesdeUltima <= 1 ? "online" : diasDesdeUltima <= 7 ? "unstable" : "offline";
+      }
+
+      return {
+        ...c,
+        status,
+        totalCertidoes: total,
+        certidoesObtidas: obtidas,
+        certidoesHoje: s?.hoje ?? 0,
+        taxaSucesso,
+        ultimaConsulta: ultima,
+        tempoMedio,
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('[Settings] Erro ao buscar status dos conectores:', err);
+    res.status(500).json({ error: 'Erro ao buscar status dos conectores' });
+  }
+});
+
+router.post('/connectors/:id/test', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connector = BUILTIN_CONNECTORS.find(c => c.id === id);
+    if (!connector) {
+      res.status(404).json({ error: 'Conector não encontrado' });
+      return;
+    }
+
+    const stats = await queryRawOne(
+      `SELECT
+        COUNT(*)::int as total,
+        COUNT(*) FILTER (WHERE status = 'Obtida')::int as obtidas,
+        MAX(CASE WHEN status = 'Obtida' THEN obtained_at END) as ultima_obtida,
+        MAX(created_at) as ultima_tentativa
+      FROM certificates WHERE organ = $1`,
+      connector.name
+    ) as { total: number; obtidas: number; ultima_obtida: string | null; ultima_tentativa: string | null } | null;
+
+    if (!stats || stats.total === 0) {
+      res.json({
+        success: false,
+        message: 'Nenhuma certidão registrada para este órgão',
+        total: 0, obtidas: 0,
+      });
+      return;
+    }
+
+    const online = stats.obtidas > 0;
+    res.json({
+      success: online,
+      message: online
+        ? `${stats.obtidas} de ${stats.total} certidões obtidas${stats.ultima_obtida ? ` · Última: ${new Date(stats.ultima_obtida).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`
+        : `${stats.total} tentativa${stats.total > 1 ? 's' : ''}, nenhuma concluída${stats.ultima_tentativa ? ` · Última: ${new Date(stats.ultima_tentativa).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`,
+      total: stats.total,
+      obtidas: stats.obtidas,
+      ultimaObtida: stats.ultima_obtida,
+    });
+  } catch (err) {
+    console.error('[Settings] Erro ao testar conector:', err);
+    res.status(500).json({ error: 'Erro ao testar conector' });
+  }
+});
+
 router.get('/templates', authMiddleware, async (_req, res) => {
   try {
     const rows = await queryRaw('SELECT * FROM certificate_templates ORDER BY ordem');
@@ -269,22 +375,52 @@ router.delete('/backup/:filename', authMiddleware, (req, res) => {
   }
 });
 
-router.get('/system-info', authMiddleware, (_req, res) => {
+router.get('/system-info', authMiddleware, async (_req, res) => {
   try {
-    const dbStat = fs.statSync(path.join(DATA_DIR, 'acert.db'));
-    const dbSize = dbStat.size > 1048576 ? `${(dbStat.size / 1048576).toFixed(2)} MB` : `${(dbStat.size / 1024).toFixed(2)} KB`;
+    const dbPath = path.join(DATA_DIR, 'acert.db');
+    let dbSize = '—';
+    try {
+      const dbStat = fs.statSync(dbPath);
+      dbSize = dbStat.size > 1048576 ? `${(dbStat.size / 1048576).toFixed(2)} MB` : `${(dbStat.size / 1024).toFixed(2)} KB`;
+    } catch {}
+
     const uptime = process.uptime();
     const days = Math.floor(uptime / 86400);
     const hours = Math.floor((uptime % 86400) / 3600);
+    const mins = Math.floor((uptime % 3600) / 60);
+
+    const [userCount, dossierCount, certCount, sessionCount] = await Promise.all([
+      queryRawOne("SELECT COUNT(*)::int as count FROM users") as Promise<{ count: number }>,
+      queryRawOne("SELECT COUNT(*)::int as count FROM dossiers WHERE deleted_at IS NULL OR deleted_at = ''") as Promise<{ count: number }>,
+      queryRawOne("SELECT COUNT(*)::int as count FROM certificates") as Promise<{ count: number }>,
+      queryRawOne("SELECT COUNT(*)::int as count FROM user_sessions WHERE is_active = 1") as Promise<{ count: number }>,
+    ]);
+
+    const memUsage = process.memoryUsage();
+    const memMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+
+    const pkgJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'));
+
     res.json({
-      version: '1.0.0',
+      version: pkgJson.version || '1.0.0',
       environment: process.env.NODE_ENV || 'development',
-      lastUpdate: '2026-06-25',
       server: `Node.js ${process.version}`,
       database: dbSize,
-      uptime: `${days}d ${hours}h`,
+      uptime: days > 0 ? `${days}d ${hours}h ${mins}min` : hours > 0 ? `${hours}h ${mins}min` : `${mins}min`,
+      lastUpdate: '2026-06-25',
+      stats: {
+        users: userCount.count,
+        dossiers: dossierCount.count,
+        certificates: certCount.count,
+        activeSessions: sessionCount.count,
+      },
+      resources: {
+        memory: `${memMB} MB`,
+        uptimeSeconds: Math.round(uptime),
+      },
     });
   } catch (err) {
+    console.error('[Settings] Erro ao buscar informações do sistema:', err);
     res.status(500).json({ error: 'Erro ao buscar informações do sistema' });
   }
 });

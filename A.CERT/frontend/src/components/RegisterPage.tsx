@@ -19,7 +19,6 @@ import {
   IdCard,
 } from "lucide-react";
 import AuthLayout from "./AuthLayout";
-import LoginTransition from "./LoginTransition";
 import Link from "next/link";
 import { register } from "@/lib/api";
 import { useT } from "@/i18n/useT";
@@ -55,15 +54,14 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [showTransition, setShowTransition] = useState(false);
   const [confirmationLink, setConfirmationLink] = useState("");
   const [timer, setTimer] = useState(60);
   const [reenviando, setReenviando] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [confirmLink, setConfirmLink] = useState("");
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -96,11 +94,11 @@ export default function RegisterPage() {
     (accountType === "pf" ? cpfRaw.length === 11 : cnpj.replace(/\D/g, "").length >= 8);
 
   useEffect(() => {
-    if (!registered && !pendingApproval) return;
+    if (!registered) return;
     if (timer <= 0) return;
     const id = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(id);
-  }, [registered, pendingApproval, timer]);
+  }, [registered, timer]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -115,7 +113,7 @@ export default function RegisterPage() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
-    setShowTransition(true);
+    setRegistered(true);
     try {
       const res = await register(
         nome.trim(), email.trim(), password,
@@ -128,16 +126,8 @@ export default function RegisterPage() {
       if ((res as Record<string, unknown>).confirmationLink) {
         setConfirmationLink((res as Record<string, unknown>).confirmationLink as string);
       }
-      setTimeout(() => {
-        setShowTransition(false);
-        if (accountType === "pj") {
-          setPendingApproval(true);
-        } else {
-          setRegistered(true);
-        }
-      }, 1800);
     } catch (err) {
-      setShowTransition(false);
+      setRegistered(false);
       setErrors({ form: err instanceof Error ? err.message : 'Erro inesperado' });
     } finally {
       setLoading(false);
@@ -176,47 +166,6 @@ export default function RegisterPage() {
     transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
     boxShadow: active ? "0 4px 16px rgba(249,115,22,0.3)" : "none",
   } as React.CSSProperties);
-
-  if (showTransition) {
-    return <LoginTransition />;
-  }
-
-  if (pendingApproval) {
-    return (
-      <AuthLayout
-        title={
-          <div className="flex flex-col">
-            <span className="whitespace-nowrap"><span className="text-accent">Solicitação</span> enviada!</span>
-          </div>
-        }
-        highlightWord="Solicitação"
-        description="Aguarde a aprovação do administrador da sua empresa."
-        titleSize="text-[48px]"
-      >
-        <div className="flex flex-col items-center text-center">
-          <div className="w-[72px] h-[72px] rounded-full bg-accent/20 flex items-center justify-center mb-6">
-            <Building2 size={36} strokeWidth={1.5} className="text-accent" />
-          </div>
-          <h2 className="text-[24px] font-bold text-white tracking-tight mb-2">
-            Aguardando aprovação
-          </h2>
-          <p className="text-white/70 text-[15px] mb-8 max-w-[320px]">
-            Sua solicitação foi enviada para o administrador da empresa. Você receberá um email quando sua conta for ativada.
-          </p>
-          <div className="flex items-center gap-2 text-white/50 text-sm mb-8">
-            <Loader2 size={16} className="animate-spin" />
-            <span>Status: pendente</span>
-          </div>
-          <p className="text-sm text-center text-white/65 mt-8">
-            Já tem uma conta?{" "}
-            <Link href="/" className="font-semibold text-accent hover:text-accent-hover transition-colors">
-              Fazer login
-            </Link>
-          </p>
-        </div>
-      </AuthLayout>
-    );
-  }
 
   if (registered) {
     return (

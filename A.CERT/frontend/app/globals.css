@@ -205,8 +205,22 @@ input[type="email"]:-webkit-autofill {
 
 .dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
 }
 
 .stat-card {
@@ -248,4 +262,30 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0px 1000px rgba(255,255,255,0.07) inset !important;
   transition: background-color 5000s ease-in-out 0s;
   caret-color: #FF7A00 !important;
+}
+
+/* Responsive: dashboard content on mobile */
+@media (max-width: 1023px) {
+  .dashboard-content-mobile {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* Responsive: auth form full-width centered on mobile */
+@media (max-width: 639px) {
+  .auth-form-box {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 16px !important;
+  }
 }

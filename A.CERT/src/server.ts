@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -23,7 +24,7 @@ import settingsRoutes from './routes/settings.js';
 import supportRoutes from './routes/support.js';
 import trashRoutes from './routes/trash.js';
 import companiesRoutes from './routes/companies.js';
-import prisma, { executeRaw, queryRawOne } from './lib/prisma.js';
+import prisma, { executeRaw, queryRawOne, getSetting } from './lib/prisma.js';
 
 const LOG = (msg: string) => console.log(`[A.CERT] ${msg}`);
 
@@ -34,7 +35,8 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 app.use(cors());
-app.use(express.json());
+app.use(compression());
+app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -73,32 +75,100 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
   },
 });
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Apenas imagens são permitidas'));
+
+async function getUploadLimitBytes(): Promise<number> {
+  const limitMB = parseInt((await getSetting('upload_limit', '10')) || '10', 10);
+  return limitMB * 1024 * 1024;
+}
+
+app.post('/api/upload/avatar', async (req, res) => {
+  const fileSize = await getUploadLimitBytes();
+  const upload = multer({
+    storage,
+    limits: { fileSize },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('Apenas imagens são permitidas'));
+    },
+  });
+  upload.single('avatar')(req as any, res as any, async (err) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    const userId = (req as any).body.userId;
+    if (!userId || !(req as any).file) {
+      res.status(400).json({ error: 'userId e avatar são obrigatórios' });
+      return;
+    }
+    const avatarUrl = `/uploads/avatars/${(req as any).file.filename}`;
+    await executeRaw('UPDATE users SET avatar = $1 WHERE id = $2', avatarUrl, userId);
+    res.json({ avatarUrl });
+  });
+});
+
+const logosDir = path.join(__dirname, '..', 'uploads', 'company-logos');
+if (!fs.existsSync(logosDir)) { fs.mkdirSync(logosDir, { recursive: true }); }
+
+const logoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, logosDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `logo-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
   },
 });
 
-app.post('/api/upload/avatar', upload.single('avatar'), async (req, res) => {
-  const userId = req.body.userId;
-  if (!userId || !req.file) {
-    res.status(400).json({ error: 'userId e avatar são obrigatórios' });
-    return;
-  }
-  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-  await executeRaw('UPDATE users SET avatar = $1 WHERE id = $2', avatarUrl, userId);
-  res.json({ avatarUrl });
+app.post('/api/upload/company-logo', async (req, res) => {
+  const fileSize = await getUploadLimitBytes();
+  const upload = multer({
+    storage: logoStorage,
+    limits: { fileSize },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('Apenas imagens são permitidas'));
+    },
+  });
+  upload.single('logotipo')(req as any, res as any, async (err) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    const companyId = (req as any).body.companyId;
+    if (!companyId || !(req as any).file) {
+      res.status(400).json({ error: 'companyId e logotipo são obrigatórios' });
+      return;
+    }
+    const logoUrl = `/uploads/company-logos/${(req as any).file.filename}`;
+    await executeRaw('UPDATE companies SET logo_url = $1 WHERE id = $2', logoUrl, companyId);
+    res.json({ logoUrl });
+  });
 });
+
+// Serve frontend (Next.js static export)
+const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
+app.use(express.static(frontendOut, { extensions: ['html'] }));
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
-app.use(express.static(publicPath));
+app.use(express.static(publicPath, { maxAge: '30d' }));
 
 const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
-app.use('/uploads', express.static(uploadsPublicPath));
+app.use('/uploads', express.static(uploadsPublicPath, { maxAge: '30d' }));
+
+// Dynamic routes — serve generated placeholder HTML
+app.get('/confirmar-email/:token', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html'));
+});
+app.get('/dashboard/usuarios/:id', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html'));
+});
+app.get('/dashboard/dossies/:id', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html'));
+});
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'index.html'));
+});
 
 const documentos = new Map<string, Uint8Array>();
 
@@ -299,13 +369,6 @@ app.get('/api/dossie/:jobId', async (req, res) => {
     console.error('Erro ao gerar dossiê:', error);
     res.status(500).json({ error: 'Erro ao gerar dossiê' });
   }
-});
-
-// Serve frontend (Electron production mode)
-const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
-app.use(express.static(frontendOut));
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(frontendOut, 'index.html'));
 });
 
 process.on('SIGINT', async () => {

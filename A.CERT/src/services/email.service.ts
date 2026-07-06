@@ -1,8 +1,10 @@
+import nodemailer from 'nodemailer';
+
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 function getSmtpFromEnv() {
   const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const fromEmail = process.env.SMTP_FROM_EMAIL || user || '';
@@ -72,7 +74,7 @@ function buttonHtml(text: string, url: string): string {
 }
 
 export async function enviarEmailConfirmacao(email: string, name: string, token: string): Promise<void> {
-  const link = `${FRONTEND_URL}/confirmar-email/${token}`;
+  const link = `${FRONTEND_URL}/confirmar-email/${token}?email=${encodeURIComponent(email)}`;
   console.log('───────────────────────────────────────────');
   console.log('  EMAIL DE CONFIRMAÇÃO → ' + email);
 
@@ -84,8 +86,7 @@ export async function enviarEmailConfirmacao(email: string, name: string, token:
   }
 
   try {
-    const nodemailer = await import('nodemailer');
-    const transporter = nodemailer.default.createTransport({
+    const transporter = nodemailer.createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.port === 465,
       auth: { user: smtp.user, pass: smtp.pass },
     });
@@ -121,8 +122,7 @@ export async function enviarEmailRedefinirSenha(email: string, name: string, tok
   }
 
   try {
-    const nodemailer = await import('nodemailer');
-    const transporter = nodemailer.default.createTransport({
+    const transporter = nodemailer.createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.port === 465,
       auth: { user: smtp.user, pass: smtp.pass },
     });
@@ -157,8 +157,7 @@ export async function enviarEmailBoasVindas(email: string, name: string, tempPas
   }
 
   try {
-    const nodemailer = await import('nodemailer');
-    const transporter = nodemailer.default.createTransport({
+    const transporter = nodemailer.createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.port === 465,
       auth: { user: smtp.user, pass: smtp.pass },
     });
@@ -166,16 +165,21 @@ export async function enviarEmailBoasVindas(email: string, name: string, tempPas
     const info = await transporter.sendMail({
       from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
       to: email,
-      subject: `Bem-vindo(a) à A.CERT, ${name}!`,
-      html: wrapEmail('Bem-vindo(a)!',
-        `<p style="margin:0 0 16px 0;">Que bom ter você conosco, <strong>${name}</strong>!</p>
-         <p style="margin:0 0 16px 0;">Sua empresa <strong>${companyName}</strong> já está na plataforma A.CERT.</p>
+      subject: `Bem-vindo(a) à ${companyName}, ${name}!`,
+      html: wrapEmail('Boas-vindas!',
+        `<p style="margin:0 0 16px 0;">Olá <strong>${name}</strong>,</p>
+         <p style="margin:0 0 16px 0;">Sua conta na <strong>${companyName}</strong> foi criada com sucesso na plataforma A.CERT.</p>
+         ${tempPassword ? `
+         <p style="margin:0 0 16px 0;">Utilize as credenciais abaixo para seu primeiro acesso:</p>
          <div style="background:#F3F4F6;padding:16px;border-radius:8px;margin:18px 0;">
-           <p style="margin:0 0 8px 0;font-size:12px;color:#6B7280;">Seus dados de acesso:</p>
+           <p style="margin:0 0 8px 0;font-size:12px;color:#6B7280;">Dados de acesso:</p>
            <p style="margin:0 0 4px 0;font-size:14px;font-weight:700;color:#111827;">📧 ${email}</p>
            <p style="margin:0;font-size:14px;font-weight:700;color:#111827;">🔑 ${tempPassword}</p>
          </div>
          <p style="margin:0 0 20px 0;color:#D97706;font-size:13px;font-weight:600;">⚠ No primeiro login, você precisará trocar sua senha.</p>
+         ` : `
+         <p style="margin:0 0 16px 0;">Confirme seu email para ativar sua conta e começar a usar a plataforma.</p>
+         `}
          ${buttonHtml('Acessar Plataforma', `${FRONTEND_URL}/login`)}
          <p style="margin:20px 0 0 0;color:#9CA3AF;font-size:12px;">Dúvidas? Responda este email ou entre em contato pelo suporte.</p>`),
     });

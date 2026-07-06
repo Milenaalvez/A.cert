@@ -193,26 +193,39 @@ function RedefinirSenhaForm() {
       </div>
 
       {done && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-md rounded-[24px] border border-white/15 bg-[#1a1a1a] p-8 shadow-2xl text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="w-[72px] h-[72px] rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle size={36} strokeWidth={1.5} className="text-green-500" />
+        <>
+          <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full bg-surface animate-in fade-in zoom-in-95 duration-200"
+              style={{ maxWidth: "460px", borderRadius: "16px", border: "1px solid var(--border-default)", boxShadow: "0 25px 80px rgba(0,0,0,0.18)" }}>
+              <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid var(--border-light)" }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0" style={{ background: "rgba(5,150,105,0.12)" }}>
+                    <CheckCircle size={20} strokeWidth={1.5} color="#059669" />
+                  </div>
+                  <div>
+                    <h2 className="text-[17px] font-bold tracking-tight" style={{ color: "var(--text-primary)", lineHeight: 1.2 }}>Senha atualizada!</h2>
+                    <p className="text-[12px]" style={{ color: "var(--text-muted)", marginTop: "2px" }}>Sua senha foi redefinida com sucesso</p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: "24px 28px" }}>
+                <div className="flex items-center gap-3 p-4 rounded-[10px]" style={{ background: "var(--bg-app)", border: "1px solid var(--border-light)" }}>
+                  <Loader2 size={16} className="animate-spin shrink-0" style={{ color: "#FF7A00" }} />
+                  <span className="text-[13px] text-secondary">Redirecionando para o login em instantes...</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-end shrink-0" style={{ padding: "16px 28px 20px", borderTop: "1px solid var(--border-light)" }}>
+                <button onClick={() => router.push("/")}
+                  style={{ height: "38px", padding: "0 28px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: 600, color: "#FFF", cursor: "pointer", background: "#FF7A00" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#E06900"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#FF7A00"; }}>
+                  Ir para o login
+                </button>
+              </div>
             </div>
-            <h2 className="text-[24px] font-bold text-white tracking-tight mb-2">Senha atualizada!</h2>
-            <p className="text-white/70 text-[15px] mb-6">Sua senha foi redefinida com sucesso.</p>
-            <div className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-[14px] bg-white/[0.07] border border-white/10 mb-6">
-              <Loader2 size={16} className="animate-spin text-white/50" />
-              <span className="text-sm text-white/60">Redirecionando para o login...</span>
-            </div>
-            <button
-              onClick={() => router.push("/")}
-              className="w-full h-[52px] rounded-[14px] bg-accent font-semibold text-white hover:bg-accent-hover transition-all"
-            >
-              Ir para o login agora
-            </button>
           </div>
-        </div>
+        </>
       )}
     </AuthLayout>
   );

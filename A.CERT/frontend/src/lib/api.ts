@@ -62,14 +62,21 @@ export async function me(token: string): Promise<User> {
 
 export function salvarToken(token: string) {
   localStorage.setItem('acert_token', token);
+  document.cookie = `acert_token=${token}; path=/; max-age=604800; SameSite=Lax`;
 }
 
 export function obterToken(): string | null {
-  return localStorage.getItem('acert_token');
+  let token = localStorage.getItem('acert_token');
+  if (!token) {
+    const match = document.cookie.match(/acert_token=([^;]+)/);
+    if (match) token = match[1];
+  }
+  return token;
 }
 
 export function limparSessao() {
   localStorage.removeItem('acert_token');
+  document.cookie = 'acert_token=; path=/; max-age=0';
 }
 
 export async function esqueciSenha(email: string): Promise<{ success: boolean; message: string }> {

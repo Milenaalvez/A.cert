@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('acert_token') : null;
-    if (token) {
+    if (token && window.location.pathname === '/') {
       router.replace('/dashboard');
     } else {
       setCheckingToken(false);

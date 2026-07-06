@@ -8,6 +8,7 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import NovoDossieModal from "@/components/NovoDossieModal";
 import { useT } from "@/i18n/useT";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface Dossier {
   id: string; identifier: string; status: string; priority: string; responsible: string;
@@ -74,6 +75,8 @@ function DossierCard({ dossier }: { dossier: Dossier }) {
 
 export default function DossiesPage() {
   const { t } = useT();
+  const { settings } = useSettings();
+  const limit = settings.items_per_page || "12";
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export default function DossiesPage() {
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (activeTab !== "todos") params.set("status", STATUS_MAP[activeTab]);
-    params.set("page", String(currentPage)); params.set("limit", "12");
+    params.set("page", String(currentPage)); params.set("limit", limit);
     try {
       const r = await fetch(`/api/dossiers?${params}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!r.ok) throw new Error("Falha ao carregar");

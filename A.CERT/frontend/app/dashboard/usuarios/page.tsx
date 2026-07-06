@@ -1,5 +1,4 @@
-"use client";
-export const dynamic = "force-dynamic";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -215,9 +214,9 @@ export default function UsuariosPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ background: "var(--bg-app)", minHeight: "100vh" }}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-8" style={{ marginTop: 40, marginBottom: 28 }}>
+        <div className="flex items-start justify-between gap-8" style={{ marginTop: "clamp(16px, 5vw, 40px)", marginBottom: 28 }}>
           <div className="flex flex-col gap-1.5 min-w-0">
             <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Usuários</h1>
             <p className="text-[14px] text-muted leading-relaxed">Gerencie os colaboradores que possuem acesso ao sistema A.CERT.</p>

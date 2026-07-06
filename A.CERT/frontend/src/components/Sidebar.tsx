@@ -15,9 +15,7 @@ import {
   LogOut,
   Sun,
   Moon,
-  Archive,
   Trash2,
-  Star,
   Building2,
 } from "lucide-react"
 import { useTheme } from "@/contexts/ThemeContext"
@@ -82,7 +80,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
   const { t } = useT()
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarHover, setSidebarHover] = useState(false)
-  const [dossieSubmenu, setDossieSubmenu] = useState(false)
+
   const [mounted, setMounted] = useState(false)
   const [sectionState, setSectionState] = useState<Record<string, boolean>>({})
 
@@ -141,7 +139,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
         { label: t("sidebar.trash"), icon: Trash2, page: "trash" },
       ],
     },
-  ], [])
+  ], [t])
 
   function NavItem({ item, navCollapsed }: { item: MenuItem; navCollapsed: boolean }) {
     const Icon = item.icon
@@ -285,69 +283,9 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 )}
                 {(!hasLabel || sectionOpen || collapsed) && (
                   <div className={`flex flex-col gap-0.5 ${collapsed ? "items-center" : ""}`}>
-                    {group.items.map((item) =>
-                      item.page === "dossies" ? (
-                        <div key={item.page} className="flex flex-col">
-                          <button
-                            onClick={() => onNavigate(item.page)}
-                            title={collapsed ? item.label : undefined}
-                            style={collapsed ? undefined : { paddingLeft: "18px", paddingRight: "18px" }}
-                            className={`group relative flex items-center gap-3 w-full h-11 rounded-xl text-[14px] font-medium transition-all duration-200 ${
-                              collapsed ? "justify-center px-0" : ""
-                            } ${
-                              activePage === item.page
-                                ? "text-white"
-                                : "text-[#F0F3FA]/70 hover:text-[#FFFFFF] hover:bg-white/[0.06]"
-                            } ${collapsed ? "" : "pr-0"}`}
-                          >
-                            <FolderOpen
-                              size={20}
-                              strokeWidth={activePage === item.page ? 2.5 : 2}
-                              className={`shrink-0 transition-all duration-200 ${
-                                activePage === item.page
-                                  ? "text-[#FF7A00]"
-                                  : "text-[#F0F3FA]/50 group-hover:text-[#F0F3FA]/80"
-                              }`}
-                            />
-                            {!collapsed && (
-                              <div className="flex items-center gap-0 flex-1 min-w-0">
-                                <span className="truncate">{item.label}</span>
-                                <span
-                                  onClick={(e) => { e.stopPropagation(); setDossieSubmenu(!dossieSubmenu); }}
-                                  className="flex items-center justify-center text-[#F0F3FA]/40 hover:text-white transition-colors shrink-0 cursor-pointer select-none"
-                                  style={{ width: "14px", height: "14px", marginLeft: "2px" }}
-                                >
-                                  <span className={`text-[10px] leading-none transition-transform duration-200 ${dossieSubmenu ? "rotate-90" : ""}`}>›</span>
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                          {!collapsed && dossieSubmenu && (
-                            <div className="flex flex-col">
-                              <button
-                                onClick={() => onNavigate("dossies")}
-                                className="group flex items-center gap-3 w-full h-10 text-[13px] text-[#F0F3FA]/60 hover:text-white hover:bg-white/[0.04] transition-colors"
-                                style={{ paddingLeft: "50px", paddingRight: "18px" }}
-                              >
-                                <Archive size={16} strokeWidth={1.5} className="shrink-0 text-[#F0F3FA]/40 group-hover:text-[#F0F3FA]/70" />
-                                <span>Arquivados</span>
-                              </button>
-                              <button
-                                onClick={() => onNavigate("dossies")}
-                                className="group flex items-center gap-3 w-full h-10 text-[13px] text-[#F0F3FA]/60 hover:text-white hover:bg-white/[0.04] transition-colors"
-                                style={{ paddingLeft: "50px", paddingRight: "18px" }}
-                              >
-                                <Star size={16} strokeWidth={1.5} className="shrink-0 text-[#FFB800]/60 group-hover:text-[#FFB800]" />
-                                <span>Prioridades</span>
-                              </button>
-
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <NavItem key={item.page} item={item} navCollapsed={collapsed} />
-                      )
-                    )}
+                    {group.items.map((item) => (
+                      <NavItem key={item.page} item={item} navCollapsed={collapsed} />
+                    ))}
                   </div>
                 )}
               </div>

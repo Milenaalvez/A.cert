@@ -1,7 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { getSetting } from '../lib/prisma.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'acert-dev-secret-change-in-production';
+const secret = process.env.JWT_SECRET;
+if (!secret) {
+  throw new Error('JWT_SECRET não definido nas variáveis de ambiente');
+}
+const JWT_SECRET: string = secret;
 
 export interface AuthPayload {
   userId: string;
@@ -16,8 +21,11 @@ declare global {
   }
 }
 
-export function gerarToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+export async function gerarToken(payload: AuthPayload): Promise<string> {
+  const sessionMax = await getSetting('session_max', '10080');
+  const minutes = parseInt(sessionMax || '10080', 10);
+  const days = Math.max(1, Math.ceil(minutes / 1440));
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: `${days}d` });
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -29,7 +37,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
 
   const token = header.slice(7);
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as unknown as AuthPayload;
     req.user = decoded;
     next();
   } catch {

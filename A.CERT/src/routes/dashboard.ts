@@ -93,6 +93,28 @@ router.get('/', async (_req, res) => {
       "SELECT COUNT(*)::int as count FROM dossiers WHERE deleted_at IS NULL OR deleted_at = ''"
     ) as { count: number };
 
+    const dossiersCriadosAnterior = await queryRawOne(
+      "SELECT COUNT(*)::int as count FROM dossiers WHERE created_at < $1 AND (deleted_at IS NULL OR deleted_at = '')",
+      inicioMes.toISOString()
+    ) as { count: number };
+
+    const dossiersConcluidos = await queryRawOne(`
+      SELECT COUNT(*)::int as count FROM dossiers d
+      LEFT JOIN persons p ON p.id = d.person_id
+      WHERE (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') >= 9
+        AND p.cpf IS NOT NULL AND p.cpf != ''
+        AND (d.deleted_at IS NULL OR d.deleted_at = '')
+    `) as { count: number };
+
+    const dossiersConcluidosAnterior = await queryRawOne(`
+      SELECT COUNT(*)::int as count FROM dossiers d
+      LEFT JOIN persons p ON p.id = d.person_id
+      WHERE (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') >= 9
+        AND p.cpf IS NOT NULL AND p.cpf != ''
+        AND d.updated_at < $1
+        AND (d.deleted_at IS NULL OR d.deleted_at = '')
+    `, inicioMes.toISOString()) as { count: number };
+
     const certHoje = await queryRawOne(
       "SELECT COUNT(*)::int as count FROM certificates WHERE status = 'Obtida' AND obtained_at::date = CURRENT_DATE"
     ) as { count: number };
@@ -133,6 +155,10 @@ router.get('/', async (_req, res) => {
     `) as { user_name: string; action: string; reference: string | null; dossier_ref: string | null; created_at: string }[];
 
     res.json({
+      dossiersCriados: totalDossiers.count,
+      dossiersCriadosAnterior: dossiersCriadosAnterior.count,
+      dossiersConcluidos: dossiersConcluidos.count,
+      dossiersConcluidosAnterior: dossiersConcluidosAnterior.count,
       dossiersAndamento: dossiersAndamento.count,
       dossiersAndamentoMesAnterior: dossiersAndamentoMesAnterior.count,
       pendenciasCriticas: pendenciasCriticas.count,

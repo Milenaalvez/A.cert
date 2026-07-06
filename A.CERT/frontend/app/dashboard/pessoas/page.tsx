@@ -1,5 +1,4 @@
-"use client";
-export const dynamic = "force-dynamic";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -35,7 +34,7 @@ const PAGE_SIZE = 15;
 const TABS = [
   { key: "todas", label: "Todas" },
   { key: "fisica", label: "Pessoa Física" },
-  { key: "empresarial", label: "Pessoa Empresarial" },
+  { key: "empresarial", label: "Pessoa Jurídica" },
 ] as const;
 
 function formatDoc(cpf: string | null, cnpj: string | null): string {
@@ -312,7 +311,7 @@ export default function PessoasPage() {
       await fetch(`/api/people/${confirmAction.id}/archive`, {
         method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      const tabKey = allPeople.find(p => p.id === confirmAction.id)?.type === "Pessoa Empresarial" ? "empresarial" : "fisica";
+      const tabKey = allPeople.find(p => p.id === confirmAction.id)?.type === "Pessoa Jurídica" ? "empresarial" : "fisica";
       setConfirmAction(null);
       setActionBadge({ tab: tabKey, delta: -1 });
       fetchData();
@@ -326,7 +325,7 @@ export default function PessoasPage() {
       await fetch(`/api/people/${confirmAction.id}`, {
         method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      const tabKey = allPeople.find(p => p.id === confirmAction.id)?.type === "Pessoa Empresarial" ? "empresarial" : "fisica";
+      const tabKey = allPeople.find(p => p.id === confirmAction.id)?.type === "Pessoa Jurídica" ? "empresarial" : "fisica";
       setConfirmAction(null);
       setActionBadge({ tab: tabKey, delta: -1 });
       fetchData();
@@ -359,7 +358,7 @@ export default function PessoasPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col px-16 pt-12 pb-24 w-full">
+      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full">
 
         {/* Header */}
         <div style={{ marginTop: 24, marginBottom: 20 }}>
@@ -497,7 +496,7 @@ export default function PessoasPage() {
                   <td style={{ padding: "12px 12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <div style={{ width: "36px", height: "36px", borderRadius: "50%",
-                        background: p.type === "Pessoa Empresarial" ? "#7C3AED" : "#FF7A00",
+                        background: p.type === "Pessoa Jurídica" ? "#7C3AED" : "#FF7A00",
                         color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: "11px", fontWeight: 700, flexShrink: 0 }}>
                         {p.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}

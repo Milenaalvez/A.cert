@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { randomUUID, randomBytes } from 'node:crypto';
 import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
 import { gerarToken, authMiddleware } from '../middleware/auth.js';
-import { enviarEmailConfirmacao, enviarEmailRedefinirSenha } from '../services/email.service.js';
+import { enviarEmailConfirmacao, enviarEmailRedefinirSenha, enviarEmailBoasVindas } from '../services/email.service.js';
 import { validarSenhaForte, validarEmail } from '../utils/validation.js';
 
 const router = Router();
@@ -45,9 +45,11 @@ router.post('/register', async (req, res) => {
         return;
       }
 
+      const cnpjDigits = cnpj.replace(/\D/g, '');
+
       const company = await queryRawOne(
-        'SELECT id, name FROM companies WHERE cnpj = $1',
-        cnpj.replace(/\D/g, '')
+        'SELECT id, name FROM companies WHERE regexp_replace(cnpj, \'[^0-9]\', \'\', \'g\') = $1',
+        cnpjDigits
       );
 
       if (!company) {
@@ -56,10 +58,20 @@ router.post('/register', async (req, res) => {
       }
 
       const confirmation_token = randomBytes(32).toString('hex');
+
+      const adminCount = await queryRawOne(
+        'SELECT COUNT(*)::int as count FROM users WHERE company_id = $1 AND role = \'ADMIN\'',
+        company.id
+      );
+      const role = (adminCount?.count || 0) === 0 ? 'ADMIN' : 'EMPLOYEE';
+
       await executeRaw(
         'INSERT INTO users (id, name, email, cpf, phone, password_hash, role, company_id, is_active, email_confirmed, password_change_required, confirmation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
-        id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, 'EMPLOYEE', company.id, 0, 0, 1, confirmation_token, created_at
+        id, name.trim(), email.toLowerCase().trim(), cpf || null, phone || null, password_hash, role, company.id, 1, 0, 1, confirmation_token, created_at
       );
+
+      enviarEmailConfirmacao(email.trim(), name.trim(), confirmation_token);
+      enviarEmailBoasVindas(email.trim(), name.trim(), '', company.name);
 
       res.status(201).json({
         success: true,
@@ -119,7 +131,7 @@ router.get('/confirmar/:token', async (req, res) => {
       return;
     }
 
-    await executeRaw('UPDATE users SET email_confirmed = 1, confirmation_token = NULL WHERE id = $1', user.id);
+    await executeRaw('UPDATE users SET email_confirmed = 1 WHERE id = $1', user.id);
 
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?confirmacao=ok`);
   } catch (error) {
@@ -349,16 +361,16 @@ router.post('/login', async (req, res) => {
     );
 
     if (user.password_change_required) {
-      const changeToken = gerarToken({ userId: user.id, email: user.email });
+      const token = await gerarToken({ userId: user.id, email: user.email });
       res.json({
+        token,
         precisaTrocarSenha: true,
-        changeToken,
         user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
       });
       return;
     }
 
-    const token = gerarToken({ userId: user.id, email: user.email });
+    const token = await gerarToken({ userId: user.id, email: user.email });
 
     res.json({
       token,
@@ -406,7 +418,7 @@ router.post('/trocar-senha', authMiddleware, async (req, res) => {
     await executeRaw('UPDATE users SET password_hash = $1, password_change_required = 0 WHERE id = $2',
       password_hash, req.user!.userId);
 
-    const token = gerarToken({ userId: req.user!.userId, email: req.user!.email });
+    const token = await gerarToken({ userId: req.user!.userId, email: req.user!.email });
 
     res.json({ success: true, token, message: 'Senha atualizada com sucesso!' });
   } catch (error) {
@@ -490,16 +502,50 @@ router.get('/me/stats', authMiddleware, async (req, res) => {
        WHERE d.created_by = $1 AND c.status = 'Emitida'`, userId
     ) as { count: number }).count;
 
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+
+    const dossiersEmAndamentoAnterior = (await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = $1 AND status = 'Em andamento' AND created_at::timestamp < $2 AND deleted_at IS NULL",
+      userId, inicioMes.toISOString()
+    ) as { count: number }).count;
+
+    const dossiersConcluidosAnterior = (await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = $1 AND status = 'Concluído' AND created_at::timestamp < $2 AND deleted_at IS NULL",
+      userId, inicioMes.toISOString()
+    ) as { count: number }).count;
+
+    const certidoesMesAnterior = (await queryRawOne(
+      `SELECT COUNT(*) as count FROM certificates c
+       JOIN dossiers d ON c.dossier_id = d.id
+       WHERE d.created_by = $1 AND c.status = 'Emitida' AND c.obtained_at::timestamp < $2`,
+      userId, inicioMes.toISOString()
+    ) as { count: number }).count;
+
     const recentActivities = await queryRaw(
       `SELECT id, action, reference, dossier_ref, created_at
        FROM activities WHERE user_name = (SELECT name FROM users WHERE id = $1)
        ORDER BY created_at DESC LIMIT 15`, userId
     ) as any[];
 
+    const crescimentoCriados = dossiersEmAndamentoAnterior > 0
+      ? Math.round(((dossiersEmAndamento - dossiersEmAndamentoAnterior) / dossiersEmAndamentoAnterior) * 100)
+      : null;
+    const crescimentoConcluidos = dossiersConcluidosAnterior > 0
+      ? Math.round(((dossiersConcluidos - dossiersConcluidosAnterior) / dossiersConcluidosAnterior) * 100)
+      : null;
+    const crescimentoCertidoes = certidoesMesAnterior > 0
+      ? Math.round(((totalCertidoes - certidoesMesAnterior) / certidoesMesAnterior) * 100)
+      : null;
+
     res.json({
       dossiersEmAndamento,
       dossiersConcluidos,
       totalCertidoes,
+      crescimentoCriados,
+      crescimentoConcluidos,
+      crescimentoCertidoes,
       recentActivities,
     });
   } catch (error) {
@@ -553,7 +599,7 @@ router.get('/confirmar-status/:token', async (req, res) => {
       return;
     }
 
-    await executeRaw('UPDATE users SET email_confirmed = 1, confirmation_token = NULL WHERE id = $1', user.id);
+    await executeRaw('UPDATE users SET email_confirmed = 1 WHERE id = $1', user.id);
 
     res.json({ status: 'ok' });
   } catch (error) {

@@ -216,7 +216,7 @@ export function NovaPessoaModal({ onClose, onCreated }: Props) {
               <div>
                 <h2 className="text-[17px] font-bold tracking-tight" style={{ color: "var(--text-primary)", lineHeight: 1.2 }}>Nova Pessoa</h2>
                 <p className="text-[12px]" style={{ color: "var(--text-muted)", marginTop: "2px" }}>
-                  {personType === "fisica" ? "Pessoa Física" : "Pessoa Empresarial"}
+                  {personType === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}
                 </p>
               </div>
             </div>
@@ -239,7 +239,7 @@ export function NovaPessoaModal({ onClose, onCreated }: Props) {
                   <User size={15} strokeWidth={2} /> Pessoa Física
                 </button>
                 <button style={toggleBtn(personType === "empresarial")} onClick={() => { setPersonType("empresarial"); setErrors(e => { const { cpf, ...r } = e; return r; }); }}>
-                  <Building2 size={15} strokeWidth={2} /> Pessoa Empresarial
+                  <Building2 size={15} strokeWidth={2} /> Pessoa Jurídica
                 </button>
               </div>
             </div>
