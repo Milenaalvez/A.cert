@@ -101,8 +101,8 @@ function SuporteContent() {
               <LifeBuoy size={22} strokeWidth={1.5} color="#FF7A00" />
             </div>
             <div>
-              <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Suporte</h1>
-              <p className="text-[14px] text-secondary mt-1">Central de ajuda, documentação e recursos para utilização do sistema A.CERT.</p>
+              <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Central de Ajuda</h1>
+              <p className="text-[14px] text-secondary mt-1">Encontre respostas rápidas, aprenda a utilizar a A.CERT e resolva dúvidas sem precisar aguardar atendimento.</p>
             </div>
           </div>
         </div>
