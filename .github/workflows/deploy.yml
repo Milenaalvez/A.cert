@@ -15,15 +15,25 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /var/www/acert && git pull origin main
+            set -e
+            cd /var/www/acert
+            git pull origin main
             cd /var/www/acert/A.CERT
+            echo "=== npm install ==="
             npm install
+            echo "=== prisma ==="
             npx prisma generate
             npx prisma migrate deploy
+            echo "=== tsc ==="
             npx tsc
             cd frontend
+            echo "=== clean build ==="
+            rm -rf .next node_modules
             npm install
-            rm -rf .next node_modules/.cache
-            npx next build
+            echo "=== next build ==="
+            npx next build || { echo "BUILD FAILED"; exit 1; }
+            echo "=== pm2 restart ==="
             pm2 restart all --update-env
             pm2 status
+            echo "=== done ==="
+            ls -la .next/static/chunks/app/ | head -5
