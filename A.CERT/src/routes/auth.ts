@@ -361,7 +361,7 @@ router.post('/login', async (req, res) => {
     );
 
     if (user.password_change_required) {
-      const token = await gerarToken({ userId: user.id, email: user.email });
+      const token = gerarToken({ userId: user.id, email: user.email });
       res.json({
         token,
         precisaTrocarSenha: true,
@@ -370,7 +370,7 @@ router.post('/login', async (req, res) => {
       return;
     }
 
-    const token = await gerarToken({ userId: user.id, email: user.email });
+    const token = gerarToken({ userId: user.id, email: user.email });
 
     res.json({
       token,
@@ -418,7 +418,7 @@ router.post('/trocar-senha', authMiddleware, async (req, res) => {
     await executeRaw('UPDATE users SET password_hash = $1, password_change_required = 0 WHERE id = $2',
       password_hash, req.user!.userId);
 
-    const token = await gerarToken({ userId: req.user!.userId, email: req.user!.email });
+    const token = gerarToken({ userId: req.user!.userId, email: req.user!.email });
 
     res.json({ success: true, token, message: 'Senha atualizada com sucesso!' });
   } catch (error) {

@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { getSetting } from '../lib/prisma.js';
 
 const secret = process.env.JWT_SECRET;
 if (!secret) {
@@ -21,11 +20,8 @@ declare global {
   }
 }
 
-export async function gerarToken(payload: AuthPayload): Promise<string> {
-  const sessionMax = await getSetting('session_max', '10080');
-  const minutes = parseInt(sessionMax || '10080', 10);
-  const days = Math.max(1, Math.ceil(minutes / 1440));
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: `${days}d` });
+export function gerarToken(payload: AuthPayload): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {

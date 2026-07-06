@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
-import { useSettings } from "@/contexts/SettingsContext";
 
 export default function LoginTransition({ onComplete }: { onComplete?: () => void }) {
   const router = useRouter();
-  const { settings } = useSettings();
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"entering" | "ready">("entering");
 
@@ -23,17 +21,9 @@ export default function LoginTransition({ onComplete }: { onComplete?: () => voi
     const t2 = setTimeout(() => {
       if (onComplete) {
         onComplete();
-        return;
+      } else {
+        router.replace("/dashboard");
       }
-      if (settings.remember_last_page === "true") {
-        const lastPage = localStorage.getItem("acert_last_page");
-        if (lastPage && lastPage.startsWith("/dashboard")) {
-          router.replace(lastPage);
-          localStorage.removeItem("acert_last_page");
-          return;
-        }
-      }
-      router.replace("/dashboard");
     }, 1800);
 
     return () => {
