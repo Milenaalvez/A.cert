@@ -23,6 +23,7 @@ jobs:
             npx tsc
             cd frontend
             npm install
-            rm -rf .next
+            rm -rf .next node_modules/.cache
             npx next build
-            pm2 restart all
+            pm2 restart all --update-env
+            pm2 status
