@@ -146,7 +146,6 @@ app.post('/api/upload/company-logo', async (req, res) => {
 
 // Serve frontend (Next.js static export)
 const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
-app.use(express.static(frontendOut, { extensions: ['html'] }));
 
 const publicPath = path.join(__dirname, '..', 'public');
 console.log('Sirvindo arquivos estáticos de:', publicPath);
@@ -154,6 +153,19 @@ app.use(express.static(publicPath, { maxAge: '30d' }));
 
 const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPublicPath, { maxAge: '30d' }));
+
+const srv = express.static(frontendOut);
+function serveHtmlFile(p: string, res: any) {
+  const fp = path.join(frontendOut, p + '.html');
+  if (fs.existsSync(fp)) { res.sendFile(fp); return true; }
+  return false;
+}
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  const p = req.path === '/' ? '/index' : req.path.endsWith('/') ? req.path.slice(0, -1) : req.path;
+  if (serveHtmlFile(p, res)) return;
+  srv(req as any, res as any, next);
+});
 
 // Dynamic routes — serve generated placeholder HTML
 app.get('/confirmar-email/:token', (_req, res) => {
@@ -163,7 +175,7 @@ app.get('/dashboard/usuarios/:id', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html'));
 });
 app.get('/dashboard/dossies/:id', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html'));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossiers', '_.html'));
 });
 
 app.get('*', (_req, res) => {
