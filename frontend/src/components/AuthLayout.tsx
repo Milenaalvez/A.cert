@@ -80,8 +80,8 @@ export default function AuthLayout({
 
       {/* RIGHT SIDE — Form — 45% desktop, full-width mobile */}
       <div className="absolute right-0 top-0 w-full sm:w-[45%] h-screen">
-        <div className="flex items-center justify-center h-full px-4 sm:block sm:absolute sm:right-[120px] sm:top-1/2 sm:-translate-y-1/2 sm:max-w-[520px] sm:w-[calc(100%-180px)] sm:px-0 sm:h-auto">
-          <div className="animate-fade-in w-full sm:w-auto" style={{ padding: "40px", borderRadius: "32px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
+        <div className="auth-form-box" style={{ position: "absolute", right: "120px", top: "50%", transform: "translateY(-50%)", maxWidth: "520px", width: "calc(100% - 180px)" }}>
+          <div className="animate-fade-in" style={{ padding: "40px", borderRadius: "32px", background: "rgba(20,20,20,0.35)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 80px rgba(0,0,0,0.35)" }}>
             {children}
           </div>
         </div>

@@ -258,3 +258,20 @@ input:-webkit-autofill:focus {
     width: 100% !important;
   }
 }
+
+/* Responsive: auth form full-width centered on mobile */
+@media (max-width: 639px) {
+  .auth-form-box {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 16px !important;
+  }
+}
