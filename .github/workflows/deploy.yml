@@ -23,5 +23,6 @@ jobs:
             npx tsc
             cd frontend
             npm install
+            rm -rf .next
             npx next build
             pm2 restart all
