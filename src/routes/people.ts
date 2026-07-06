@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
 
       let personType = 'Pessoa Física';
       if (p.cnpj) {
-        personType = 'Pessoa Empresarial';
+        personType = 'Pessoa Jurídica';
       } else if (!p.cpf) {
         personType = 'Pessoa Física';
       }

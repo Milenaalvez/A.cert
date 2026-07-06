@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import prisma, { queryRaw, queryRawOne, executeRaw } from '../lib/prisma.js';
+import prisma, { queryRaw, queryRawOne, executeRaw, getSetting } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { gerarDossiePDFFromDB } from '../services/dossie.service.js';
 
@@ -275,11 +275,13 @@ router.get('/', async (req, res) => {
       LIMIT 5
     `);
 
+    const deadlineDays = parseInt((await getSetting('dossier_deadline', '30')) || '30', 10);
+
     const attentionWithMotives = attentionItems.map((a) => {
       const motives: string[] = [];
       if (a.pendencias > 0) motives.push(`${a.pendencias} pendência${a.pendencias > 1 ? 's' : ''}`);
       const dias = Math.floor((Date.now() - new Date(a.updated_at).getTime()) / 86400000);
-      if (dias > 1) motives.push(`Prazo em ${Math.max(1, 5 - dias)} dias`);
+      if (dias > 1) motives.push(`Prazo em ${Math.max(1, deadlineDays - dias)} dias`);
       if (a.pendencias > 0) motives.push('Aguardando documentos');
       return {
         id: a.id,

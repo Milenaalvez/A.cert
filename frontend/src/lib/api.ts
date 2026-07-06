@@ -62,7 +62,8 @@ export async function me(token: string): Promise<User> {
 
 export function salvarToken(token: string) {
   localStorage.setItem('acert_token', token);
-  document.cookie = `acert_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `acert_token=${token}; path=/; max-age=604800; SameSite=Lax${secure}`;
 }
 
 export function obterToken(): string | null {

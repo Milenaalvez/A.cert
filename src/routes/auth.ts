@@ -502,16 +502,50 @@ router.get('/me/stats', authMiddleware, async (req, res) => {
        WHERE d.created_by = $1 AND c.status = 'Emitida'`, userId
     ) as { count: number }).count;
 
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+
+    const dossiersEmAndamentoAnterior = (await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = $1 AND status = 'Em andamento' AND created_at::timestamp < $2 AND deleted_at IS NULL",
+      userId, inicioMes.toISOString()
+    ) as { count: number }).count;
+
+    const dossiersConcluidosAnterior = (await queryRawOne(
+      "SELECT COUNT(*) as count FROM dossiers WHERE created_by = $1 AND status = 'Concluído' AND created_at::timestamp < $2 AND deleted_at IS NULL",
+      userId, inicioMes.toISOString()
+    ) as { count: number }).count;
+
+    const certidoesMesAnterior = (await queryRawOne(
+      `SELECT COUNT(*) as count FROM certificates c
+       JOIN dossiers d ON c.dossier_id = d.id
+       WHERE d.created_by = $1 AND c.status = 'Emitida' AND c.obtained_at::timestamp < $2`,
+      userId, inicioMes.toISOString()
+    ) as { count: number }).count;
+
     const recentActivities = await queryRaw(
       `SELECT id, action, reference, dossier_ref, created_at
        FROM activities WHERE user_name = (SELECT name FROM users WHERE id = $1)
        ORDER BY created_at DESC LIMIT 15`, userId
     ) as any[];
 
+    const crescimentoCriados = dossiersEmAndamentoAnterior > 0
+      ? Math.round(((dossiersEmAndamento - dossiersEmAndamentoAnterior) / dossiersEmAndamentoAnterior) * 100)
+      : null;
+    const crescimentoConcluidos = dossiersConcluidosAnterior > 0
+      ? Math.round(((dossiersConcluidos - dossiersConcluidosAnterior) / dossiersConcluidosAnterior) * 100)
+      : null;
+    const crescimentoCertidoes = certidoesMesAnterior > 0
+      ? Math.round(((totalCertidoes - certidoesMesAnterior) / certidoesMesAnterior) * 100)
+      : null;
+
     res.json({
       dossiersEmAndamento,
       dossiersConcluidos,
       totalCertidoes,
+      crescimentoCriados,
+      crescimentoConcluidos,
+      crescimentoCertidoes,
       recentActivities,
     });
   } catch (error) {

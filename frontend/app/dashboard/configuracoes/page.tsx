@@ -1,20 +1,22 @@
-﻿"use client";
+"use client";
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   User, Settings, Building2, FileText, Activity,
-  Save, Mail, CheckCircle2, Check, XCircle, Clock, Plus,
-  Server, Eye, Trash2, Search, RefreshCw,
-  Camera, Phone, Calendar, FileSpreadsheet, FileCheck,
-  Shield, HardDrive, Download,
-  Lock, LogOut, Database, Pencil,
-  LogIn, X,
+  Save, CheckCircle2, Check, XCircle, Clock, Plus,
+  Server, Trash2, RefreshCw, Radio,
+  Camera, Phone, Calendar, FileCheck,
+  Shield, Lock, LogOut, Pencil,
+  LogIn, X, Mail,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import ConfirmModal from "@/components/ConfirmModal";
 import PasswordModal from "@/components/PasswordModal";
 import SessionsModal from "@/components/SessionsModal";
 import { useUser } from "@/contexts/UserContext";
+import { useLocale } from "@/i18n/LocaleContext";
+import { useSettings, clearSettingsCache } from "@/contexts/SettingsContext";
 import { useT } from "@/i18n/useT";
 
 const apiBase = "";
@@ -22,10 +24,7 @@ const apiBase = "";
 const TABS = [
   { key: "perfil", label: "Perfil", icon: User },
   { key: "geral", label: "Geral", icon: Settings },
-  { key: "orgaos", label: "Órgãos Integrados", icon: Building2 },
-  { key: "email", label: "E-mail (SMTP)", icon: Mail },
-  { key: "templates", label: "Templates PDF", icon: FileText },
-  { key: "backup", label: "Backup", icon: HardDrive },
+  { key: "orgaos", label: "Conectores", icon: Radio },
   { key: "auditoria", label: "Auditoria", icon: Activity },
   { key: "sistema", label: "Sistema", icon: Server },
 ];
@@ -126,39 +125,25 @@ export default function ConfiguracoesPage() {
 function ConfiguracoesContent() {
   const { setUser: setGlobalUser } = useUser();
   const { t } = useT();
+  const { setLocale } = useLocale();
+  const { refresh: refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState("perfil");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
   const [showConfirmExit, setShowConfirmExit] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
-  const [themeMode, setThemeMode] = useState("system");
-  const [density, setDensity] = useState("default");
 
   // Modals
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showSessionsModal, setShowSessionsModal] = useState(false);
   const [showEndSessionsConfirm, setShowEndSessionsConfirm] = useState(false);
   const [cardSessions, setCardSessions] = useState<any[]>([]);
-
-  // Email state
-  const [smtpHost, setSmtpHost] = useState("");
-  const [smtpPort, setSmtpPort] = useState("587");
-  const [smtpUser, setSmtpUser] = useState("");
-  const [smtpPass, setSmtpPass] = useState("");
-  const [smtpFrom, setSmtpFrom] = useState("");
-  const [smtpResult, setSmtpResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  // Backup state
-  const [backupInfo, setBackupInfo] = useState<{ lastBackupAt: string; size: string; files: any[] } | null>(null);
-  const [backupGenerating, setBackupGenerating] = useState(false);
 
   // Sistema state
   const [systemInfo, setSystemInfo] = useState<any>(null);
@@ -171,19 +156,32 @@ function ConfiguracoesContent() {
   const [uploadLimit, setUploadLimit] = useState("10");
   const [itemsPerPage, setItemsPerPage] = useState("50");
   const [dossierDeadline, setDossierDeadline] = useState("30");
+  const [certsPerDossier, setCertsPerDossier] = useState("9");
+  const [trashAutoPurgeDays, setTrashAutoPurgeDays] = useState("90");
+  const [certExpiryWarningDays, setCertExpiryWarningDays] = useState("30");
+  const [loginMaxAttempts, setLoginMaxAttempts] = useState("5");
   const [showNotifications, setShowNotifications] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(true);
   const [confirmFinalize, setConfirmFinalize] = useState(true);
   const [expiryWarnings, setExpiryWarnings] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [alertSound, setAlertSound] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoDarkMode, setAutoDarkMode] = useState(false);
+  const [rememberLastPage, setRememberLastPage] = useState(true);
+  const [sidebarCollapsedDefault, setSidebarCollapsedDefault] = useState(false);
+  const [showTips, setShowTips] = useState(true);
 
   const [organs, setOrgans] = useState<any[]>([]);
+  const [connectors, setConnectors] = useState<any[]>([]);
+  const [connectorsLoading, setConnectorsLoading] = useState(false);
+  const [testingConnector, setTestingConnector] = useState<string | null>(null);
+  const [testMessages, setTestMessages] = useState<Record<string, string>>({});
   const [newOrganName, setNewOrganName] = useState("");
   const [showNewOrgan, setShowNewOrgan] = useState(false);
 
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [pdfConfig, setPdfConfig] = useState<Record<string, string>>({});
-
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState({ user: "", action: "", period: "", module: "", result: "" });
 
   const getHeaders = useCallback((): Record<string, string> => {
@@ -203,9 +201,6 @@ function ConfiguracoesContent() {
         if (meData.user) {
           setUser(meData.user);
           setPhone(meData.user.phone || "");
-          setName(meData.user.name || "");
-          setEmail(meData.user.email || "");
-          setAvatarUrl(meData.user.avatar || null);
         }
         const sData = await sRes.json();
         setTimezone(sData.timezone || "America/Sao_Paulo");
@@ -216,13 +211,32 @@ function ConfiguracoesContent() {
         setUploadLimit(sData.upload_limit || "10");
         setItemsPerPage(sData.items_per_page || "50");
         setDossierDeadline(sData.dossier_deadline || "30");
+        setCertsPerDossier(sData.certs_per_dossier || "9");
+        setTrashAutoPurgeDays(sData.trash_auto_purge_days || "90");
+        setCertExpiryWarningDays(sData.cert_expiry_warning_days || "30");
+        setLoginMaxAttempts(sData.login_max_attempts || "5");
         setShowNotifications(sData.show_notifications !== "false");
         setConfirmDelete(sData.confirm_delete !== "false");
+        setConfirmFinalize(sData.confirm_finalize !== "false");
+        setExpiryWarnings(sData.expiry_warnings !== "false");
+        setEmailNotifications(sData.email_notifications !== "false");
+        setAlertSound(sData.alert_sound === "true");
+        setAutoRefresh(sData.auto_refresh !== "false");
+        setAutoDarkMode(sData.auto_dark_mode === "true");
+        setRememberLastPage(sData.remember_last_page !== "false");
+        setSidebarCollapsedDefault(sData.sidebar_collapsed_default === "true");
+        setShowTips(sData.show_tips !== "false");
+        if (sData.language) setLocale(sData.language as any);
         setConfirmFinalize(sData.confirm_finalize !== "false");
         setExpiryWarnings(sData.expiry_warnings !== "false");
       } catch {}
     })();
   }, [getHeaders]);
+
+  useEffect(() => {
+    if (activeTab !== "geral") return;
+    setDirty(true);
+  }, [dossierDeadline, itemsPerPage, sessionMax, uploadLimit, timezone, dateFormat, timeFormat, lang, showNotifications, confirmDelete, confirmFinalize, expiryWarnings]);
 
   useEffect(() => {
     if (activeTab !== "perfil") return;
@@ -249,36 +263,34 @@ function ConfiguracoesContent() {
 
   useEffect(() => {
     if (activeTab !== "orgaos") return;
-    const h = getHeaders();
-    (async () => {
-      try {
-        const [oRes, tRes] = await Promise.all([
-          fetch(`${apiBase}/api/settings/organs`, { headers: h }),
-          fetch(`${apiBase}/api/settings/templates`, { headers: h }),
-        ]);
-        setOrgans(await oRes.json());
-        setTemplates(await tRes.json());
-      } catch {}
-    })();
-  }, [activeTab, getHeaders]);
+    fetchConnectorStatus();
+  }, [activeTab]);
 
-  useEffect(() => {
-    if (activeTab !== "templates") return;
+  async function fetchConnectorStatus() {
+    setConnectorsLoading(true);
     const h = getHeaders();
-    (async () => {
-      try {
-        const pRes = await fetch(`${apiBase}/api/settings/pdf-templates`, { headers: h });
-        setPdfConfig(await pRes.json());
-      } catch {}
-    })();
-  }, [activeTab, getHeaders]);
+    try { const r = await fetch(`${apiBase}/api/settings/connectors-status`,{headers:h}); const d = await r.json(); setConnectors(Array.isArray(d)?d:[]); } catch { setConnectors([]); } finally { setConnectorsLoading(false); }
+  }
+
+  async function testConnector(connectorId: string) {
+    setTestingConnector(connectorId);
+    const h = getHeaders();
+    try { const r = await fetch(`${apiBase}/api/settings/connectors/${connectorId}/test`,{method:"POST",headers:h}); return await r.json(); } catch { return {success:false,message:"Falha ao conectar"}; } finally { setTestingConnector(null); }
+  }
 
   useEffect(() => {
     if (activeTab !== "auditoria") return;
     fetchAudit();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab !== "auditoria") return;
+    const t = setTimeout(() => fetchAudit(), 400);
+    return () => clearTimeout(t);
+  }, [auditFilter.user, auditFilter.action, auditFilter.module, auditFilter.result, auditFilter.period]);
+
   async function fetchAudit() {
+    setAuditLoading(true);
     const h = getHeaders();
     const params = new URLSearchParams();
     if (auditFilter.user) params.set("user", auditFilter.user);
@@ -286,22 +298,8 @@ function ConfiguracoesContent() {
     if (auditFilter.module) params.set("module", auditFilter.module);
     if (auditFilter.result) params.set("result", auditFilter.result);
     if (auditFilter.period) params.set("period", auditFilter.period);
-    try {
-      const r = await fetch(`${apiBase}/api/settings/audit?${params}`, { headers: h });
-      setAuditLogs(await r.json());
-    } catch {}
+    try { const r = await fetch(`${apiBase}/api/settings/audit?${params}`,{headers:h}); const d = await r.json(); setAuditLogs(Array.isArray(d)?d:[]); } catch { setAuditLogs([]); } finally { setAuditLoading(false); }
   }
-
-  useEffect(() => {
-    if (activeTab !== "backup") return;
-    const h = getHeaders();
-    (async () => {
-      try {
-        const r = await fetch(`${apiBase}/api/settings/backup`, { headers: h });
-        setBackupInfo(await r.json());
-      } catch {}
-    })();
-  }, [activeTab, getHeaders]);
 
   useEffect(() => {
     if (activeTab !== "sistema") return;
@@ -314,75 +312,22 @@ function ConfiguracoesContent() {
     })();
   }, [activeTab, getHeaders]);
 
-  async function testSmtp() {
-    setSmtpResult(null);
-    const h = { "Content-Type": "application/json", ...getHeaders() };
-    try {
-      const r = await fetch(`${apiBase}/api/settings/test-smtp`, {
-        method: "POST", headers: h,
-        body: JSON.stringify({ host: smtpHost, port: smtpPort, user: smtpUser, pass: smtpPass }),
-      });
-      setSmtpResult(await r.json());
-    } catch {
-      setSmtpResult({ success: false, message: "Erro ao conectar com o servidor" });
-    }
-  }
-
   async function endSessions() {
     const h = getHeaders();
-    try {
-      await fetch(`${apiBase}/api/auth/me/sessions/end`, { method: "POST", headers: h });
-      setCardSessions([]);
-    } catch {}
-  }
-
-  async function generateBackup() {
-    setBackupGenerating(true);
-    const h = { "Content-Type": "application/json", ...getHeaders() };
-    try {
-      const r = await fetch(`${apiBase}/api/settings/backup/generate`, { method: "POST", headers: h });
-      const result = await r.json();
-      if (result.success) {
-        const infoR = await fetch(`${apiBase}/api/settings/backup`, { headers: getHeaders() });
-        setBackupInfo(await infoR.json());
-      }
-    } catch {} finally { setBackupGenerating(false); }
-  }
-
-  async function downloadBackup(filename: string) {
-    const h = getHeaders();
-    try {
-      const r = await fetch(`${apiBase}/api/settings/backup/download/${filename}`, { headers: h });
-      if (!r.ok) return;
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {}
-  }
-
-  async function deleteBackup(filename: string) {
-    const h = getHeaders();
-    try {
-      await fetch(`${apiBase}/api/settings/backup/${filename}`, { method: "DELETE", headers: h });
-      const infoR = await fetch(`${apiBase}/api/settings/backup`, { headers: getHeaders() });
-      setBackupInfo(await infoR.json());
-    } catch {}
+    try { await fetch(`${apiBase}/api/auth/me/sessions/end`, { method: "POST", headers: h }); } catch {}
+    localStorage.removeItem("acert_token");
+    window.location.href = "/";
   }
 
   async function saveProfile() {
     setSaving(true);
     const h = { "Content-Type": "application/json", ...getHeaders() };
     try {
-      const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ name, email, phone }) });
+      const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ phone }) });
       const data = await r.json();
-      if (data.user) { setUser(data.user); setGlobalUser(data.user); }
+      if (data.user) setUser(data.user);
       setDirty(false);
+      setEditingField(null);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch {} finally { setSaving(false); }
   }
@@ -397,21 +342,26 @@ function ConfiguracoesContent() {
           timezone, date_format: dateFormat, time_format: timeFormat, language: lang,
           session_max: sessionMax, upload_limit: uploadLimit, items_per_page: itemsPerPage,
           dossier_deadline: dossierDeadline,
+          certs_per_dossier: certsPerDossier,
+          trash_auto_purge_days: trashAutoPurgeDays,
+          cert_expiry_warning_days: certExpiryWarningDays,
+          login_max_attempts: loginMaxAttempts,
           show_notifications: showNotifications ? "true" : "false",
           confirm_delete: confirmDelete ? "true" : "false",
           confirm_finalize: confirmFinalize ? "true" : "false",
           expiry_warnings: expiryWarnings ? "true" : "false",
+          email_notifications: emailNotifications ? "true" : "false",
+          alert_sound: alertSound ? "true" : "false",
+          auto_refresh: autoRefresh ? "true" : "false",
+          auto_dark_mode: autoDarkMode ? "true" : "false",
+          remember_last_page: rememberLastPage ? "true" : "false",
+          sidebar_collapsed_default: sidebarCollapsedDefault ? "true" : "false",
+          show_tips: showTips ? "true" : "false",
         }),
       });
-      setSaved(true); setTimeout(() => setSaved(false), 2000);
-    } catch {} finally { setSaving(false); }
-  }
-
-  async function savePDFConfig() {
-    setSaving(true);
-    const h = { "Content-Type": "application/json", ...getHeaders() };
-    try {
-      await fetch(`${apiBase}/api/settings/pdf-templates`, { method: "PUT", headers: h, body: JSON.stringify(pdfConfig) });
+      setLocale(lang as any);
+      clearSettingsCache();
+      await refreshSettings();
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch {} finally { setSaving(false); }
   }
@@ -456,14 +406,17 @@ function ConfiguracoesContent() {
 
   function discardAndGo() {
     setDirty(false);
+    setEditingField(null);
     if (pendingTab) setActiveTab(pendingTab);
     setShowConfirmExit(false);
     setPendingTab(null);
   }
 
   async function saveAndGo() {
-    await saveProfile();
+    if (activeTab === "perfil") await saveProfile();
+    else if (activeTab === "geral") await saveGeneral();
     setDirty(false);
+    setEditingField(null);
     if (pendingTab) setActiveTab(pendingTab);
     setShowConfirmExit(false);
     setPendingTab(null);
@@ -471,31 +424,24 @@ function ConfiguracoesContent() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.id) return;
-    const formData = new FormData();
-    formData.append("avatar", file);
-    formData.append("userId", user.id);
-    try {
-      const token = localStorage.getItem("acert_token");
-      const r = await fetch(`/api/upload/avatar`, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
-      });
-      const data = await r.json();
-      if (data.avatarUrl) {
-        setAvatarUrl(data.avatarUrl);
-        setUser((prev: any) => prev ? { ...prev, avatar: data.avatarUrl } : prev);
-        const updated = { ...user, avatar: data.avatarUrl };
-        setGlobalUser(updated);
-      }
-    } catch {}
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const h = { "Content-Type": "application/json", ...getHeaders() };
+      try {
+        const r = await fetch(`${apiBase}/api/auth/me`, { method: "PUT", headers: h, body: JSON.stringify({ avatar: base64 }) });
+        const data = await r.json();
+        if (data.user) { setUser(data.user); setGlobalUser(data.user); }
+      } catch {}
+    };
+    reader.readAsDataURL(file);
     e.target.value = "";
   };
 
   return (
     <>
-      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
+      <div className="flex flex-col px-16 pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
         <div style={{ marginTop: 24, marginBottom: 28 }}>
           <div className="flex items-start justify-between gap-8">
             <div className="flex flex-col gap-1.5 min-w-0">
@@ -506,16 +452,6 @@ function ConfiguracoesContent() {
               {dirty && activeTab === "perfil" && (
                 <button onClick={saveProfile} className={btnPrimary}>
                   <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar alterações"}
-                </button>
-              )}
-              {activeTab === "geral" && (
-                <button onClick={saveGeneral} className={btnPrimary}>
-                  <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Alterações"}
-                </button>
-              )}
-              {activeTab === "templates" && (
-                <button onClick={savePDFConfig} className={btnPrimary}>
-                  <Save size={15} /> {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar Cores"}
                 </button>
               )}
             </div>
@@ -542,7 +478,7 @@ function ConfiguracoesContent() {
 
         {activeTab === "perfil" && (
           <div className="flex flex-col gap-6" style={{ paddingTop: 40 }}>
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex gap-6">
               {/* Left: Perfil do Usuário (portrait) */}
               <div className="flex-1 min-w-0">
                 <div className="relative w-full h-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
@@ -553,9 +489,9 @@ function ConfiguracoesContent() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
                     <label className="relative group shrink-0 cursor-pointer">
-                      <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                      <div className="w-40 h-40 rounded-full border-2 border-default overflow-hidden bg-elevated flex items-center justify-center">
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <User size={76} className="text-muted" />
                         )}
@@ -566,11 +502,11 @@ function ConfiguracoesContent() {
                       <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     </label>
                     <div className="min-w-0 flex-1">
-                      <FieldRow icon={User} label={t("people.fields.name")} value={name || "—"} readOnly />
+                      <FieldRow icon={User} label={t("people.fields.name")} value={user?.name || "—"} readOnly />
                       <FieldRow icon={Shield} label={t("users.table.role")} value={(user?.role && ROLES_MAP[user.role]) || "Corretor"} readOnly />
-                      <FieldRow icon={Building2} label={t("profile.company")} value="—" readOnly />
-                      <FieldRow icon={Mail} label={t("profile.email")} value={email || "—"} readOnly />
-                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} readOnly />
+                      <FieldRow icon={Building2} label={t("profile.company")} value="Bloco Imobiliária" readOnly />
+                      <FieldRow icon={Mail} label={t("profile.email")} value={user?.email || "—"} readOnly />
+                      <FieldRow icon={Phone} label={t("people.fields.phone")} value={phone || "—"} editing={editingField === "phone"} onEdit={() => setEditingField("phone")} onCancel={() => { setEditingField(null); setPhone(user?.phone || ""); }} onChange={(v) => { setPhone(v); setDirty(true); }} readOnly={false} />
                     </div>
                   </div>
                 </div>
@@ -734,390 +670,196 @@ function ConfiguracoesContent() {
         )}
 
         {activeTab === "geral" && (
-          <div className="flex gap-8">
-            <div className="flex-1 min-w-0">
-              <div>
-                <div className="mb-6 pb-4 border-b border-default">
-                  <h3 className="text-[15px] font-semibold text-primary">Configurações Operacionais</h3>
-                </div>
-                <div className="border border-default p-6 flex flex-col gap-5">
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Prazo padrão para conclusão de dossiês</span>
-                    <input type="number" value={dossierDeadline} onChange={e => setDossierDeadline(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
-                  </div>
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Itens por página</span>
-                    <input type="number" value={itemsPerPage} onChange={e => setItemsPerPage(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
-                  </div>
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Tempo máximo de sessão (min)</span>
-                    <input type="number" value={sessionMax} onChange={e => setSessionMax(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
-                  </div>
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Limite de upload (MB)</span>
-                    <input type="number" value={uploadLimit} onChange={e => setUploadLimit(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]" />
-                  </div>
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Fuso horário</span>
-                    <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
-                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
-                      <option value="America/Sao_Paulo">America/Sao_Paulo (UTC-3)</option>
-                      <option value="America/Manaus">America/Manaus (UTC-4)</option>
-                      <option value="America/Recife">America/Recife (UTC-3)</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Formato de data</span>
-                    <select value={dateFormat} onChange={e => setDateFormat(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
-                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
-                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between pb-4 border-b border-default">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Formato de hora</span>
-                    <select value={timeFormat} onChange={e => setTimeFormat(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
-                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
-                      <option value="24h">24h</option>
-                      <option value="12h">12h (AM/PM)</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-[0.4px]">Idioma</span>
-                    <select value={lang} onChange={e => setLang(e.target.value)}
-                      className="w-[180px] h-9 rounded-[6px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 appearance-none cursor-pointer focus:border-[#FF7A00]"
-                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
-                      <option value="pt-BR">Português (Brasil)</option>
-                      <option value="en">English</option>
-                      <option value="es">Español</option>
-                    </select>
-                  </div>
-                </div>
+          <div className="flex gap-8" style={{ paddingTop: 40 }}>
+            <div className="flex-1 min-w-0 bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--border-default)" }}>
+                <Settings size={16} strokeWidth={2} color="#FF7A00" />
+                <h3 className="text-[15px] font-bold text-primary">Operacional</h3>
+              </div>
+              <div className="flex flex-col gap-5">
+                {[
+                  {icon:Calendar,label:"Prazo padrão para conclusão de dossiês",val:dossierDeadline,set:setDossierDeadline,unit:"dias"},
+                  {icon:FileText,label:"Itens por página nas listagens",val:itemsPerPage,set:setItemsPerPage,unit:"itens"},
+                  {icon:Clock,label:"Tempo máximo de sessão",val:sessionMax,set:setSessionMax,unit:"min"},
+                  {icon:Shield,label:"Limite de upload por arquivo",val:uploadLimit,set:setUploadLimit,unit:"MB"},
+                  {icon:FileCheck,label:"Certidões necessárias por dossiê",val:certsPerDossier,set:setCertsPerDossier,unit:"cert"},
+                  {icon:Shield,label:"Tentativas máximas de login",val:loginMaxAttempts,set:setLoginMaxAttempts,unit:"tent"},
+                  {icon:Clock,label:"Aviso de expiração de certidões",val:certExpiryWarningDays,set:setCertExpiryWarningDays,unit:"dias"},
+                  {icon:Trash2,label:"Auto-exclusão da lixeira",val:trashAutoPurgeDays,set:setTrashAutoPurgeDays,unit:"dias"},
+                ].map((f,i)=>React.createElement("div",{key:i,className:"flex items-center justify-between pb-4"},
+                  React.createElement("div",{className:"flex items-center gap-2.5"},
+                    React.createElement(f.icon,{size:14,strokeWidth:1.5,className:"text-muted shrink-0"}),
+                    React.createElement("span",{className:"text-[13px] text-secondary"},f.label)
+                  ),
+                  React.createElement("div",{className:"flex items-center gap-1.5"},
+                    React.createElement("input",{type:"number",value:f.val,onChange:e=>f.set(e.target.value),className:"w-[88px] h-9 rounded-[7px] text-[13px] text-primary text-right outline-none border border-default bg-app px-3 focus:border-[#FF7A00]"}),
+                    React.createElement("span",{className:"text-[12px] text-muted w-8"},f.unit)
+                  )
+                ))}
+              </div>
+              <div style={{ marginTop: 28, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--border-default)" }}>
+                <h3 className="text-[13px] font-semibold text-muted uppercase tracking-[0.5px]">Regionalização</h3>
+              </div>
+              <div className="flex flex-col gap-5">
+                {[
+                  {icon:Clock,label:"Fuso horário",val:timezone,set:setTimezone,opts:[["America/Sao_Paulo (UTC-3)","America/Sao_Paulo"],["America/Manaus (UTC-4)","America/Manaus"],["America/Recife (UTC-3)","America/Recife"]]},
+                  {icon:Calendar,label:"Formato de data",val:dateFormat,set:setDateFormat,opts:[["DD/MM/YYYY","DD/MM/YYYY"],["MM/DD/YYYY","MM/DD/YYYY"],["YYYY-MM-DD","YYYY-MM-DD"]]},
+                  {icon:Clock,label:"Formato de hora",val:timeFormat,set:setTimeFormat,opts:[["24h","24h"],["12h (AM/PM)","12h"]]},
+                  {icon:FileText,label:"Idioma do sistema",val:lang,set:setLang,opts:[["Português (Brasil)","pt-BR"],["English","en"],["Español","es"]]},
+                ].map((f,i)=>React.createElement("div",{key:i,className:"flex items-center justify-between pb-4"},
+                  React.createElement("div",{className:"flex items-center gap-2.5"},
+                    React.createElement(f.icon,{size:14,strokeWidth:1.5,className:"text-muted shrink-0"}),
+                    React.createElement("span",{className:"text-[13px] text-secondary"},f.label)
+                  ),
+                  React.createElement("select",{value:f.val,onChange:(e:any)=>f.set(e.target.value),
+                    className:"w-[210px] h-10 rounded-[7px] text-[13px] text-primary outline-none border border-default bg-app appearance-none cursor-pointer focus:border-[#FF7A00]",
+                    style:{paddingLeft:"20px",backgroundImage:selectBg,backgroundRepeat:"no-repeat",backgroundPosition:"right 10px center",paddingRight:"32px"}},
+                    f.opts.map((o,j)=>React.createElement("option",{key:j,value:o[1]},o[0]))
+                  )
+                ))}
               </div>
             </div>
-            <div style={{ width: "320px", minWidth: "320px" }}>
-              <div className="bg-surface p-6 border border-default">
-                <div className="mb-5 pb-3 border-b border-default">
-                  <h3 className="text-[15px] font-semibold text-primary">Preferências do Sistema</h3>
-                </div>
-                <Switch checked={showNotifications} onChange={setShowNotifications} label={t("config.exibir_notif")} desc="Alertas e notificações do sistema" />
-                <Switch checked={confirmDelete} onChange={setConfirmDelete} label={t("config.confirmar_excluir")} desc="Exibir confirmação ao mover para lixeira" />
-                <Switch checked={confirmFinalize} onChange={setConfirmFinalize} label={t("config.confirmar_finalizar")} desc="Exibir confirmação ao concluir um dossiê" />
-                <Switch checked={expiryWarnings} onChange={setExpiryWarnings} label={t("config.avisos_vencimento")} desc="Alertar quando certidões estiverem perto de expirar" />
+
+            <div className="flex-1 min-w-0 bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--border-default)" }}>
+                <Settings size={16} strokeWidth={2} color="#FF7A00" />
+                <h3 className="text-[15px] font-bold text-primary">Preferências do Sistema</h3>
               </div>
+              {[
+                {t:"Alertas e notificações",items:[
+                  [showNotifications,setShowNotifications,"Notificações no sistema","Alertas visuais de prazos e atualizações"],
+                  [emailNotifications,setEmailNotifications,"Notificações por e-mail","Receber alertas também no seu e-mail"],
+                  [alertSound,setAlertSound,"Som de alerta","Tocar som ao receber notificações importantes"],
+                  [expiryWarnings,setExpiryWarnings,"Avisos de vencimento","Alertar quando certidões estiverem perto de expirar"],
+                ]},
+                {t:"Interface",items:[
+                  [autoDarkMode,setAutoDarkMode,"Modo escuro automático","Acompanhar tema do sistema operacional"],
+                  [sidebarCollapsedDefault,setSidebarCollapsedDefault,"Sidebar compacta por padrão","Iniciar com a barra lateral recolhida"],
+                  [showTips,setShowTips,"Dicas e tutoriais","Exibir guias rápidos ao usar novas funcionalidades"],
+                ]},
+                {t:"Comportamento",items:[
+                  [confirmDelete,setConfirmDelete,"Confirmar ao excluir","Pedir confirmação ao mover itens para a lixeira"],
+                  [confirmFinalize,setConfirmFinalize,"Confirmar ao concluir","Pedir confirmação ao finalizar um dossiê"],
+                  [autoRefresh,setAutoRefresh,"Atualização automática","Recarregar listas automaticamente a cada 2 minutos"],
+                  [rememberLastPage,setRememberLastPage,"Lembrar última página","Abrir a última tela visitada ao fazer login"],
+                ]},
+              ].map((g,gi)=>React.createElement("div",{key:gi,style:gi>0?{marginTop:28,marginBottom:24,paddingBottom:16,borderBottom:"1px solid var(--border-default)"}:{marginBottom:24,paddingBottom:16,borderBottom:"1px solid var(--border-default)"}},
+                React.createElement("h3",{className:"text-[13px] font-semibold text-muted uppercase tracking-[0.5px] mb-0"},g.t),
+                React.createElement("div",{className:"flex flex-col gap-5",style:{marginTop:12}},g.items.map(([checked,onChange,label,desc]:any,i)=>React.createElement(Switch,{key:i,checked,onChange,label,desc})))
+              ))}
             </div>
           </div>
         )}
 
         {activeTab === "orgaos" && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[15px] font-semibold text-primary">Integrações</h3>
-              <button onClick={() => setShowNewOrgan(true)} className={btnOutline}>
-                <Plus size={14} /> Adicionar Órgão
-              </button>
-            </div>
-            {showNewOrgan && (
-              <div className="flex items-center gap-3 mb-6 p-4 border border-default">
-                <input type="text" value={newOrganName} onChange={e => setNewOrganName(e.target.value)}
-                  placeholder="Nome do novo órgão..." className={inputBase} style={{ maxWidth: "400px" }}
-                  onKeyDown={e => { if (e.key === "Enter") addOrgan(); }} />
-                <button onClick={addOrgan} className={btnPrimary}>Adicionar</button>
-                <button onClick={() => { setShowNewOrgan(false); setNewOrganName(""); }} className={btnOutline}>Cancelar</button>
-              </div>
-            )}
-            <div className="grid grid-cols-3 gap-6">
-              {organs.map((o: any) => (
-                <div key={o.id} className="bg-surface p-6 flex flex-col gap-4 rounded-[10px]">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0">
-                      <h4 className="text-[14px] font-semibold text-primary">{o.name}</h4>
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className={`w-2 h-2 rounded-full ${o.status === "online" ? "bg-[#059669]" : o.status === "offline" ? "bg-[#DC2626]" : "bg-[#D97706]"}`} />
-                        <span className={`text-[12px] font-medium ${o.status === "online" ? "text-[#059669]" : o.status === "offline" ? "text-[#DC2626]" : "text-[#D97706]"}`}>
-                          {o.status === "online" ? "Conectado" : o.status === "offline" ? "Desconectado" : "Instável"}
-                        </span>
-                      </div>
-                    </div>
-                    <button onClick={() => removeOrgan(o.id)} className="w-8 h-8 flex items-center justify-center text-[#DC2626] hover:bg-white/[0.05] transition-colors shrink-0">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div className="space-y-2.5 text-[12px]">
-                    <div className="flex justify-between">
-                      <span className="text-secondary">Última sincronização</span>
-                      <span className="text-primary font-medium">{o.last_sync ? formatDate(o.last_sync) : "—"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-secondary">Tempo médio de resposta</span>
-                      <span className="text-primary font-medium">{o.avg_response_time || "—"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-secondary">Última consulta</span>
-                      <span className="text-primary font-medium">{o.last_query ? formatDate(o.last_query) : "—"}</span>
-                    </div>
-                    {o.token_expiry && (
-                      <div className="flex justify-between">
-                        <span className="text-secondary">Validade do token</span>
-                        <span className={`font-medium ${new Date(o.token_expiry) < new Date() ? "text-[#DC2626]" : "text-[#059669]"}`}>
-                          {formatDateShort(o.token_expiry)}
-                        </span>
-                      </div>
-                    )}
-                    {o.token_updated_at && (
-                      <div className="flex justify-between">
-                        <span className="text-secondary">Última atualização do token</span>
-                        <span className="text-primary font-medium">{formatDateShort(o.token_updated_at)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 pt-3 border-t border-default mt-auto">
-                    <select value={o.status} onChange={async e => {
-                      const h = { "Content-Type": "application/json", ...getHeaders() };
-                      await fetch(`${apiBase}/api/settings/organs/${o.id}`, {
-                        method: "PUT", headers: h, body: JSON.stringify({ status: e.target.value }),
-                      });
-                      const r = await fetch(`${apiBase}/api/settings/organs`, { headers: getHeaders() });
-                      setOrgans(await r.json());
-                    }}
-                      className="h-8 px-3 text-[12px] text-muted border border-default bg-surface outline-none cursor-pointer appearance-none flex-1"
-                      style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
-                      <option value="online">Conectado</option>
-                      <option value="offline">Desconectado</option>
-                      <option value="unstable">Instável</option>
-                    </select>
-                    <button className="h-8 px-3 text-[12px] font-medium text-[#FF7A00] border border-[#FF7A00]/30 hover:bg-[#FF7A00]/10 transition-colors">
-                      Testar
-                    </button>
-                  </div>
+          <div className="flex gap-8" style={{ paddingTop: 40 }}>
+            <div className="flex-1 min-w-0 bg-surface border border-default animate-in fade-in zoom-in-95 duration-200"
+              style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--border-default)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Radio size={16} strokeWidth={2} color="#FF7A00" />
+                  <h3 className="text-[15px] font-bold text-primary">Monitor de Conectores</h3>
                 </div>
-              ))}
-              {organs.length === 0 && (
-                <div className="col-span-3 py-16 text-center">
-                  <Building2 size={32} className="mx-auto text-muted mb-3" />
-                  <p className="text-[14px] text-secondary">Nenhum órgão integrado cadastrado.</p>
-                  <p className="text-[12px] text-muted mt-1">Clique em "Adicionar Órgão" para começar.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "email" && (
-          <div>
-            <div className={sectionBox} style={{ maxWidth: "640px" }}>
-              <div className="mb-6 pb-4 border-b border-default">
-                <h3 className="text-[15px] font-semibold text-primary">Configuração de E-mail (SMTP)</h3>
-              </div>
-              <p className="text-[13px] text-muted mb-8">Configure o servidor SMTP para envio de e-mails do sistema.</p>
-              <div className="flex flex-col gap-5">
-                <div className={grid2}>
-                  <div>
-                    <label className={labelStyle}>Servidor SMTP</label>
-                    <input type="text" value={smtpHost} onChange={e => setSmtpHost(e.target.value)}
-                      className={inputBase} placeholder="smtp.exemplo.com" />
-                  </div>
-                  <div>
-                    <label className={labelStyle}>Porta</label>
-                    <input type="text" value={smtpPort} onChange={e => setSmtpPort(e.target.value)}
-                      className={inputBase} placeholder="587" />
-                  </div>
-                  <div>
-                    <label className={labelStyle}>Usuário</label>
-                    <input type="text" value={smtpUser} onChange={e => setSmtpUser(e.target.value)}
-                      className={inputBase} placeholder="contato@exemplo.com" />
-                  </div>
-                  <div>
-                    <label className={labelStyle}>Senha</label>
-                    <input type="password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)}
-                      className={inputBase} placeholder="••••••••" />
-                  </div>
-                  <div>
-                    <label className={labelStyle}>E-mail de remetente</label>
-                    <input type="email" value={smtpFrom} onChange={e => setSmtpFrom(e.target.value)}
-                      className={inputBase} placeholder="nao-responder@exemplo.com" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 pt-4 border-t border-default">
-                  <button onClick={testSmtp} className={btnPrimary}>
-                    <Mail size={15} /> Testar Conexão
-                  </button>
-                </div>
-                {smtpResult && (
-                  <div className={`flex items-start gap-3 p-4 rounded-[10px] text-[13px] ${
-                    smtpResult.success ? "bg-[rgba(5,150,105,0.1)] text-[#059669]" : "bg-[rgba(220,38,38,0.1)] text-[#DC2626]"
-                  }`}>
-                    {smtpResult.success ? <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> : <XCircle size={16} className="shrink-0 mt-0.5" />}
-                    <span>{smtpResult.message}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "templates" && (
-          <div>
-            <div className={sectionBox} style={{ maxWidth: "800px" }}>
-              <div className="mb-6 pb-4 border-b border-default">
-                <h3 className="text-[15px] font-semibold text-primary">Modelos de Documentos</h3>
-              </div>
-              <div className="space-y-4 mb-10">
-                {[
-                  { key: "dossie_operacional", label: "Dossiê Operacional", desc: "Modelo padrão para dossiês operacionais do sistema." },
-                  { key: "dossie_executivo", label: "Dossiê Executivo", desc: "Modelo executivo com layout diferenciado." },
-                  { key: "relatorios", label: "Relatórios", desc: "Modelo utilizado na geração de relatórios." },
-                  { key: "certidoes_consolidadas", label: "Certidões Consolidadas", desc: "Modelo para consolidação de certidões emitidas." },
-                ].map(t => (
-                  <div key={t.key} className="flex items-center justify-between p-5 border border-default">
-                    <div className="min-w-0">
-                      <h4 className="text-[14px] font-semibold text-primary">{t.label}</h4>
-                      <p className="text-[12px] text-muted mt-1">{t.desc}</p>
-                      <p className="text-[11px] text-secondary mt-1.5">Última modificação: — | Versão: 1.0</p>
-                    </div>
-                    <button className={btnOutline} style={{ height: 34, padding: "0 14px", fontSize: "12px" }}>
-                      <Eye size={13} /> Visualizar
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mb-6 pb-4 border-b border-default">
-                <h3 className="text-[15px] font-semibold text-primary">Personalização de PDFs</h3>
-              </div>
-              <p className="text-[13px] text-muted mb-8">Configure as cores e logotipo utilizados nos PDFs gerados pelo sistema.</p>
-              <div className={grid2}>
-                {[
-                  { label: "Cor principal", key: "pdf_primary_color", value: "#FF7A00" },
-                  { label: "Cor secundária", key: "pdf_secondary_color", value: "#111827" },
-                  { label: "Cor de destaque", key: "pdf_accent_color", value: "#059669" },
-                  { label: "Cor de sucesso", key: "pdf_success_color", value: "#059669" },
-                ].map(c => (
-                  <div key={c.key}>
-                    <label className={labelStyle}>{c.label}</label>
-                    <div className="flex items-center gap-3">
-                      <input type="color" value={pdfConfig[c.key] || c.value}
-                        onChange={e => setPdfConfig(prev => ({ ...prev, [c.key]: e.target.value }))}
-                        className="w-10 h-10 border-0 cursor-pointer bg-transparent" />
-                      <input type="text" value={pdfConfig[c.key] || c.value}
-                        onChange={e => setPdfConfig(prev => ({ ...prev, [c.key]: e.target.value }))}
-                        className={inputBase} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <h4 className="text-[14px] font-semibold text-primary mt-10 mb-6">Elementos incluídos nos documentos</h4>
-              <div className="space-y-3">
-                {[
-                  { key: "include_history", label: "Histórico de atividades", default: true },
-                  { key: "include_notes", label: "Observações", default: true },
-                  { key: "include_parties", label: "Dados das partes envolvidas", default: true },
-                  { key: "include_protocols", label: "Protocolos", default: true },
-                  { key: "include_financial", label: "Informações financeiras", default: false },
-                ].map(el => (
-                  <Switch
-                    key={el.key}
-                    checked={pdfConfig[el.key] !== "false"}
-                    onChange={v => setPdfConfig(prev => ({ ...prev, [el.key]: v ? "true" : "false" }))}
-                    label={el.label}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "backup" && (
-          <div>
-            <div className={sectionBox} style={{ maxWidth: "720px" }}>
-              <div className="mb-6 pb-4 border-b border-default">
-                <h3 className="text-[15px] font-semibold text-primary">Gerenciamento de Backup</h3>
-              </div>
-              <p className="text-[13px] text-muted mb-8">Gerencie os backups do sistema. Os backups incluem todos os dados e configurações.</p>
-
-              <div className="flex items-center justify-between p-6 rounded-[10px] border border-default mb-8">
-                <div>
-                  <p className="text-[13px] text-secondary">Último backup</p>
-                  <p className="text-[15px] font-semibold text-primary mt-1">
-                    {backupInfo?.lastBackupAt ? formatDate(backupInfo.lastBackupAt) : "Nenhum backup realizado"}
-                  </p>
-                  {backupInfo?.size && backupInfo.size !== "0" && (
-                    <p className="text-[12px] text-muted mt-0.5">Tamanho: {backupInfo.size}</p>
-                  )}
-                </div>
-                <button onClick={generateBackup} disabled={backupGenerating} className={btnPrimary}>
-                  {backupGenerating ? (
-                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Gerando...</>
-                  ) : (
-                    <><Download size={15} /> Gerar Backup</>
-                  )}
+                <button onClick={fetchConnectorStatus} className={btnOutline} style={{ height: 32, padding: "0 12px", fontSize: "12px" }}>
+                  <RefreshCw size={13} /> Atualizar
                 </button>
               </div>
-
-              {backupInfo?.files && backupInfo.files.length > 0 ? (
-                <div>
-                  <h4 className="text-[13px] font-medium text-secondary mb-4">Backups disponíveis</h4>
-                  <div className="flex flex-col gap-3">
-                    {backupInfo.files.map((file: any) => (
-                      <div key={file.name} className="flex items-center justify-between p-4 rounded-[10px] border border-default">
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-primary truncate">{file.name}</p>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="text-[11px] text-muted">{file.size > 1048576 ? `${(file.size / 1048576).toFixed(2)} MB` : `${(file.size / 1024).toFixed(2)} KB`}</span>
-                            <span className="text-[11px] text-muted">{formatDate(file.date)}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button onClick={() => downloadBackup(file.name)} className={btnOutline} style={{ height: 32, padding: "0 12px", fontSize: "12px" }}>
-                            <Download size={13} /> Baixar
-                          </button>
-                          <button onClick={() => deleteBackup(file.name)} className="flex items-center justify-center gap-1.5 h-8 px-3 text-[12px] font-semibold cursor-pointer transition-all duration-150 bg-transparent text-[#DC2626] border border-[#DC2626]/30 hover:bg-[rgba(220,38,38,0.1)] rounded-lg">
-                            <Trash2 size={13} /> Excluir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              {!connectorsLoading && (
+                <div className="flex items-center gap-6 mb-6 pb-4 border-b border-default">
+                  {[{c:"#059669",l:"online"},{c:"#D97706",l:"instável"},{c:"#DC2626",l:"offline"}].map(s=>(
+                    <div key={s.l} className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{background:s.c}} />
+                      <span className="text-[12px] text-secondary">{connectors.filter((x:any)=>x.status===s.l).length} {s.l}</span>
+                    </div>
+                  ))}
+                  <div className="flex-1" />
+                  <span className="text-[12px] text-muted">
+                    {connectors.reduce((s:number,x:any)=>s+x.certidoesObtidas,0)} obtidas · {(connectors.reduce((s:number,x:any)=>s+(x.totalCertidoes>0?x.taxaSucesso:0),0)/Math.max(1,connectors.filter((x:any)=>x.totalCertidoes>0).length)).toFixed(0)}% sucesso
+                  </span>
                 </div>
+              )}
+              {connectorsLoading ? (
+                <div className="flex items-center justify-center py-16"><div className="w-6 h-6 border-2 border-default border-t-[#FF7A00] rounded-full animate-spin" /></div>
               ) : (
-                <div className="flex flex-col items-center gap-3 py-12 text-center">
-                  <Database size={32} className="text-muted" />
-                  <span className="text-[15px] font-semibold text-primary">Nenhum backup encontrado</span>
-                  <span className="text-[13px] text-secondary">Clique em "Gerar Backup" para criar o primeiro.</span>
-                </div>
+                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                  <thead>
+                    <tr className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)" }}>Órgão</th>
+                      <th className="text-center px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "80px" }}>Status</th>
+                      <th className="text-center px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "70px" }}>Obtidas</th>
+                      <th className="text-center px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "70px" }}>Hoje</th>
+                      <th className="text-center px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "110px" }}>Sucesso</th>
+                      <th className="text-center px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "90px" }}>Tempo médio</th>
+                      <th className="text-right px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "150px" }}>Última consulta</th>
+                      <th className="text-center px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", width: "64px" }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {connectors.map((c: any) => {
+                      const sc = c.status==="online"?"#059669":c.status==="unstable"?"#D97706":"#DC2626";
+                      const sb = c.status==="online"?"rgba(5,150,105,0.1)":c.status==="unstable"?"rgba(217,119,6,0.1)":"rgba(220,38,38,0.1)";
+                      const sl = c.status==="online"?"Online":c.status==="unstable"?"Instável":"Offline";
+                      const bc = c.taxaSucesso>=80?"#059669":c.taxaSucesso>=50?"#D97706":"#DC2626";
+                      const tm = testMessages[c.id]||null;
+                      return (
+                        <tr key={c.id} className="transition-colors" onMouseEnter={e=>{e.currentTarget.style.background="var(--bg-subtle)"}} onMouseLeave={e=>{e.currentTarget.style.background="transparent"}}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0" style={{background:sb}}><Building2 size={14} strokeWidth={2} style={{color:sc}} /></div>
+                              <div className="min-w-0">
+                                <span className="text-[13px] font-semibold text-primary block leading-tight">{c.name}</span>
+                                {tm&&tm!=="..."&&<span className="text-[11px] text-muted block truncate mt-0.5" style={{maxWidth:"260px"}}>{tm}</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{background:sb,color:sc}}><span className="w-1.5 h-1.5 rounded-full" style={{background:sc}} />{sl}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center"><span className="text-[13px] font-semibold text-primary tabular-nums">{c.certidoesObtidas}</span>{c.totalCertidoes>0&&<span className="text-[11px] text-muted">/{c.totalCertidoes}</span>}</td>
+                          <td className="px-4 py-3 text-center"><span className={`text-[13px] font-semibold tabular-nums ${c.certidoesHoje>0?"text-[#059669]":"text-muted"}`}>{c.certidoesHoje}</span></td>
+                          <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="flex-1 h-1.5 rounded-full bg-elevated overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{width:`${Math.max(2,c.taxaSucesso)}%`,background:bc}} /></div><span className="text-[12px] font-semibold tabular-nums w-9 text-right" style={{color:bc}}>{c.taxaSucesso}%</span></div></td>
+                          <td className="px-4 py-3 text-center"><span className="text-[13px] text-primary">{c.tempoMedio}</span></td>
+                          <td className="px-4 py-3 text-right"><span className="text-[12px] text-muted">{c.ultimaConsulta?new Date(c.ultimaConsulta).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"}</span></td>
+                          <td className="px-4 py-3 text-center">
+                            {tm==="..."?<span className="text-[11px] text-muted">...</span>:
+                            <button onClick={async()=>{setTestMessages(p=>({...p,[c.id]:"..."}));const r=await testConnector(c.id);setTestMessages(p=>({...p,[c.id]:r.message}));setTimeout(()=>setTestMessages(p=>{const n={...p};delete n[c.id];return n}),4000)}} disabled={testingConnector===c.id} className="h-7 px-3 rounded-[5px] text-[11px] font-medium border transition-colors" style={{color:sc,borderColor:sc+"30",opacity:testingConnector===c.id?0.5:1}}>Testar</button>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
         )}
 
         {activeTab === "auditoria" && (
-          <div>
-            <div className={sectionBox}>
-              <div className="mb-6 pb-4 border-b border-default">
-                <h3 className="text-[15px] font-semibold text-primary">Log de Auditoria</h3>
+          <div style={{ paddingTop: 40 }}>
+            <div className="bg-surface border border-default" style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--border-default)" }}>
+                <Activity size={18} color="#FF7A00" />
+                <h3 className="text-[16px] font-bold text-primary">Log de Auditoria</h3>
+                <span className="ml-auto text-[12px] text-muted">
+                  {auditLoading ? (
+                    <RefreshCw size={14} className="animate-spin text-[#FF7A00]" />
+                  ) : (
+                    <span className="text-[12px] font-medium text-secondary bg-elevated px-2.5 py-0.5 rounded">{Array.isArray(auditLogs) ? auditLogs.length : 0} registros</span>
+                  )}
+                </span>
               </div>
-              <div className="flex items-center gap-4 mb-8 flex-wrap">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
-                  <input type="text" placeholder="Usuário..." value={auditFilter.user}
-                    onChange={e => setAuditFilter(p => ({ ...p, user: e.target.value }))}
-                    className="w-[170px] h-9 pl-9 pr-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none placeholder:text-secondary" />
-                </div>
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
+                <input type="text" placeholder="Usuário..." value={auditFilter.user}
+                  onChange={e => setAuditFilter(p => ({ ...p, user: e.target.value }))}
+                  className="w-[160px] h-9 px-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none placeholder:text-muted" />
                 <input type="text" placeholder="Ação..." value={auditFilter.action}
                   onChange={e => setAuditFilter(p => ({ ...p, action: e.target.value }))}
-                  className="w-[140px] h-9 px-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none placeholder:text-secondary" />
+                  className="w-[130px] h-9 px-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none placeholder:text-muted" />
                 <input type="text" placeholder="Módulo..." value={auditFilter.module}
                   onChange={e => setAuditFilter(p => ({ ...p, module: e.target.value }))}
-                  className="w-[140px] h-9 px-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none placeholder:text-secondary" />
+                  className="w-[130px] h-9 px-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none placeholder:text-muted" />
                 <select value={auditFilter.result} onChange={e => setAuditFilter(p => ({ ...p, result: e.target.value }))}
                   className="h-9 px-3 rounded-[8px] text-[13px] text-primary border border-default bg-surface outline-none cursor-pointer appearance-none"
                   style={{ backgroundImage: selectBg, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: "28px" }}>
@@ -1133,7 +875,9 @@ function ConfiguracoesContent() {
                   <option value="semana">Esta semana</option>
                   <option value="mes">Este mês</option>
                 </select>
-                <button onClick={fetchAudit} className={btnOutline}><RefreshCw size={14} /> Buscar</button>
+                <button onClick={() => { setAuditFilter({ user: "", action: "", period: "", module: "", result: "" }); }} className={btnOutline}>
+                  Limpar filtros
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: "0 6px" }}>
@@ -1149,7 +893,9 @@ function ConfiguracoesContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {auditLogs.length === 0 ? (
+                    {auditLoading ? (
+                      <tr><td colSpan={7} className="py-16 text-center"><RefreshCw size={22} className="animate-spin mx-auto text-[#FF7A00]" /></td></tr>
+                    ) : !Array.isArray(auditLogs) || auditLogs.length === 0 ? (
                       <tr><td colSpan={7} className="py-12 text-center text-[13px] text-secondary">Nenhum registro de auditoria encontrado.</td></tr>
                     ) : auditLogs.map((log: any) => (
                       <tr key={log.id} className="group transition-colors" style={{ borderRadius: "8px" }}
@@ -1180,43 +926,33 @@ function ConfiguracoesContent() {
         )}
 
         {activeTab === "sistema" && (
-          <div>
-            <div className={sectionBox} style={{ maxWidth: "600px" }}>
-              <div className="mb-6 pb-4 border-b border-default">
-                <h3 className="text-[15px] font-semibold text-primary">Informações do Sistema</h3>
+          <div style={{ paddingTop: 40 }}>
+            <div className="bg-surface border border-default animate-in fade-in zoom-in-95 duration-200" style={{ borderRadius: "16px", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", padding: "18px 36px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--border-default)" }}>
+                <Server size={16} strokeWidth={2} color="#FF7A00" />
+                <h3 className="text-[15px] font-bold text-primary">Informações do Sistema</h3>
               </div>
               {systemInfo ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
-                    <span className="text-[13px] text-secondary">Versão</span>
-                    <span className="text-[13px] font-semibold text-primary">{systemInfo.version}</span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-[12px] font-semibold text-muted uppercase tracking-[0.5px] mb-4">Ambiente</h4>
+                    <div className="flex flex-col gap-0.5">
+                      {[{k:"Versão",v:systemInfo.version},{k:"Ambiente",v:systemInfo.environment},{k:"Servidor",v:systemInfo.server},{k:"Banco de dados",v:systemInfo.database},{k:"Última atualização",v:systemInfo.lastUpdate}].map(r=>(
+                        <div key={r.k} className="flex items-center justify-between py-3 px-4 rounded-[7px] hover:bg-subtle"><span className="text-[13px] text-secondary">{r.k}</span><span className="text-[13px] font-semibold text-primary">{r.v}</span></div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
-                    <span className="text-[13px] text-secondary">Ambiente</span>
-                    <span className="text-[13px] font-semibold text-primary">{systemInfo.environment}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
-                    <span className="text-[13px] text-secondary">Servidor</span>
-                    <span className="text-[13px] font-semibold text-primary">{systemInfo.server}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
-                    <span className="text-[13px] text-secondary">Banco de dados</span>
-                    <span className="text-[13px] font-semibold text-primary">{systemInfo.database}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
-                    <span className="text-[13px] text-secondary">Tempo de atividade</span>
-                    <span className="text-[13px] font-semibold text-primary">{systemInfo.uptime}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-4 px-4 rounded-[10px] border border-default">
-                    <span className="text-[13px] text-secondary">Última atualização</span>
-                    <span className="text-[13px] font-semibold text-primary">{systemInfo.lastUpdate}</span>
+                  <div>
+                    <h4 className="text-[12px] font-semibold text-muted uppercase tracking-[0.5px] mb-4">Recursos</h4>
+                    <div className="flex flex-col gap-0.5">
+                      {[{k:"Tempo de atividade",v:systemInfo.uptime},{k:"Memória em uso",v:systemInfo.resources?.memory||"—"},{k:"Banco de dados",v:"Conectado"},{k:"Conectores ativos",v:"7"},{k:"Próximo backup",v:"Não agendado"}].map(r=>(
+                        <div key={r.k} className="flex items-center justify-between py-3 px-4 rounded-[7px] hover:bg-subtle"><span className="text-[13px] text-secondary">{r.k}</span><span className="text-[13px] font-semibold text-primary">{r.v}</span></div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-3 py-12 text-center">
-                  <Server size={32} className="text-muted" />
-                  <span className="text-[13px] text-secondary">Carregando informações do sistema...</span>
-                </div>
+                <div className="flex flex-col items-center gap-3 py-16 text-center"><Server size={32} className="text-muted opacity-40" /><span className="text-[13px] text-secondary">Carregando informações do sistema...</span></div>
               )}
             </div>
           </div>

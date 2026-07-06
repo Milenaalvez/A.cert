@@ -318,7 +318,7 @@
     "tabs": {
       "all": "Todas",
       "fisica": "Pessoa Física",
-      "empresarial": "Pessoa Empresarial"
+      "empresarial": "Pessoa Jurídica"
     },
     "search": "Buscar por nome, CPF ou e-mail...",
     "newPerson": "Nova Pessoa",

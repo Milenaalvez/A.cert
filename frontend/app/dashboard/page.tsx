@@ -11,17 +11,21 @@ import {
   ChevronRight,
   MoreHorizontal,
   UserPlus,
-  Home,
+  Trash2,
   FileText,
   BarChart3,
   Users,
   Calendar,
   Settings,
   Star,
+  RefreshCw,
+  Activity,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useT } from "@/i18n/useT";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useUser } from "@/contexts/UserContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { PageHeader } from "@/components/PageHeader";
 import { StatsCard } from "@/components/StatsCard";
 import { DonutChart } from "@/components/DonutChart";
@@ -29,7 +33,12 @@ import DossierEditModal from "@/components/DossierEditModal";
 import ConfirmModal from "@/components/ConfirmModal";
 
 interface DashboardData {
+  dossiersCriados: number;
+  dossiersCriadosAnterior: number;
+  dossiersConcluidos: number;
+  dossiersConcluidosAnterior: number;
   dossiersAndamento: number;
+  dossiersAndamentoMesAnterior: number;
   pendenciasCriticas: number;
   pendenciasSemanaPassada: number;
   certidoesEmitidas: number;
@@ -40,9 +49,16 @@ interface DashboardData {
   emissions: { mes: string; total: number }[];
   totalDossiers: number;
   distribution: { label: string; total: number }[];
+  resumo: {
+    certidoesHoje: number;
+    certidoesMes: number;
+    tempoMedio: number;
+    taxaSucesso: number;
+  };
   priorities: {
+    id: string;
     identifier: string;
-    tipo: string;
+    motivo: string;
     diasSemAtualizar: number;
   }[];
   activities: {
@@ -136,6 +152,16 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("pt-BR");
 }
 
+function calcGrowth(current: number, previous: number): { value: string; positive: boolean } {
+  if (previous === 0) {
+    if (current === 0) return { value: "", positive: true };
+    return { value: "Novo", positive: true };
+  }
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return { value: "", positive: true };
+  return { value: `${pct >= 0 ? "+" : ""}${pct}%`, positive: pct >= 0 };
+}
+
 const donutColors: Record<string, string> = {
   Regular: "#3B82F6",
   Urgente: "#DC2626",
@@ -152,7 +178,7 @@ const priorityLabels: Record<string, string> = {
 
 const quickActions = [
   { label: "Cadastrar Pessoa", icon: UserPlus },
-  { label: "Cadastrar Imóvel", icon: Home },
+  { label: "Lixeira", icon: Trash2 },
   { label: "Solicitar Certidão", icon: FileText },
   { label: "Relatórios", icon: BarChart3 },
   { label: "Usuários", icon: Users },
@@ -160,8 +186,20 @@ const quickActions = [
 ];
 
 export default function DashboardPage() {
+  const { settings } = useSettings();
+  const dossiersLimit = settings.items_per_page || "15";
+
+  return (
+    <DashboardLayout>
+      <DashboardContent dossiersLimit={dossiersLimit} settings={settings} />
+    </DashboardLayout>
+  );
+}
+
+function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; settings: any }) {
   const router = useRouter();
   const { t } = useT();
+  const { user } = useUser();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +277,7 @@ export default function DashboardPage() {
     if (apiStatus) params.set("status", apiStatus);
     if (dossierPeriod) params.set("period", dossierPeriod);
     params.set("page", String(dossierPage));
-    params.set("limit", "15");
+    params.set("limit", dossiersLimit);
     try {
       const r = await fetch(`/api/dossiers?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -258,6 +296,21 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDossiers();
   }, [fetchDossiers]);
+
+  useEffect(() => {
+    if (settings.auto_refresh !== "true") return;
+    const id = setInterval(() => {
+      fetchDashboard();
+      fetchDossiers();
+    }, 120000);
+    return () => clearInterval(id);
+  }, [settings.auto_refresh, fetchDashboard, fetchDossiers]);
+
+  useEffect(() => {
+    const onFocus = () => { fetchDashboard(); fetchDossiers(); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [fetchDashboard, fetchDossiers]);
 
   const handleDossierTabChange = (tab: string) => {
     setDossierActiveTab(tab);
@@ -284,20 +337,20 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center min-h-[60vh] px-16 pt-44 pb-24 w-full">
           <div className="flex flex-col items-center gap-4">
             <div className="w-8 h-8 border-2 border-default border-t-[#FF7A00] rounded-full animate-spin" />
             <span className="text-[14px] text-secondary">Carregando...</span>
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (error || !data) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center min-h-[60vh] px-16 pt-44 pb-24 w-full">
           <div className="flex flex-col items-center gap-3 text-center">
             <AlertTriangle size={28} className="text-[#DC2626]" />
@@ -311,76 +364,74 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
-  const pendenciasGrowth = data.pendenciasSemanaPassada > 0
-    ? `-${Math.round((1 - data.pendenciasCriticas / data.pendenciasSemanaPassada) * 100)}%`
-    : "0%";
-
-  const pendenciasPositive = data.pendenciasCriticas < data.pendenciasSemanaPassada;
-
-  const certGrowth = data.certidoesEmitidasMesAnterior > 0
-    ? `+${Math.round((data.certidoesEmitidasMes / data.certidoesEmitidasMesAnterior) * 100)}%`
-    : "+100%";
-
-  const taxaDiff = data.taxaConclusao - data.taxaConclusaoAnterior;
-  const taxaGrowth = `${taxaDiff >= 0 ? "+" : ""}${taxaDiff.toFixed(1)}%`;
+  const dossCriadosGrowth = calcGrowth(data.dossiersCriados, data.dossiersCriadosAnterior);
+  const dossConcluidosGrowth = calcGrowth(data.dossiersConcluidos, data.dossiersConcluidosAnterior);
+  const certGrowth = calcGrowth(data.certidoesEmitidasMes, data.certidoesEmitidasMesAnterior);
+  const pendenciasGrowth = calcGrowth(data.dossiersAndamento, data.dossiersAndamentoMesAnterior);
+  const taxaGrowth = calcGrowth(data.taxaConclusao, data.taxaConclusaoAnterior);
 
   const donutTotal = data.distribution.reduce((a, s) => a + s.total, 0);
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full">
+    <>
+    <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full">
 
         <div style={{ marginBottom: 32 }}>
           <div style={{ marginTop: 24 }}>
-            <PageHeader
-              title={t("dashboard.title")}
-              subtitle={t("dashboard.subtitle")}
-            />
+            <div className="flex items-center justify-between gap-6">
+              <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
+              <button
+                onClick={() => { fetchDashboard(); fetchDossiers(); }}
+                className="h-9 px-4 rounded-[7px] text-[12px] font-medium text-secondary border border-default bg-transparent hover:border-[#FF7A00] hover:text-[#FF7A00] transition-colors flex items-center gap-1.5"
+              >
+                <RefreshCw size={13} /> Atualizar métricas
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="dashboard-stats" style={{ marginBottom: 0, marginTop: -12 }}>
           <StatsCard
             icon={FolderOpen}
-            title={t("dashboard.dossiersInProgress")}
-            value={String(data.dossiersAndamento)}
-            growth="+12%"
-            growthPositive={true}
-            complement={t("dashboard.lastMonth")}
+            title="Dossiês criados"
+            value={String(data.dossiersCriados)}
+            growth={dossCriadosGrowth.value}
+            growthPositive={dossCriadosGrowth.positive}
+            complement="Total de dossiês ativos no sistema"
             iconBg="#FFF7ED"
             iconColor="#FF7A00"
           />
           <StatsCard
-            icon={AlertTriangle}
-            title={t("dashboard.pendingCritical")}
-            value={String(data.pendenciasCriticas)}
-            growth={pendenciasGrowth}
-            growthPositive={pendenciasPositive}
-            complement={t("dashboard.lastWeek")}
-            iconBg="#FEF2F2"
-            iconColor="#DC2626"
+            icon={Activity}
+            title="Dossiês em andamento"
+            value={String(data.dossiersAndamento)}
+            growth={pendenciasGrowth.value}
+            growthPositive={pendenciasGrowth.positive}
+            complement="Dossiês ativos em processamento"
+            iconBg="#EFF6FF"
+            iconColor="#3B82F6"
           />
           <StatsCard
             icon={ScrollText}
-            title={t("config.certidoes_emitidas")}
+            title="Certidões emitidas"
             value={String(data.certidoesEmitidas)}
-            growth={certGrowth}
-            growthPositive={true}
-            complement={t("reports.periods.month")}
+            growth={certGrowth.value}
+            growthPositive={certGrowth.positive}
+            complement="Total de certidões obtidas"
             iconBg="#ECFDF5"
             iconColor="#059669"
           />
           <StatsCard
             icon={CheckCircle2}
-            title={t("dashboard.completionRate")}
+            title="Taxa de conclusão"
             value={`${data.taxaConclusao}%`}
-            growth={taxaGrowth}
-            growthPositive={taxaDiff >= 0}
-            complement={t("dashboard.previousPeriod")}
+            growth={taxaGrowth.value}
+            growthPositive={taxaGrowth.positive}
+            complement="Certidões obtidas vs solicitadas"
             iconBg="#ECFDF5"
             iconColor="#059669"
           />
@@ -658,14 +709,14 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-semibold text-primary">{p.identifier}</span>
-                          <span className="text-[11px] text-[#DC2626] font-medium">{p.tipo}</span>
+                          <span className="text-[11px] text-[#DC2626] font-medium">{p.motivo}</span>
                         </div>
                         <span className="text-[12px] text-secondary block mt-0.5">
                           Há {p.diasSemAtualizar}d sem atualização
                         </span>
                       </div>
                       <button
-                        onClick={() => router.push(`/dashboard/dossies?search=${encodeURIComponent(p.identifier)}`)}
+                        onClick={() => router.push(`/dashboard/dossies/${p.id}`)}
                         className="shrink-0 h-8 w-[88px] rounded-[6px] bg-[#DC2626] text-white text-[12px] font-semibold hover:bg-[#B91C1C] transition-colors"
                       >
                         Resolver
@@ -689,7 +740,7 @@ export default function DashboardPage() {
               const Icon = action.icon;
               const href = {
                 "Cadastrar Pessoa": "/dashboard/pessoas",
-                "Cadastrar Imóvel": "/dashboard/imoveis",
+                "Lixeira": "/dashboard/trash",
                 "Solicitar Certidão": "/dashboard/certidoes",
                 "Relatórios": "/dashboard/relatorios",
                 "Usuários": "/dashboard/usuarios",
@@ -731,6 +782,6 @@ export default function DashboardPage() {
         onCancel={() => setConfirmPriority(null)}
         onClose={() => setConfirmPriority(null)}
       />
-    </DashboardLayout>
+    </>
   );
 }

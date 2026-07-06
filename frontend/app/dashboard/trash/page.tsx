@@ -10,6 +10,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import ConfirmModal from "@/components/ConfirmModal";
 import * as trashApi from "@/services/trashApi";
 import { useT } from "@/i18n/useT";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface TrashItem {
   id: string;
@@ -72,6 +73,7 @@ function DetailRow({ icon, label, value }: { icon: any; label: string; value: st
 
 export default function TrashPage() {
   const { t } = useT();
+  const { settings } = useSettings();
   const [items, setItems] = useState<TrashItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -226,6 +228,15 @@ export default function TrashPage() {
       fetchItems();
     } catch (err: any) {
       alert(err.message || "Erro ao excluir permanentemente");
+    }
+  }
+
+  function handleDeleteClick(item: TrashItem) {
+    if (settings.confirm_delete === "false") {
+      setDeleteConfirm(item);
+      trashApi.permanentDelete(item.entityType, item.id).then(fetchItems).catch(err => alert(err.message));
+    } else {
+      setDeleteConfirm(item);
     }
   }
 
@@ -417,7 +428,7 @@ export default function TrashPage() {
                                 <RotateCcw size={15} strokeWidth={1.5} />
                               </button>
                               <button
-                                onClick={() => setDeleteConfirm(item)}
+                                onClick={() => handleDeleteClick(item)}
                                 title={t("trash.deletePermanent")}
                                 style={actionBtnStyle}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#EF4444" }}

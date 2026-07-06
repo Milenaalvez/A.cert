@@ -45,6 +45,12 @@ export default function DashboardLayoutClient({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNovoDossie, setShowNovoDossie] = useState(false);
+
+  useEffect(() => {
+    if (pathname && pathname.startsWith("/dashboard")) {
+      localStorage.setItem("acert_last_page", pathname);
+    }
+  }, [pathname]);
   const [pageLoading, setPageLoading] = useState(false);
   const sidebarWidth = collapsed ? 68 : 250;
 
@@ -154,7 +160,10 @@ function DashboardInner({
           width: `calc(100% - ${sidebarWidth + 48}px)`,
         }}
       >
-        {children}
+        <div className="flex-1">{children}</div>
+        <footer className="py-6 text-center text-[11px] text-muted mt-auto" style={{ marginTop: 48 }}>
+          © {new Date().getFullYear()} A.CERT — Todos os direitos reservados.
+        </footer>
       </div>
       {showNovoDossie && (
         <NovoDossieModal

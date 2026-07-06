@@ -31,4 +31,20 @@ export async function executeRaw(text: string, ...params: any[]): Promise<void> 
   await pool.query(text, params);
 }
 
+const settingsCache = new Map<string, string>();
+let settingsCacheAt = 0;
+
+export async function getSetting(key: string, defaultValue?: string): Promise<string | undefined> {
+  if (settingsCacheAt > Date.now() - 60000) {
+    return settingsCache.get(key) ?? defaultValue;
+  }
+  try {
+    const rows = await queryRaw('SELECT key, value FROM settings');
+    settingsCache.clear();
+    for (const r of rows) settingsCache.set(r.key, r.value);
+    settingsCacheAt = Date.now();
+  } catch {}
+  return settingsCache.get(key) ?? defaultValue;
+}
+
 export default prisma;

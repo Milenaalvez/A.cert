@@ -13,6 +13,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import DossierEditModal from "@/components/DossierEditModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useT } from "@/i18n/useT";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface DossierDetail {
   id: string; identifier: string; status: string; priority: string; responsible: string;
@@ -44,7 +45,9 @@ const TABS = [
 
 export default function DossierDetailClient() {
   const { t } = useT();
+  const { settings } = useSettings();
   const { id } = useParams<{ id: string }>();
+  const deadlineDays = parseInt(settings.dossier_deadline || "30", 10);
   const searchParams = useSearchParams();
   const emitir = searchParams.get("emitir") === "true";
   const [dossier, setDossier] = useState<DossierDetail | null>(null);
@@ -202,8 +205,8 @@ export default function DossierDetailClient() {
             <div style={{ width: "1px", background: "var(--bg-elevated)", margin: "6px 0" }} />
             <div style={{ flex: 1, padding: "0 20px" }}>
               <span className="text-[11px] text-secondary uppercase font-semibold mb-1.5 block">Prazo</span>
-              <div className="flex items-center gap-2"><Calendar size={15} className="text-secondary" /><span className="text-[14px] font-semibold text-primary">{new Date(new Date(dossier.createdAt).getTime() + 15*86400000).toLocaleDateString("pt-BR")}</span></div>
-              <span className="text-[10px] text-secondary mt-0.5 block">15 dias</span>
+              <div className="flex items-center gap-2"><Calendar size={15} className="text-secondary" /><span className="text-[14px] font-semibold text-primary">{new Date(new Date(dossier.createdAt).getTime() + deadlineDays * 86400000).toLocaleDateString("pt-BR")}</span></div>
+              <span className="text-[10px] text-secondary mt-0.5 block">{deadlineDays} dias</span>
             </div>
             <div style={{ width: "1px", background: "var(--bg-elevated)", margin: "6px 0" }} />
             <div style={{ flex: 1.3, paddingLeft: "20px" }}>
