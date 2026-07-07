@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Clock, ArrowRight, HelpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, HelpCircle } from "lucide-react";
 import { artigosDetalhes, categorias } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
@@ -192,39 +192,62 @@ export default function ArtigoDetailClient() {
           </div>
 
           {/* Sidebar */}
-          <div className="hidden lg:block shrink-0" style={{ width: 260, position: "relative" }}>
+          <div className="hidden lg:block shrink-0" style={{ width: 280, position: "relative" }}>
             <div style={{ position: "sticky", top: 100 }}>
+
               {/* Nesta página */}
-              <div className="mb-6">
-                <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3">Nesta página</h4>
-                <div className="flex flex-col gap-0.5">
-                  {artigo.conteudo.filter(b => b.tipo !== "veja-tambem").map((bloco) => (
-                    <button
-                      key={bloco.id}
-                      onClick={() => scrollTo(bloco.id)}
-                      className={`flex items-center gap-2 text-left py-1.5 px-2 rounded-[6px] transition-colors cursor-pointer bg-transparent border-none text-[12px] ${
-                        activeId === bloco.id ? "text-[#FF7A00] font-semibold bg-[#FF7A00]/5" : "text-secondary hover:text-primary hover:bg-subtle"
-                      }`}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: activeId === bloco.id ? "#FF7A00" : "var(--border-default)" }} />
-                      {bloco.titulo || ""}
-                    </button>
-                  ))}
+              <div className="mb-8" style={{ paddingRight: 8 }}>
+                <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.5px] mb-4">Nesta página</h4>
+                <div className="flex flex-col">
+                  {artigo.conteudo.filter(b => b.tipo !== "veja-tambem").map((bloco) => {
+                    const active = activeId === bloco.id;
+                    return (
+                      <button
+                        key={bloco.id}
+                        onClick={() => scrollTo(bloco.id)}
+                        className="flex items-center gap-3 text-left py-2 px-3 -mx-3 rounded-[8px] transition-all duration-150 cursor-pointer bg-transparent border-none group"
+                      >
+                        <div
+                          className="shrink-0 rounded-full transition-all duration-200"
+                          style={{
+                            width: active ? 3 : 2,
+                            height: active ? 16 : 12,
+                            background: active ? "#FF7A00" : "var(--bg-elevated)",
+                          }}
+                        />
+                        <span
+                          className="text-[13px] transition-colors leading-snug"
+                          style={{ color: active ? "#FF7A00" : "var(--text-secondary)", fontWeight: active ? 600 : 400 }}
+                        >
+                          {bloco.titulo || ""}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Ainda precisa de ajuda */}
-              <div className="p-4 rounded-[12px] mb-6" style={{ background: "rgba(255,122,0,0.04)", border: "1px solid rgba(255,122,0,0.08)" }}>
-                <div className="flex items-start gap-2.5 mb-3">
-                  <HelpCircle size={16} strokeWidth={1.5} color="#FF7A00" className="shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[13px] font-semibold text-primary">Ainda precisa de ajuda?</p>
-                    <p className="text-[11px] text-muted mt-0.5">Se não encontrou o que precisava, nossa equipe está pronta para te ajudar.</p>
+              <div
+                className="p-5 rounded-[14px] mb-8"
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-default)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
+                    <HelpCircle size={14} strokeWidth={1.5} color="#FF7A00" />
                   </div>
+                  <p className="text-[13px] font-semibold text-primary">Precisa de ajuda?</p>
                 </div>
+                <p className="text-[12px] text-muted mb-4 leading-relaxed">
+                  Se não encontrou o que precisava, nossa equipe está pronta para te ajudar.
+                </p>
                 <button
                   onClick={() => setShowTicket(true)}
-                  className="w-full h-[34px] rounded-[6px] bg-[#FF7A00] text-white text-[12px] font-semibold hover:bg-[#E06900] transition-all border-none cursor-pointer"
+                  className="w-full h-9 rounded-[7px] bg-[#FF7A00] text-white text-[12px] font-semibold hover:bg-[#E06900] transition-all border-none cursor-pointer"
                 >
                   Abrir ticket
                 </button>
@@ -232,17 +255,17 @@ export default function ArtigoDetailClient() {
 
               {/* Veja também */}
               {artigo.conteudo.some(b => b.tipo === "veja-tambem") && (
-                <div>
-                  <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3">Veja também</h4>
-                  <div className="flex flex-col gap-1">
+                <div style={{ paddingRight: 8 }}>
+                  <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.5px] mb-4">Veja também</h4>
+                  <div className="flex flex-col">
                     {artigo.conteudo.find(b => b.tipo === "veja-tambem")?.links?.map((link, j) => (
                       <button
                         key={j}
                         onClick={() => router.push(`/dashboard/ajuda/${slug}/${link.slug}`)}
-                        className="flex items-center gap-2 text-left py-1.5 text-[12px] text-[#FF7A00] hover:text-[#E06900] transition-colors cursor-pointer bg-transparent border-none"
+                        className="flex items-center gap-2 text-left py-2 px-3 -mx-3 rounded-[8px] text-[13px] text-secondary hover:text-[#FF7A00] hover:bg-subtle transition-all duration-150 cursor-pointer bg-transparent border-none group"
                       >
-                        <ArrowRight size={12} />
-                        {link.titulo}
+                        <ChevronRight size={13} strokeWidth={2} className="shrink-0 text-muted group-hover:text-[#FF7A00] transition-colors" />
+                        <span>{link.titulo}</span>
                       </button>
                     ))}
                   </div>
