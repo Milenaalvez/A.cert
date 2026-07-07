@@ -171,18 +171,18 @@ export default function ArtigoDetailClient() {
               <div className="flex items-center justify-between mt-8 pt-6 border-t border-default">
                 <button
                   onClick={() => router.push(`/dashboard/ajuda/${slug}`)}
-                  className="flex items-center gap-2 text-[13px] text-secondary hover:text-[#FF7A00] transition-colors cursor-pointer bg-transparent border-none"
+                  className="flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold bg-transparent text-secondary border border-default hover:border-[#FF7A00] hover:text-[#FF7A00] rounded-lg cursor-pointer transition-all duration-150"
                 >
-                  <ChevronLeft size={16} strokeWidth={1.5} />
+                  <ChevronLeft size={14} strokeWidth={2} />
                   Voltar para {categoria.titulo}
                 </button>
                 {artigoProximo && (
                   <button
                     onClick={() => router.push(`/dashboard/ajuda/${slug}/${artigoProximo.slug}`)}
-                    className="flex items-center gap-2 text-[13px] text-secondary hover:text-[#FF7A00] transition-colors cursor-pointer bg-transparent border-none"
+                    className="flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold bg-[#FF7A00] text-white hover:bg-[#E06900] rounded-lg cursor-pointer transition-all duration-150 border-0"
                   >
-                    {artigoProximo.titulo}
-                    <ChevronRight size={16} strokeWidth={1.5} />
+                    Próximo artigo
+                    <ChevronRight size={14} strokeWidth={2} />
                   </button>
                 )}
               </div>
