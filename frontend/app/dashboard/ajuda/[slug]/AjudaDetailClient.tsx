@@ -1,16 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Play, Search, LayoutGrid, List, ChevronRight } from "lucide-react";
+import { ChevronLeft, Play, Search, LayoutGrid, List, ChevronRight, Rocket, FolderOpen, Users, ScrollText, Building2, FileText, BarChart3, UserCog, Settings, Trash2, BookOpen } from "lucide-react";
 import { categorias, Guia } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
-
-const sectionBox = "bg-surface border border-default animate-in fade-in zoom-in-95 duration-200";
-const cardStyle: React.CSSProperties = {
-  borderRadius: "16px",
-  boxShadow: "0 25px 80px rgba(0,0,0,0.18)",
-  padding: "18px 36px 24px",
+const ICONE_MAP: Record<string, any> = {
+  "primeiros-passos": Rocket,
+  "dossies": FolderOpen,
+  "pessoas": Users,
+  "emissao-certidoes": ScrollText,
+  "orgaos-integrados": Building2,
+  "dossies-pdf": FileText,
+  "relatorios": BarChart3,
+  "usuarios-empresas": UserCog,
+  "configuracoes": Settings,
+  "lixeira-recuperacao": Trash2,
 };
 
 const NIVEL: Record<string, { cor: string; label: string }> = {
@@ -119,7 +125,7 @@ export default function AjudaDetailClient() {
                 style={{ padding: "24px 28px 28px" }}
               >
                 <div className="flex items-start gap-4 mb-3">
-                  <span className="text-[36px] leading-none shrink-0">{cat.emoji}</span>
+                  {React.createElement(ICONE_MAP[cat.slug] || BookOpen, { size: 32, strokeWidth: 1.5, color: "#FF7A00", className: "shrink-0", style: { marginTop: 2 } })}
                   <div className="min-w-0">
                     <h3 className="text-[16px] font-bold text-primary group-hover:text-[#FF7A00] transition-colors">{cat.titulo}</h3>
                     <p className="text-[13px] text-muted mt-1 leading-relaxed">{cat.descricao}</p>
