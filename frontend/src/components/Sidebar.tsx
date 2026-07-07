@@ -397,13 +397,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                   }}
                 >
                   {/* Header */}
-                  <div style={{ padding: "28px 24px 20px", position: "relative" }}>
-                    <button
-                      onClick={() => { closeAll(); }}
-                      style={{ position: "absolute", top: 16, right: 16, width: 28, height: 28, borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Pencil size={12} strokeWidth={1.5} color="rgba(255,255,255,0.4)" />
-                    </button>
+                  <div style={{ padding: "28px 24px 20px" }}>
 
                     <div className="flex flex-col items-center gap-2.5">
                       <div
