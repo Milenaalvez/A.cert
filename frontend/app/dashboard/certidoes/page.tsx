@@ -396,9 +396,9 @@ export default function CertidoesPage() {
             <div style={{ display: "flex", gap: 8 }}>
               <div style={{ position: "relative", flex: 1 }}>
                 <Search size={16} strokeWidth={1.5} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
-                <input type="text" placeholder="Buscar por nome, CPF, CNPJ, matrícula ou inscrição..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} style={{ ...inputBase, paddingLeft: 36 }} onFocus={focusIn} onBlur={focusOut} />
+                <input data-tour="certidoes-busca" type="text" placeholder="Buscar por nome, CPF, CNPJ, matrícula ou inscrição..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} style={{ ...inputBase, paddingLeft: 36 }} onFocus={focusIn} onBlur={focusOut} />
               </div>
-              <button onClick={handleSearch} disabled={searching || !searchQuery.trim()} style={{ height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: searching || !searchQuery.trim() ? 0.5 : 1, whiteSpace: "nowrap" }}>{searching ? "Buscando..." : "Buscar"}</button>
+              <button data-tour="certidoes-consultar" onClick={handleSearch} disabled={searching || !searchQuery.trim()} style={{ height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: searching || !searchQuery.trim() ? 0.5 : 1, whiteSpace: "nowrap" }}>{searching ? "Buscando..." : "Buscar"}</button>
             </div>
             {searchResults.length > 0 && (
               <div style={{ marginTop: 4, borderRadius: 6, border: "1px solid var(--border-light)", background: "var(--bg-surface)", overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", position: "absolute", left: 0, right: 0, zIndex: 10 }}>

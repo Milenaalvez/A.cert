@@ -9,6 +9,7 @@ import PageLoadingOverlay from "./PageLoadingOverlay";
 import ElectronTitleBar from "./ElectronTitleBar";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { useT } from "@/i18n/useT";
+import { iniciarTour } from "@/components/TourGuia";
 
 function pathToPage(pathname: string): string {
   if (pathname === "/dashboard") return "dashboard";
@@ -56,6 +57,10 @@ export default function DashboardLayoutClient({
   useEffect(() => {
     if (pathname && pathname.startsWith("/dashboard")) {
       localStorage.setItem("acert_last_page", pathname);
+    }
+    if (typeof window !== "undefined" && window.location.search.includes("tour=1")) {
+      const timer = setTimeout(() => iniciarTour(), 600);
+      return () => clearTimeout(timer);
     }
   }, [pathname]);
   const [pageLoading, setPageLoading] = useState(false);

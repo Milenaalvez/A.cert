@@ -130,7 +130,7 @@ export default function DossiesPage() {
       <div className="flex flex-col px-20 pt-36 pb-32 w-full">
         {showNovoDossie && <NovoDossieModal onClose={() => setShowNovoDossie(false)} onCreated={() => { setShowNovoDossie(false); fetchData(); }} />}
         <div style={{ marginTop: 24 }} className="flex items-start justify-between gap-8">
-          <div className="flex flex-col gap-1.5 min-w-0"><h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Dossiês</h1><p className="text-[14px] text-secondary leading-relaxed">Organize e acompanhe todos os dossiês.</p></div>
+          <div className="flex flex-col gap-1.5 min-w-0" data-tour="dossies-lista"><h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Dossiês</h1><p className="text-[14px] text-secondary leading-relaxed">Organize e acompanhe todos os dossiês.</p></div>
           <div className="flex items-center gap-3 shrink-0 pt-0.5">
             <div className="relative">
               <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />

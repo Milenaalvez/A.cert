@@ -202,7 +202,7 @@ function CentralAjudaContent() {
         </div>
 
         {/* Col 2: Email */}
-        <div onClick={() => setShowTicketModal(true)} className="flex items-center gap-5 cursor-pointer hover:opacity-80 transition-opacity" style={{ paddingLeft: 40, paddingRight: 40, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+        <div data-tour="suporte-ticket" onClick={() => setShowTicketModal(true)} className="flex items-center gap-5 cursor-pointer hover:opacity-80 transition-opacity" style={{ paddingLeft: 40, paddingRight: 40, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
           <MessageSquare size={48} strokeWidth={1.5} color="#3B82F6" className="shrink-0" />
           <div>
             <span className="text-[14px] font-semibold text-primary block">suporte@acert.tech</span>
