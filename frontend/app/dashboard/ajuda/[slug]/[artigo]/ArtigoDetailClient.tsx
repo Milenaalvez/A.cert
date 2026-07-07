@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Clock, Rocket, CheckCircle2, Lightbulb, MessageCircleQuestion } from "lucide-react";
+import { ChevronLeft, ChevronRight, Rocket, CheckCircle2, Lightbulb, MessageCircleQuestion } from "lucide-react";
 import { artigosDetalhes, categorias } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
@@ -70,12 +70,19 @@ export default function ArtigoDetailClient() {
                   <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-2">{artigo.subtitulo}</p>
                   <h1 className="text-[28px] font-bold text-primary tracking-tight leading-tight">{artigo.titulo}</h1>
                   <p className="text-[14px] text-secondary mt-3 leading-relaxed max-w-[640px]">{artigo.descricao}</p>
-                  <div className="flex items-center gap-4 mt-5">
+                  <div className="flex items-center gap-5 mt-6">
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: NIVEL_COR[artigo.nivel] }}>
                       <span className="w-2 h-2 rounded-full" style={{ background: NIVEL_COR[artigo.nivel] }} />
                       {artigo.nivel === "iniciante" ? "Iniciante" : artigo.nivel === "intermediario" ? "Intermediário" : "Avançado"}
                     </span>
-                    <span className="flex items-center gap-1 text-[12px] text-muted"><Clock size={12} /> {artigo.tempo}</span>
+                    <span className="flex items-center gap-1.5 text-[12px] text-muted">
+                      <span className="w-1 h-1 rounded-full bg-muted" />
+                      {artigo.tempo}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[12px] text-muted">
+                      <span className="w-1 h-1 rounded-full bg-muted" />
+                      Atualizado em {artigo.atualizado || "07/07/2026"}
+                    </span>
                   </div>
                 </div>
               </div>
