@@ -419,7 +419,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
           </div>
         </div>
 
-        <div className="dashboard-stats" style={{ marginBottom: 0, marginTop: -12 }}>
+        <div className="dashboard-stats" data-tour="dashboard-stats" style={{ marginBottom: 0, marginTop: -12 }}>
           <StatsCard
             icon={FolderOpen}
             title="Dossiês criados"

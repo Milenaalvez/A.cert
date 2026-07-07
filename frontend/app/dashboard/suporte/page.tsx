@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, BookOpen, ChevronRight, CirclePlay, Lightbulb, Mail, Clock, MessageSquare, Zap } from "lucide-react";
+import { Search, BookOpen, ChevronRight, Lightbulb, Mail, Clock, MessageSquare, Zap, MapPin } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
+import { iniciarTour } from "@/components/TourGuia";
 import { useUser } from "@/contexts/UserContext";
 
 const cardStyle: React.CSSProperties = {
@@ -49,7 +50,7 @@ function CentralAjudaContent() {
       <div style={{ marginTop: 24, marginBottom: 32 }}>
         <div className="flex items-start justify-between gap-8">
           <div className="flex flex-col gap-1.5 min-w-0">
-            <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Central de Ajuda</h1>
+            <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none" data-tour="central-ajuda">Central de Ajuda</h1>
             <p className="text-[14px] text-secondary leading-relaxed">Encontre respostas rápidas, aprenda a utilizar a A.CERT e resolva dúvidas sem precisar aguardar atendimento.</p>
           </div>
         </div>
@@ -113,44 +114,40 @@ function CentralAjudaContent() {
           </button>
         </div>
 
-        {/* Vídeo Tutoriais */}
+        {/* Tour Guiado */}
         <div className="bg-surface border border-default" style={cardStyle}>
           <div className="flex items-start gap-4" style={{ marginBottom: 20 }}>
-            <CirclePlay size={48} strokeWidth={1.5} color="#FF7A00" className="shrink-0" style={{ marginTop: 6 }} />
+            <MapPin size={48} strokeWidth={1.5} color="#FF7A00" className="shrink-0" style={{ marginTop: 6 }} />
             <div>
-              <h3 className="text-[16px] font-bold text-primary mb-1">Tutoriais</h3>
-              <p className="text-[13px] text-secondary leading-relaxed">Guias passo a passo com vídeos e textos explicativos. Aprenda cada funcionalidade na prática.</p>
+              <h3 className="text-[16px] font-bold text-primary mb-1">Tour pela Plataforma</h3>
+              <p className="text-[13px] text-secondary leading-relaxed">Conheça os principais recursos da A.CERT com um tour guiado passo a passo pela interface.</p>
             </div>
           </div>
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-3">
             {[
-              { t: "Primeiros passos", slug: "primeiros-passos" },
-              { t: "Dossiês", slug: "dossies" },
-              { t: "Pessoas", slug: "pessoas" },
-              { t: "Emissão de Certidões", slug: "emissao-certidoes" },
-              { t: "Órgãos Integrados", slug: "orgaos-integrados" },
-              { t: "Dossiês e PDF", slug: "dossies-pdf" },
-              { t: "Relatórios", slug: "relatorios" },
-              { t: "Usuários e Empresas", slug: "usuarios-empresas" },
-              { t: "Configurações", slug: "configuracoes" },
-              { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
+              { t: "Menu lateral", d: "Conheça todos os módulos disponíveis na plataforma." },
+              { t: "Novo Dossiê", d: "Saiba onde criar sua primeira negociação imobiliária." },
+              { t: "Indicadores", d: "Entenda as métricas do seu dashboard." },
+              { t: "Seu perfil", d: "Acesse seus dados e configurações pessoais." },
+              { t: "Central de Ajuda", d: "Descubra onde encontrar documentação e suporte." },
             ].map((item, i) => (
-              <div
-                key={i}
-                onClick={() => router.push(`/dashboard/ajuda/${item.slug}`)}
-                className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
-              >
-                <ChevronRight size={14} strokeWidth={2} className="text-muted shrink-0" />
-                <span className="text-[12px] font-medium text-primary">{item.t}</span>
+              <div key={i} className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold mt-0.5" style={{ background: "rgba(255,122,0,0.12)", color: "#FF7A00" }}>
+                  {i + 1}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-medium text-primary">{item.t}</p>
+                  <p className="text-[11px] text-muted mt-0.5">{item.d}</p>
+                </div>
               </div>
             ))}
           </div>
           <button
-            onClick={() => router.push("/dashboard/ajuda/conhecendo-plataforma")}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}
+            onClick={iniciarTour}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 24 }}
           >
-            Ver todos os tutoriais <ChevronRight size={14} strokeWidth={2.5} />
+            Iniciar tour guiado <ChevronRight size={14} strokeWidth={2.5} />
           </button>
         </div>
 

@@ -266,6 +266,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
       )}
       <aside
         suppressHydrationWarning
+        data-tour="menu-lateral"
         onMouseEnter={() => setSidebarHover(true)}
         onMouseLeave={() => setSidebarHover(false)}
         className={`fixed top-0 left-0 h-screen flex flex-col select-none z-30 transition-all duration-250 ease-out lg:translate-x-0 ${
@@ -340,6 +341,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
           <div className="shrink-0" style={{ marginBottom: "19px", paddingLeft: collapsed ? "0" : "18px", paddingRight: collapsed ? "0" : "18px" }}>
             <button
               onClick={() => onNovoDossie ? onNovoDossie() : onNavigate("dossies")}
+              data-tour="btn-novo-dossie"
               className="flex items-center justify-center w-full h-9 bg-gradient-to-r from-[#FF7A00] to-[#FF9A3D] text-white font-semibold hover:brightness-110 transition-all duration-200"
               style={{ borderRadius: collapsed ? "0" : "4px", fontSize: collapsed ? "18px" : "13px", gap: collapsed ? "0" : "8px" }}
             >
@@ -416,6 +418,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
           <div className="relative w-full">
             <button
               onClick={() => { profileOpen ? closeDrop() : openProfileDropdown() }}
+              data-tour="sidebar-perfil"
               title={collapsed ? user?.name || 'Usuário' : undefined}
               className={`flex items-center gap-3 w-full h-14 rounded-xl text-[14px] font-medium text-[#F0F3FA] hover:text-[#FFFFFF] hover:bg-white/[0.06] transition-all duration-200 ${
                 collapsed ? "justify-center px-0" : "px-0"
