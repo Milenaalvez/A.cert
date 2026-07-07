@@ -105,7 +105,7 @@ export default function ArtigoDetailClient() {
                   )}
                   {bloco.tipo === "verde" && (
                     <div className="p-6 rounded-[16px]" style={{ ...CARD_GREEN, padding: "28px 32px" }}>
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
                         <CheckCircle2 size={20} strokeWidth={1.5} color="#059669" />
                         <h3 className="text-[15px] font-bold text-primary">{bloco.titulo}</h3>
                       </div>
@@ -114,7 +114,7 @@ export default function ArtigoDetailClient() {
                   )}
                   {bloco.tipo === "amarelo" && (
                     <div className="p-6 rounded-[16px]" style={{ ...CARD_AMBER, padding: "28px 32px" }}>
-                      <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-3" style={{ marginBottom: 20 }}>
                         <Lightbulb size={20} strokeWidth={1.5} color="#D97706" />
                         <h3 className="text-[15px] font-bold text-primary">{bloco.titulo}</h3>
                       </div>
@@ -146,7 +146,7 @@ export default function ArtigoDetailClient() {
                   )}
                   {bloco.tipo === "problemas" && (
                     <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "28px 32px" }}>
-                      <div className="flex items-center gap-3 mb-5">
+                      <div className="flex items-center gap-3" style={{ marginBottom: 24 }}>
                         <MessageCircleQuestion size={20} strokeWidth={1.5} color="#FF7A00" />
                         <h3 className="text-[15px] font-bold text-primary">{bloco.titulo}</h3>
                       </div>
