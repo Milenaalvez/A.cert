@@ -1,11 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Clock, HelpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, HelpCircle, Rocket } from "lucide-react";
 import { artigosDetalhes, categorias } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
+
+const ICONE_ARTIGO: Record<string, any> = {
+  "bem-vindo-a-acert": Rocket,
+  "primeiro-acesso": Rocket,
+  "conhecendo-dashboard": Rocket,
+  "navegando-sistema": Rocket,
+  "fluxo-completo": Rocket,
+};
 
 const NIVEL_COR: Record<string, string> = {
   iniciante: "#059669",
@@ -89,7 +98,9 @@ export default function ArtigoDetailClient() {
             {/* Header */}
             <div style={{ marginBottom: 36 }}>
               <div className="flex items-start gap-5">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)", fontSize: 28 }}>{artigo.icone}</div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
+                  {React.createElement(ICONE_ARTIGO[artigo.slug] || Rocket, { size: 26, strokeWidth: 1.5, color: "#FF7A00" })}
+                </div>
                 <div>
                   <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-1">{artigo.subtitulo}</p>
                   <h1 className="text-[28px] font-bold text-primary tracking-tight leading-tight">{artigo.titulo}</h1>
@@ -196,58 +207,41 @@ export default function ArtigoDetailClient() {
             <div style={{ position: "sticky", top: 100 }}>
 
               {/* Nesta página */}
-              <div className="mb-8" style={{ paddingRight: 8 }}>
-                <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.5px] mb-4">Nesta página</h4>
-                <div className="flex flex-col">
+              <div className="mb-8">
+                <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.5px] mb-4 pl-1">Nesta página</h4>
+                <div className="flex flex-col border-l-2 border-transparent">
                   {artigo.conteudo.filter(b => b.tipo !== "veja-tambem").map((bloco) => {
                     const active = activeId === bloco.id;
                     return (
                       <button
                         key={bloco.id}
                         onClick={() => scrollTo(bloco.id)}
-                        className="flex items-center gap-3 text-left py-2 px-3 -mx-3 rounded-[8px] transition-all duration-150 cursor-pointer bg-transparent border-none group"
+                        className={`text-left py-1.5 pl-3 transition-all duration-150 cursor-pointer bg-transparent border-none text-[13px] ${
+                          active
+                            ? "text-[#FF7A00] font-semibold border-l-2 -ml-[2px]"
+                            : "text-secondary hover:text-primary border-l-2 border-transparent -ml-[2px]"
+                        }`}
+                        style={active ? { borderColor: "#FF7A00" } : {}}
                       >
-                        <div
-                          className="shrink-0 rounded-full transition-all duration-200"
-                          style={{
-                            width: active ? 3 : 2,
-                            height: active ? 16 : 12,
-                            background: active ? "#FF7A00" : "var(--bg-elevated)",
-                          }}
-                        />
-                        <span
-                          className="text-[13px] transition-colors leading-snug"
-                          style={{ color: active ? "#FF7A00" : "var(--text-secondary)", fontWeight: active ? 600 : 400 }}
-                        >
-                          {bloco.titulo || ""}
-                        </span>
+                        {bloco.titulo || ""}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Ainda precisa de ajuda */}
-              <div
-                className="p-5 rounded-[14px] mb-8"
-                style={{
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--border-default)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
-                    <HelpCircle size={14} strokeWidth={1.5} color="#FF7A00" />
-                  </div>
-                  <p className="text-[13px] font-semibold text-primary">Precisa de ajuda?</p>
-                </div>
-                <p className="text-[12px] text-muted mb-4 leading-relaxed">
-                  Se não encontrou o que precisava, nossa equipe está pronta para te ajudar.
+              {/* Precisa de ajuda */}
+              <div className="p-4 rounded-[10px] mb-8 bg-surface border border-default">
+                <p className="text-[13px] font-semibold text-primary mb-1.5 flex items-center gap-2">
+                  <HelpCircle size={14} strokeWidth={1.5} color="#FF7A00" />
+                  Precisa de ajuda?
+                </p>
+                <p className="text-[12px] text-muted mb-3 leading-relaxed">
+                  Não encontrou o que precisava? Fale com nossa equipe.
                 </p>
                 <button
                   onClick={() => setShowTicket(true)}
-                  className="w-full h-9 rounded-[7px] bg-[#FF7A00] text-white text-[12px] font-semibold hover:bg-[#E06900] transition-all border-none cursor-pointer"
+                  className="w-full h-[34px] rounded-[6px] bg-[#FF7A00] text-white text-[12px] font-semibold hover:bg-[#E06900] transition-all border-none cursor-pointer"
                 >
                   Abrir ticket
                 </button>
@@ -255,17 +249,17 @@ export default function ArtigoDetailClient() {
 
               {/* Veja também */}
               {artigo.conteudo.some(b => b.tipo === "veja-tambem") && (
-                <div style={{ paddingRight: 8 }}>
-                  <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.5px] mb-4">Veja também</h4>
-                  <div className="flex flex-col">
+                <div>
+                  <h4 className="text-[11px] font-semibold text-muted uppercase tracking-[0.5px] mb-3 pl-1">Veja também</h4>
+                  <div className="flex flex-col gap-0.5">
                     {artigo.conteudo.find(b => b.tipo === "veja-tambem")?.links?.map((link, j) => (
                       <button
                         key={j}
                         onClick={() => router.push(`/dashboard/ajuda/${slug}/${link.slug}`)}
-                        className="flex items-center gap-2 text-left py-2 px-3 -mx-3 rounded-[8px] text-[13px] text-secondary hover:text-[#FF7A00] hover:bg-subtle transition-all duration-150 cursor-pointer bg-transparent border-none group"
+                        className="flex items-center gap-2 text-left py-1.5 pl-1 text-[13px] text-secondary hover:text-[#FF7A00] transition-colors cursor-pointer bg-transparent border-none"
                       >
-                        <ChevronRight size={13} strokeWidth={2} className="shrink-0 text-muted group-hover:text-[#FF7A00] transition-colors" />
-                        <span>{link.titulo}</span>
+                        <ChevronRight size={13} strokeWidth={2} className="shrink-0 text-muted" />
+                        {link.titulo}
                       </button>
                     ))}
                   </div>
