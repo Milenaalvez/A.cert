@@ -165,13 +165,82 @@ export default function ArtigoDetailClient() {
                       </div>
                     </div>
                   )}
+                  {bloco.tipo === "area" && (
+                    <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "24px 28px" }}>
+                      <div className="flex items-start gap-4">
+                        <span className="text-[32px] leading-none shrink-0 mt-0.5">{bloco.icone}</span>
+                        <div className="min-w-0">
+                          <h3 className="text-[15px] font-bold text-primary mb-2">{bloco.titulo}</h3>
+                          <p className="text-[13px] text-secondary leading-relaxed mb-3">{bloco.texto}</p>
+                          {bloco.itens && bloco.itens.length > 0 && (
+                            <div className="flex flex-col gap-1 mt-2">
+                              {bloco.itens.map((item, j) => (
+                                <div key={j} className="flex items-center gap-2 text-[12px] text-muted">
+                                  <span className="w-1 h-1 rounded-full bg-muted shrink-0" />
+                                  {item}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {bloco.tipo === "fluxograma" && (
+                    <div className="p-8 rounded-[16px] bg-surface border border-default" style={{ padding: "32px 36px" }}>
+                      <h3 className="text-[16px] font-bold text-primary text-center mb-6">{bloco.titulo}</h3>
+                      <div className="flex flex-col items-center gap-3">
+                        {bloco.passos?.map((passo, j) => (
+                          <div key={j} className="flex flex-col items-center" style={{ width: "100%", maxWidth: 280 }}>
+                            <div
+                              className="w-full flex items-center gap-4 p-4 rounded-[12px] cursor-pointer border border-default hover:border-[#FF7A00]/30 transition-all bg-surface"
+                              onClick={() => passo.slug && router.push(`/dashboard/ajuda/${slug}/${passo.slug}`)}
+                            >
+                              <div className="w-10 h-10 rounded-[8px] flex items-center justify-center shrink-0 text-[18px]" style={{ background: "rgba(255,122,0,0.12)" }}>
+                                {passo.icone}
+                              </div>
+                              <div>
+                                <p className="text-[14px] font-semibold text-primary">{passo.titulo}</p>
+                              </div>
+                            </div>
+                            {j < (bloco.passos?.length || 0) - 1 && (
+                              <div className="flex flex-col items-center" style={{ marginTop: 4, marginBottom: 4 }}>
+                                <div style={{ width: 2, height: 28, background: "rgba(255,122,0,0.25)" }} />
+                                <span style={{ color: "var(--text-muted)", fontSize: 14, marginTop: 2 }}>▼</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {bloco.tipo === "etapa" && (
+                    <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "24px 28px" }}>
+                      <div className="flex items-start gap-4 mb-3">
+                        <span className="text-[32px] leading-none shrink-0 mt-0.5">{bloco.icone}</span>
+                        <div className="min-w-0">
+                          <h3 className="text-[15px] font-bold text-primary mb-2">{bloco.titulo}</h3>
+                          <p className="text-[13px] text-secondary leading-relaxed">{bloco.texto}</p>
+                          {bloco.link && (
+                            <button
+                              onClick={() => router.push(`/dashboard/ajuda/${slug}/${bloco.link!.slug}`)}
+                              className="inline-flex items-center gap-1.5 mt-3 text-[13px] font-medium text-[#FF7A00] hover:text-[#E06900] transition-colors cursor-pointer bg-transparent border-none"
+                            >
+                              {bloco.link.titulo}
+                              <ChevronRight size={14} strokeWidth={2} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
 
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-default">
+              <div className="flex items-center justify-between mt-12 pt-6 border-t border-default">
                 <button
                   onClick={() => router.push(`/dashboard/ajuda/${slug}`)}
-                  className="flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold bg-transparent text-secondary border border-default hover:border-[#FF7A00] hover:text-[#FF7A00] rounded-lg cursor-pointer transition-all duration-150"
+                  className="flex items-center gap-1.5 text-[13px] text-secondary hover:text-[#FF7A00] transition-colors cursor-pointer bg-transparent border-none"
                 >
                   <ChevronLeft size={14} strokeWidth={2} />
                   Voltar para {categoria.titulo}
@@ -179,7 +248,7 @@ export default function ArtigoDetailClient() {
                 {artigoProximo && (
                   <button
                     onClick={() => router.push(`/dashboard/ajuda/${slug}/${artigoProximo.slug}`)}
-                    className="flex items-center justify-center gap-1.5 h-[38px] px-5 text-[13px] font-semibold bg-[#FF7A00] text-white hover:bg-[#E06900] rounded-lg cursor-pointer transition-all duration-150 border-0"
+                    className="flex items-center justify-center gap-2 h-10 px-6 text-[13px] font-semibold bg-[#FF7A00] text-white hover:bg-[#E06900] rounded-lg cursor-pointer transition-all duration-150 border-0"
                   >
                     Próximo artigo
                     <ChevronRight size={14} strokeWidth={2} />
