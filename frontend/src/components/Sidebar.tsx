@@ -476,24 +476,31 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 >
                   {showNotifications ? (
                     <>
-                      <div style={{ padding: "24px 24px 0" }}>
+                      <div style={{ padding: "20px 24px 0" }}>
                         <button
                           onClick={() => setShowNotifications(false)}
-                          className="flex items-center gap-2 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer mb-4"
+                          className="flex items-center gap-2 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer"
                         >
                           <ChevronRight size={14} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
                           Voltar ao perfil
                         </button>
+                        <div className="mt-4 mb-3 flex items-center justify-between">
+                          <h3 className="text-[14px] font-semibold text-white">
+                            Notificações
+                            {notifCount > 0 && <span className="ml-2 text-[11px] font-normal text-white/40">{notifCount} nova{notifCount > 1 ? "s" : ""}</span>}
+                          </h3>
+                        </div>
                       </div>
-                      <div className="flex flex-col max-h-[420px] overflow-y-auto">
+                      <div className="flex flex-col" style={{ minHeight: 300, maxHeight: 420, overflowY: "auto" }}>
                         {notifsLoading ? (
-                          <div className="flex items-center justify-center py-12">
+                          <div className="flex items-center justify-center" style={{ height: 300 }}>
                             <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                           </div>
                         ) : notifications.length === 0 ? (
-                          <div className="flex flex-col items-center py-12 px-6 text-center">
-                            <Bell size={28} strokeWidth={1.5} className="text-white/20 mb-3" />
-                            <p className="text-[13px] text-white/50">Nenhuma notificação.</p>
+                          <div className="flex flex-col items-center justify-center text-center" style={{ height: 280 }}>
+                            <Bell size={32} strokeWidth={1.5} className="text-white/10 mb-4" />
+                            <p className="text-[13px] text-white/40">Nenhuma notificação.</p>
+                            <p className="text-[11px] text-white/20 mt-1">As notificações do sistema aparecerão aqui.</p>
                           </div>
                         ) : (
                           notifications.map((n: any) => (
@@ -573,7 +580,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                         {[
                           { icon: User, label: "Editar perfil", path: "/dashboard/configuracoes" },
                           { icon: Lock, label: "Alterar senha", path: "/dashboard/configuracoes" },
-                          { icon: Bell, label: "Notificações", action: () => { loadNotifications(); setShowNotifications(true); } },
+                          { icon: Bell, label: notifCount > 0 ? `Notificações (${notifCount})` : "Notificações", action: () => { loadNotifications(); setShowNotifications(true); } },
                         ].map((item, i) => (
                           <button
                             key={i}
