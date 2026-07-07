@@ -22,6 +22,7 @@ import captchaRoutes from './routes/captcha.js';
 import propertiesRoutes from './routes/properties.js';
 import settingsRoutes from './routes/settings.js';
 import supportRoutes from './routes/support.js';
+import { notificationsRoutes } from './routes/notifications.js';
 import trashRoutes from './routes/trash.js';
 import companiesRoutes from './routes/companies.js';
 import prisma, { executeRaw, queryRawOne, getSetting } from './lib/prisma.js';
@@ -52,6 +53,7 @@ app.use('/api/captcha', captchaRoutes);
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/trash', trashRoutes);
 app.use('/api/companies', companiesRoutes);
 

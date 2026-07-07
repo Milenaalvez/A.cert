@@ -106,12 +106,73 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarHover, setSidebarHover] = useState(false)
 
+  const [notifCount, setNotifCount] = useState(0)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notifsLoading, setNotifsLoading] = useState(false)
+
   const [mounted, setMounted] = useState(false)
   const [sectionState, setSectionState] = useState<Record<string, boolean>>({})
+
+  function loadNotifCount() {
+    const token = localStorage.getItem("acert_token")
+    if (!token) return
+    fetch("/api/notifications/count", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setNotifCount(d.count || 0))
+      .catch(() => {})
+  }
+
+  function loadNotifications() {
+    setNotifsLoading(true)
+    const token = localStorage.getItem("acert_token")
+    if (!token) return
+    fetch("/api/notifications?limit=20", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setNotifications(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setNotifsLoading(false))
+  }
+
+  function markAsRead(id: string) {
+    const token = localStorage.getItem("acert_token")
+    if (!token) return
+    fetch(`/api/notifications/${id}/read`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } })
+      .then(() => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: 1 } : n))
+        setNotifCount(c => Math.max(0, c - 1))
+      })
+      .catch(() => {})
+  }
+
+  function markAllRead() {
+    const token = localStorage.getItem("acert_token")
+    if (!token) return
+    fetch("/api/notifications/mark-all-read", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then(() => {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: 1 })))
+        setNotifCount(0)
+      })
+      .catch(() => {})
+  }
+
+  function openProfileDropdown() {
+    setShowNotifications(notifCount > 0)
+    if (notifCount > 0) loadNotifications()
+    setProfileOpen(true)
+  }
+
+  function closeDrop() {
+    setProfileOpen(false)
+    setShowNotifications(false)
+  }
 
   useEffect(() => {
     setMounted(true)
     setSectionState(loadSectionState())
+    loadNotifCount()
+    const interval = setInterval(loadNotifCount, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -119,7 +180,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
   }, [sectionState, mounted])
 
   function closeAll() {
-    setProfileOpen(false)
+    closeDrop()
   }
 
   const toggleSection = useCallback((label: string) => {
@@ -354,23 +415,38 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
         <div className={`shrink-0 border-t border-white/[0.08] ${collapsed ? "flex flex-col items-center pt-2 pb-5" : "px-6 pt-2 pb-5"}`}>
           <div className="relative w-full">
             <button
-              onClick={() => { setProfileOpen((prev) => !prev) }}
+              onClick={() => { profileOpen ? closeDrop() : openProfileDropdown() }}
               title={collapsed ? user?.name || 'Usuário' : undefined}
               className={`flex items-center gap-3 w-full h-14 rounded-xl text-[14px] font-medium text-[#F0F3FA] hover:text-[#FFFFFF] hover:bg-white/[0.06] transition-all duration-200 ${
                 collapsed ? "justify-center px-0" : "px-0"
               }`}
             >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-[13px] font-bold overflow-hidden" style={{ background: "#FF7A00" }}>
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
+              <div className="relative shrink-0">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-[13px] font-bold overflow-hidden" style={{ background: "#FF7A00" }}>
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
+                  )}
+                </div>
+                {notifCount > 0 && (
+                  <div
+                    className={`absolute flex items-center justify-center rounded-full text-[10px] font-bold text-white bg-[#DC2626] border-2 border-[#0B1220] ${collapsed ? "-top-1 -right-1 w-[18px] h-[18px]" : ""}`}
+                    style={collapsed ? {} : { top: -2, right: -4, minWidth: 18, height: 18, padding: "0 4px" }}
+                  >
+                    {notifCount}
+                  </div>
                 )}
               </div>
               {!collapsed && (
                 <>
                   <div className="flex-1 flex flex-col items-start text-left min-w-0">
-                    <span className="text-[17px] font-semibold text-white truncate w-full">{user?.name || 'Usuário'}</span>
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="text-[17px] font-semibold text-white truncate">{user?.name || 'Usuário'}</span>
+                      {notifCount > 0 && (
+                        <span className="shrink-0 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center" style={{ minWidth: 18, height: 18, padding: "0 5px" }}>{notifCount}</span>
+                      )}
+                    </div>
                     <span className="text-[12px] text-white/60 truncate w-full">{getRoleLabel(user?.role, user?.position)}</span>
                   </div>
                   <ChevronDown
@@ -398,76 +474,132 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                     boxShadow: "0 25px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)",
                   }}
                 >
-                  {/* Header */}
-                  <div style={{ padding: "28px 24px 20px" }}>
-
-                    <div className="flex flex-col items-center gap-2.5">
-                      <div
-                        className="rounded-full flex items-center justify-center shrink-0 overflow-hidden"
-                        style={{ width: 64, height: 64, background: "#FF7A00" }}
-                      >
-                        {user?.avatar ? (
-                          <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                  {showNotifications ? (
+                    <>
+                      <div style={{ padding: "24px 24px 0" }}>
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="flex items-center gap-2 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer mb-4"
+                        >
+                          <ChevronRight size={14} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
+                          Voltar ao perfil
+                        </button>
+                      </div>
+                      <div className="flex flex-col max-h-[420px] overflow-y-auto">
+                        {notifsLoading ? (
+                          <div className="flex items-center justify-center py-12">
+                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="flex flex-col items-center py-12 px-6 text-center">
+                            <Bell size={28} strokeWidth={1.5} className="text-white/20 mb-3" />
+                            <p className="text-[13px] text-white/50">Nenhuma notificação.</p>
+                          </div>
                         ) : (
-                          <span className="text-white text-[22px] font-bold">{user?.name ? getInitials(user.name) : 'U'}</span>
+                          notifications.map((n: any) => (
+                            <div
+                              key={n.id}
+                              className={`flex items-start gap-3 px-6 py-3.5 border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.02] transition-colors ${!n.isRead ? "bg-white/[0.02]" : ""}`}
+                              onClick={() => { markAsRead(n.id); if (n.link) { closeAll(); router.push(n.link); } }}
+                            >
+                              <div
+                                className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                                style={{ background: n.isRead ? "transparent" : "#FF7A00" }}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[13px] text-white/90 leading-snug">{n.title}</p>
+                                <p className="text-[11px] text-white/40 mt-0.5">{n.message}</p>
+                              </div>
+                            </div>
+                          ))
                         )}
                       </div>
-                      <div className="text-center">
-                        <h3 className="text-[13px] font-semibold text-white leading-tight">{user?.name || 'Usuário'}</h3>
-                        <p className="text-[11px] text-white/40 mt-0.5">{getRoleLabel(user?.role, user?.position)}</p>
-                      </div>
-                    </div>
-                  </div>
+                      {notifications.filter((n: any) => !n.isRead).length > 0 && (
+                        <>
+                          <div className="mx-7 border-t border-white/[0.06]" />
+                          <button
+                            onClick={markAllRead}
+                            className="flex items-center justify-center gap-2 w-full h-12 text-[12px] text-white/50 hover:text-white/80 transition-colors cursor-pointer"
+                          >
+                            Marcar todas como lidas
+                          </button>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Header */}
+                      <div style={{ padding: "28px 24px 20px" }}>
 
-                  {/* Quick Info */}
-                  <div style={{ padding: "0 28px" }}>
-                    <div className="flex flex-col gap-4">
-                      {[
-                        { icon: Briefcase, label: "Cargo", value: getRoleLabel(user?.role, user?.position) },
-                        { icon: Building2, label: "Empresa", value: "A.CERT" },
-                        { icon: CalendarDays, label: "Membro desde", value: user?.createdAt ? formatDate(user.createdAt) : "—" },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <item.icon size={15} strokeWidth={1.5} color="rgba(255,255,255,0.4)" className="shrink-0" />
-                          <span className="text-[12px] text-white/40 w-20 shrink-0">{item.label}</span>
-                          <span className="text-[13px] text-[#FF7A00] font-medium">{item.value}</span>
+                        <div className="flex flex-col items-center gap-2.5">
+                          <div
+                            className="rounded-full flex items-center justify-center shrink-0 overflow-hidden"
+                            style={{ width: 64, height: 64, background: "#FF7A00" }}
+                          >
+                            {user?.avatar ? (
+                              <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-white text-[22px] font-bold">{user?.name ? getInitials(user.name) : 'U'}</span>
+                            )}
+                          </div>
+                          <div className="text-center">
+                            <h3 className="text-[13px] font-semibold text-white leading-tight">{user?.name || 'Usuário'}</h3>
+                            <p className="text-[11px] text-white/40 mt-0.5">{getRoleLabel(user?.role, user?.position)}</p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Divider */}
-                  <div className="mx-7 my-5 border-t border-white/[0.06]" />
-                  {/* Actions */}
-                  <div className="flex flex-col py-1">
-                    {[
-                      { icon: User, label: "Editar perfil", path: "/dashboard/configuracoes" },
-                      { icon: Lock, label: "Alterar senha", path: "/dashboard/configuracoes" },
-                      { icon: Bell, label: "Notificações", path: "/dashboard/configuracoes" },
-                    ].map((item, i) => (
+                      {/* Quick Info */}
+                      <div style={{ padding: "0 28px" }}>
+                        <div className="flex flex-col gap-4">
+                          {[
+                            { icon: Briefcase, label: "Cargo", value: getRoleLabel(user?.role, user?.position) },
+                            { icon: Building2, label: "Empresa", value: "A.CERT" },
+                            { icon: CalendarDays, label: "Membro desde", value: user?.createdAt ? formatDate(user.createdAt) : "—" },
+                          ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <item.icon size={15} strokeWidth={1.5} color="rgba(255,255,255,0.4)" className="shrink-0" />
+                              <span className="text-[12px] text-white/40 w-20 shrink-0">{item.label}</span>
+                              <span className="text-[13px] text-[#FF7A00] font-medium">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="mx-7 my-5 border-t border-white/[0.06]" />
+                      {/* Actions */}
+                      <div className="flex flex-col py-1">
+                        {[
+                          { icon: User, label: "Editar perfil", path: "/dashboard/configuracoes" },
+                          { icon: Lock, label: "Alterar senha", path: "/dashboard/configuracoes" },
+                          { icon: Bell, label: "Notificações", path: "/dashboard/configuracoes" },
+                        ].map((item, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { closeAll(); router.push(item.path); }}
+                            className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                          >
+                            <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            <ChevronRight size={14} strokeWidth={2} className="text-white/30 shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Divider */}
+                      <div className="mx-7 border-t border-white/[0.06]" />
+
+                      {/* Logout */}
                       <button
-                        key={i}
-                        onClick={() => { closeAll(); router.push(item.path); }}
-                        className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        onClick={() => { closeAll(); onLogout(); }}
+                        className="flex items-center gap-3 w-full h-12 px-7 text-[13px] font-medium text-[#F87171] hover:bg-[#DC2626]/10 transition-colors cursor-pointer"
                       >
-                        <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
-                        <span className="flex-1 text-left">{item.label}</span>
-                        <ChevronRight size={14} strokeWidth={2} className="text-white/30 shrink-0" />
+                        <LogOut size={16} strokeWidth={2} className="shrink-0" />
+                        <span>{t("sidebar.logout")}</span>
                       </button>
-                    ))}
-                  </div>
-
-                  {/* Divider */}
-                  <div className="mx-7 border-t border-white/[0.06]" />
-
-                  {/* Logout */}
-                  <button
-                    onClick={() => { closeAll(); onLogout(); }}
-                    className="flex items-center gap-3 w-full h-12 px-7 text-[13px] font-medium text-[#F87171] hover:bg-[#DC2626]/10 transition-colors cursor-pointer"
-                  >
-                    <LogOut size={16} strokeWidth={2} className="shrink-0" />
-                    <span>{t("sidebar.logout")}</span>
-                  </button>
+                    </>
+                  )}
                 </div>
               </>
             )}

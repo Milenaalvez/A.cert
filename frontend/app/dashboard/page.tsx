@@ -386,12 +386,12 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
             <div className="flex items-center justify-between gap-6">
               <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} hideSearch />
               <div className="flex items-center gap-3 shrink-0">
-                <div className="relative">
-                  <Search size={16} strokeWidth={2} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                <div className="flex items-center gap-2.5 w-[280px] h-[38px] rounded-[7px] bg-surface border border-default px-3.5 focus-within:border-[#FF7A00] transition-colors">
+                  <Search size={15} strokeWidth={2} className="text-muted shrink-0" />
                   <input
                     type="text"
                     placeholder="Buscar dossiê, pessoa ou imóvel..."
-                    className="w-[280px] h-[38px] rounded-[7px] text-[13px] text-primary outline-none border border-default bg-surface pl-9 pr-3 focus:border-[#FF7A00] placeholder:text-muted transition-colors"
+                    className="flex-1 h-full bg-transparent text-[13px] text-primary outline-none placeholder:text-muted"
                   />
                 </div>
                 <button
