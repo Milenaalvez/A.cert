@@ -58,6 +58,11 @@ export default function TicketModal({ open, onClose, user }: {
       if (!r.ok) throw new Error(data.error || "Erro ao enviar");
       setProtocol(data.protocol);
       setSent(true);
+      try {
+        const tickets = JSON.parse(localStorage.getItem("acert_tickets") || "[]");
+        tickets.unshift({ protocol: data.protocol, subject: cat?.label || category, category: cat?.label || "Problema técnico", date: new Date().toISOString() });
+        localStorage.setItem("acert_tickets", JSON.stringify(tickets.slice(0, 10)));
+      } catch {}
     } catch (err: any) {
       setError(err.message || "Erro ao enviar ticket");
     } finally {

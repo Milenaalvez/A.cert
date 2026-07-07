@@ -256,8 +256,9 @@ A Central de Ajuda conta com um sistema completo de documentação:
 - [x] Onboarding modal para novos usuários
 - [x] Tour guiado pela plataforma (Driver.js)
 - [x] Ticket de suporte com envio de email via SMTP
+- [x] Meus Chamados no Card 3 da Central de Ajuda
+- [ ] Credenciais ONR (em desenvolvimento)
 - [ ] Landing page pública com planos e pagamento
 - [ ] Emissão sequencial por pessoa na interface
 - [ ] Relatórios avançados com gráficos comparativos
 - [ ] Webhooks para integração com sistemas externos
-- [ ] Aplicativo mobile (React Native)

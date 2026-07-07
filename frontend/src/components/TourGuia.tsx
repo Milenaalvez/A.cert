@@ -27,7 +27,6 @@ const TOUR_PAGINAS = [
     titulo: "Certidões",
     steps: [
       { element: "[data-tour='certidoes-busca']", title: "Buscar pessoa", description: "Busque e selecione a pessoa para quem você deseja emitir as certidões." },
-      { element: "[data-tour='certidoes-orgaos']", title: "Órgãos disponíveis", description: "Marque os órgãos desejados: Receita Federal, TRF1, TJDFT, TRT, TST, SEFAZ-DF e ONR." },
       { element: "[data-tour='certidoes-consultar']", title: "Iniciar consulta", description: "Clique em Buscar para iniciar a consulta automática. O sistema navegará pelos sites oficiais e capturará os documentos." },
     ],
   },
@@ -36,7 +35,6 @@ const TOUR_PAGINAS = [
     titulo: "Dossiês",
     steps: [
       { element: "[data-tour='dossies-lista']", title: "Lista de dossiês", description: "Todos os seus dossiês aparecem aqui. Acompanhe o status de cada negociação." },
-      { element: "[data-tour='dossies-novo']", title: "Novo Dossiê", description: "Inicie uma nova negociação imobiliária. Defina o tipo de transação, imóvel e participantes." },
     ],
   },
   {
@@ -62,13 +60,11 @@ export function iniciarTour() {
 
   const currentPath = window.location.pathname;
 
-  // If not on tour, redirect to first page
   if (!window.location.search.includes("tour=1")) {
     window.location.href = "/dashboard?tour=1";
     return;
   }
 
-  // Find current page index
   let currentIndex = 0;
   for (let i = 0; i < TOUR_PAGINAS.length; i++) {
     if (currentPath.includes(TOUR_PAGINAS[i].page)) {
@@ -80,32 +76,37 @@ export function iniciarTour() {
   const pagina = TOUR_PAGINAS[currentIndex];
   if (!pagina) return;
 
+  function goNext() {
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < TOUR_PAGINAS.length) {
+      const nextUrl = PAGINAS_URL[TOUR_PAGINAS[nextIndex].page];
+      if (nextUrl) window.location.href = `${nextUrl}?tour=1`;
+    }
+  }
+
   import("driver.js").then(({ driver }) => {
+    const isLast = currentIndex === TOUR_PAGINAS.length - 1;
+    const steps = pagina.steps.map((s, i) => ({
+      element: s.element,
+      popover: {
+        title: `${pagina.titulo} — passo ${i + 1} de ${pagina.steps.length}`,
+        description: i === pagina.steps.length - 1 && !isLast
+          ? `${s.description}\n\nAo concluir, o tour continuará na próxima página.`
+          : s.description,
+        side: (i === 0 ? "right" : "bottom") as any,
+        align: "start" as any,
+      },
+    }));
+
     const driverObj = driver({
       showProgress: true,
       animate: true,
-      allowClose: true,
-      popoverClass: "driverjs-theme",
-      steps: pagina.steps.map((s, i) => ({
-        element: s.element,
-        popover: {
-          title: `${pagina.titulo} — passo ${i + 1} de ${pagina.steps.length}`,
-          description: s.description,
-          side: i === 0 ? "right" : "bottom",
-          align: "start",
-        },
-      })),
-      onDestroyed: () => {
-        // Navigate to next page
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < TOUR_PAGINAS.length) {
-          const nextUrl = PAGINAS_URL[TOUR_PAGINAS[nextIndex].page];
-          if (nextUrl) {
-            window.location.href = `${nextUrl}?tour=1`;
-          }
-        }
+      steps,
+      onDestroyStarted: () => {
+        setTimeout(goNext, 200);
       },
     });
+
     driverObj.drive();
   }).catch(err => console.error("[Tour] Erro:", err));
 }

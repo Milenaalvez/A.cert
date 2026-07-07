@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, BookOpen, ChevronRight, Lightbulb, Mail, Clock, MessageSquare, Zap, MapPin } from "lucide-react";
+import { Search, BookOpen, ChevronRight, Mail, Clock, MessageSquare, Zap, MapPin } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
 import { iniciarTour } from "@/components/TourGuia";
@@ -15,19 +15,6 @@ const cardStyle: React.CSSProperties = {
   minHeight: "420px",
 };
 
-const dicas = [
-  { t: "Preencha todos os dados", d: "Quanto mais completo o cadastro da pessoa, maior a taxa de acerto nas consultas." },
-  { t: "Mantenha o navegador visível", d: "Não minimize o navegador durante as consultas para evitar falhas nos CAPTCHAs." },
-  { t: "Resolva CAPTCHAs rapidamente", d: "Quanto mais rápido resolver, menor a chance de timeout da sessão." },
-  { t: "Verifique os PDFs emitidos", d: "Sempre confira se o documento gerado corresponde à certidão esperada." },
-  { t: "Use a matrícula do imóvel", d: "Ative a opção de matrícula para obter certidões de ônus reais e ficha cadastral." },
-  { t: "Mantenha backups regulares", d: "Faça backup dos dados periodicamente em Configurações → Sistema." },
-  { t: "Atualize permissões da equipe", d: "Revise as permissões dos usuários para garantir que cada um acesse apenas o necessário." },
-  { t: "Acompanhe os relatórios", d: "Use os relatórios para identificar gargalos e melhorar os processos da equipe." },
-  { t: "Consulte a documentação", d: "Em caso de dúvidas, a documentação está sempre disponível nesta central de ajuda." },
-  { t: "Mantenha o sistema atualizado", d: "Verifique regularmente se há novas versões disponíveis da plataforma." },
-];
-
 export default function CentralAjudaPage() {
   return (
     <DashboardLayout>
@@ -39,7 +26,6 @@ export default function CentralAjudaPage() {
 function CentralAjudaContent() {
   const { user } = useUser();
   const router = useRouter();
-  const [expandedDica, setExpandedDica] = useState<number | null>(null);
 
   const [showTicketModal, setShowTicketModal] = useState(false);
 
@@ -154,35 +140,54 @@ function CentralAjudaContent() {
         {/* Dicas e Boas Práticas */}
         <div className="bg-surface border border-default" style={cardStyle}>
           <div className="flex items-start gap-4" style={{ marginBottom: 20 }}>
-            <Lightbulb size={48} strokeWidth={1.5} color="#FF7A00" className="shrink-0" style={{ marginTop: 6 }} />
+            <MessageSquare size={48} strokeWidth={1.5} color="#FF7A00" className="shrink-0" style={{ marginTop: 6 }} />
             <div>
-              <h3 className="text-[16px] font-bold text-primary mb-1">Dicas e Boas Práticas</h3>
-              <p className="text-[13px] text-secondary leading-relaxed">Recomendações para aumentar a eficiência e a taxa de sucesso das emissões de certidões.</p>
+              <h3 className="text-[16px] font-bold text-primary mb-1">Meus Chamados</h3>
+              <p className="text-[13px] text-secondary leading-relaxed">Acompanhe o status dos seus tickets de suporte e abra novos chamados quando precisar de ajuda.</p>
             </div>
           </div>
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
-          <div className="flex flex-col gap-0.5">
-            {dicas.map((item, i) => (
-              <div key={i}>
-                <div
-                  onClick={() => setExpandedDica(expandedDica === i ? null : i)}
-                  className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
-                >
-                  <ChevronRight
-                    size={14}
-                    strokeWidth={2}
-                    className={`text-muted shrink-0 transition-transform duration-150 ${expandedDica === i ? "rotate-90 text-[#FF7A00]" : ""}`}
-                  />
-                  <span className={`text-[12px] transition-colors ${expandedDica === i ? "font-semibold text-[#FF7A00]" : "font-medium text-primary"}`}>{item.t}</span>
+          {(() => {
+            let tickets: any[] = [];
+            try { tickets = JSON.parse(localStorage.getItem("acert_tickets") || "[]"); } catch {}
+            const recentes = tickets.slice(0, 3);
+            if (recentes.length === 0) {
+              return (
+                <div className="flex flex-col items-center py-8 text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ background: "rgba(255,122,0,0.08)" }}>
+                    <MessageSquare size={18} strokeWidth={1.5} color="#FF7A00" />
+                  </div>
+                  <p className="text-[13px] text-muted">Nenhum chamado ainda.</p>
+                  <p className="text-[12px] text-muted mt-1">Abra um chamado e ele aparecerá aqui.</p>
                 </div>
-                {expandedDica === i && (
-                  <p className="text-[11px] text-muted ml-6 mb-1.5 leading-relaxed">{item.d}</p>
-                )}
+              );
+            }
+            return (
+              <div className="flex flex-col gap-2">
+                {recentes.map((t: any, i: number) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-[10px] bg-subtle border border-default">
+                    <div className="w-8 h-8 rounded-[6px] flex items-center justify-center shrink-0 mt-0.5" style={{ background: "rgba(255,122,0,0.12)" }}>
+                      <ChevronRight size={14} strokeWidth={2} color="#FF7A00" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[12px] font-semibold text-primary truncate">{t.subject}</p>
+                        <span className="text-[10px] font-medium text-muted shrink-0">
+                          {new Date(t.date).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted mt-0.5">Protocolo: {t.protocol}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <button style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}>
-            Ver mais dicas <ChevronRight size={14} strokeWidth={2.5} />
+            );
+          })()}
+          <button
+            onClick={() => setShowTicketModal(true)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}
+          >
+            Abrir novo chamado <ChevronRight size={14} strokeWidth={2.5} />
           </button>
         </div>
       </div>
