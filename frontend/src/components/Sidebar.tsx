@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   FolderOpen,
@@ -101,6 +102,7 @@ function formatDate(d: string) {
 export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, sidebarOpen, onToggleSidebar, collapsed, onCollapseChange }: SidebarProps) {
   const { theme, toggleTheme } = useTheme()
   const { t } = useT()
+  const router = useRouter()
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarHover, setSidebarHover] = useState(false)
 
@@ -439,13 +441,13 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                   {/* Actions */}
                   <div className="flex flex-col py-1">
                     {[
-                      { icon: User, label: "Editar perfil" },
-                      { icon: Lock, label: "Alterar senha" },
-                      { icon: Bell, label: "Notificações" },
+                      { icon: User, label: "Editar perfil", path: "/dashboard/configuracoes" },
+                      { icon: Lock, label: "Alterar senha", path: "/dashboard/configuracoes" },
+                      { icon: Bell, label: "Notificações", path: "/dashboard/configuracoes" },
                     ].map((item, i) => (
                       <button
                         key={i}
-                        onClick={closeAll}
+                        onClick={() => { closeAll(); router.push(item.path); }}
                         className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
