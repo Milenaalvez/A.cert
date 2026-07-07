@@ -13,9 +13,10 @@ interface SearchResult {
 interface PageHeaderProps {
   title: string;
   subtitle: string;
+  hideSearch?: boolean;
 }
 
-export function PageHeader({ title, subtitle }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, hideSearch }: PageHeaderProps) {
   const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -81,12 +82,13 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-6">
-      <div className="flex flex-col gap-1.5 shrink-0">
-        <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">{title}</h1>
-        <p className="text-[14px] text-secondary leading-relaxed">{subtitle}</p>
-      </div>
-      <div className="relative w-[420px]">
+      <div className="flex items-center justify-between gap-6">
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">{title}</h1>
+          <p className="text-[14px] text-secondary leading-relaxed">{subtitle}</p>
+        </div>
+        {!hideSearch && (
+          <div className="relative w-[420px]">
         <div className={`flex items-center h-11 px-4 rounded-[10px] border transition-colors ${focused ? "border-[#FF7A00] bg-surface" : "border-[var(--border-default)] bg-surface"}`}>
           <Search size={17} strokeWidth={2} className={`shrink-0 transition-colors ${focused ? "text-[#FF7A00]" : "text-muted"}`} />
           <input
@@ -122,7 +124,8 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
             <div className="px-4 py-1.5 text-[13px] text-muted">Nenhum resultado encontrado</div>
           </div>
         )}
+        </div>
+        )}
       </div>
-    </div>
   );
 }

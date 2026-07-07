@@ -19,6 +19,7 @@ import {
   Settings,
   Star,
   RefreshCw,
+  Search,
   Activity,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -383,13 +384,23 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
         <div style={{ marginBottom: 32 }}>
           <div style={{ marginTop: 24 }}>
             <div className="flex items-center justify-between gap-6">
-              <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
-              <button
-                onClick={() => { fetchDashboard(); fetchDossiers(); }}
-                className="h-9 px-4 rounded-[7px] text-[12px] font-medium text-secondary border border-default bg-transparent hover:border-[#FF7A00] hover:text-[#FF7A00] transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw size={13} /> Atualizar métricas
-              </button>
+              <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} hideSearch />
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="relative">
+                  <Search size={16} strokeWidth={2} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar dossiê, pessoa ou imóvel..."
+                    className="w-[280px] h-[38px] rounded-[7px] text-[13px] text-primary outline-none border border-default bg-surface pl-9 pr-3 focus:border-[#FF7A00] placeholder:text-muted transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={() => { fetchDashboard(); fetchDossiers(); }}
+                  className="h-[38px] px-4 rounded-[7px] text-[12px] font-medium text-secondary border border-default bg-transparent hover:border-[#FF7A00] hover:text-[#FF7A00] transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <RefreshCw size={13} /> Atualizar métricas
+                </button>
+              </div>
             </div>
           </div>
         </div>
