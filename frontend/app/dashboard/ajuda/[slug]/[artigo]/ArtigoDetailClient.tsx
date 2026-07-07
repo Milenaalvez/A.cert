@@ -23,6 +23,9 @@ const ICONE_ARTIGO: Record<string, any> = {
   "conhecendo-dashboard": Monitor,
   "navegando-sistema": Compass,
   "fluxo-completo": RefreshCw,
+  "o-que-e-dossie": FolderOpen, "criando-dossie": FolderOpen, "tipos-transacao": FolderOpen,
+  "editando-dossie": FolderOpen, "status-dossie": FolderOpen, "excluindo-dossie": FolderOpen,
+  "gerenciando-participantes": Users,
 };
 
 const ICO_MAP: Record<string, any> = {
