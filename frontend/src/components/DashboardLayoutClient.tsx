@@ -33,18 +33,22 @@ const PAGE_HREF: Record<string, string> = {
 
 export default function DashboardLayoutClient({
   children,
-  initialCollapsed,
 }: {
   children: React.ReactNode;
-  initialCollapsed: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useT();
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [collapsed, setCollapsed] = useState(true);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNovoDossie, setShowNovoDossie] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCollapsed(localStorage.getItem("acert-sidebar-collapsed") === "true");
+    }
+  }, []);
 
   useEffect(() => {
     if (pathname && pathname.startsWith("/dashboard")) {
