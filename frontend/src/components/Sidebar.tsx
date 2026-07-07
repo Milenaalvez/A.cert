@@ -417,7 +417,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                         )}
                       </div>
                       <div className="text-center">
-                        <h3 className="text-[14px] font-bold text-white leading-tight">{user?.name || 'Usuário'}</h3>
+                        <h3 className="text-[13px] font-semibold text-white leading-tight">{user?.name || 'Usuário'}</h3>
                         <p className="text-[11px] text-white/40 mt-0.5">{getRoleLabel(user?.role, user?.position)}</p>
                       </div>
                     </div>
