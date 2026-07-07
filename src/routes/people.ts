@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
 
     if (!showArchived) {
       whereParts.push('p.archived_at IS NULL');
+      whereParts.push('p.deleted_at IS NULL');
     }
     if (type === 'fisica') {
       whereParts.push('p.cpf IS NOT NULL');
@@ -55,8 +56,8 @@ router.get('/', async (req, res) => {
 
     const stats = await queryRawOne(`
       SELECT
-        (SELECT COUNT(*) FROM persons WHERE archived_at IS NULL) as total,
-        (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND EXISTS (SELECT 1 FROM dossier_participants dp WHERE dp.person_id = p.id)) as vinculadas
+        (SELECT COUNT(*) FROM persons WHERE archived_at IS NULL AND deleted_at IS NULL) as total,
+        (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND p.deleted_at IS NULL AND EXISTS (SELECT 1 FROM dossier_participants dp WHERE dp.person_id = p.id)) as vinculadas
     `);
 
     const result = await Promise.all(people.map(async p => {
