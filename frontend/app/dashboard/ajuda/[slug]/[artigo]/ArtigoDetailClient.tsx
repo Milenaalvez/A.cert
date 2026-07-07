@@ -68,9 +68,9 @@ export default function ArtigoDetailClient() {
                 </div>
                 <div>
                   <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-2">{artigo.subtitulo}</p>
-                  <h1 className="text-[28px] font-bold text-primary tracking-tight leading-tight">{artigo.titulo}</h1>
-                  <p className="text-[14px] text-secondary mt-3 leading-relaxed max-w-[640px]">{artigo.descricao}</p>
-                  <div className="flex items-center gap-5 mt-6">
+                  <h1 className="text-[28px] font-bold text-primary tracking-tight leading-tight mb-3">{artigo.titulo}</h1>
+                  <p className="text-[14px] text-secondary leading-relaxed max-w-[680px] mb-4">{artigo.descricao}</p>
+                  <div className="flex items-center gap-5 pb-3 border-b border-default">
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: NIVEL_COR[artigo.nivel] }}>
                       <span className="w-2 h-2 rounded-full" style={{ background: NIVEL_COR[artigo.nivel] }} />
                       {artigo.nivel === "iniciante" ? "Iniciante" : artigo.nivel === "intermediario" ? "Intermediário" : "Avançado"}
