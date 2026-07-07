@@ -67,9 +67,9 @@ export default function ArtigoDetailClient() {
                   {React.createElement(ICONE_ARTIGO[artigo.slug] || Rocket, { size: 26, strokeWidth: 1.5, color: "#FF7A00" })}
                 </div>
                 <div>
-                  <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-2">{artigo.subtitulo}</p>
-                  <h1 className="text-[28px] font-bold text-primary tracking-tight leading-tight mb-3">{artigo.titulo}</h1>
-                  <p className="text-[14px] text-secondary leading-relaxed max-w-[680px] mb-4">{artigo.descricao}</p>
+                  <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider" style={{ marginBottom: 8 }}>{artigo.subtitulo}</p>
+                  <h1 className="text-[26px] font-bold text-primary tracking-tight leading-tight" style={{ marginBottom: 12 }}>{artigo.titulo}</h1>
+                  <p className="text-[13px] text-secondary leading-relaxed max-w-[680px]" style={{ marginBottom: 20 }}>{artigo.descricao}</p>
                   <div className="flex items-center gap-5 pb-3 border-b border-default">
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: NIVEL_COR[artigo.nivel] }}>
                       <span className="w-2 h-2 rounded-full" style={{ background: NIVEL_COR[artigo.nivel] }} />
@@ -93,37 +93,37 @@ export default function ArtigoDetailClient() {
                 <div key={i}>
                   {bloco.tipo === "hero" && (
                     <div>
-                      <h2 className="text-[18px] font-bold text-primary mb-3">{bloco.titulo}</h2>
-                      <p className="text-[15px] text-secondary leading-relaxed">{bloco.texto}</p>
+                      <h2 className="text-[16px] font-bold text-primary mb-3">{bloco.titulo}</h2>
+                      <p className="text-[14px] text-secondary leading-relaxed">{bloco.texto}</p>
                     </div>
                   )}
                   {bloco.tipo === "azul" && (
                     <div className="p-6 rounded-[16px]" style={{ ...CARD_BLUE, padding: "28px 32px" }}>
-                      <h3 className="text-[16px] font-bold text-primary mb-3">{bloco.titulo}</h3>
-                      <p className="text-[14px] text-secondary leading-relaxed">{bloco.texto}</p>
+                      <h3 className="text-[15px] font-bold text-primary mb-3">{bloco.titulo}</h3>
+                      <p className="text-[13px] text-secondary leading-relaxed">{bloco.texto}</p>
                     </div>
                   )}
                   {bloco.tipo === "verde" && (
                     <div className="p-6 rounded-[16px]" style={{ ...CARD_GREEN, padding: "28px 32px" }}>
                       <div className="flex items-center gap-3 mb-3">
                         <CheckCircle2 size={20} strokeWidth={1.5} color="#059669" />
-                        <h3 className="text-[16px] font-bold text-primary">{bloco.titulo}</h3>
+                        <h3 className="text-[15px] font-bold text-primary">{bloco.titulo}</h3>
                       </div>
-                      <p className="text-[14px] text-secondary leading-relaxed">{bloco.texto}</p>
+                      <p className="text-[13px] text-secondary leading-relaxed">{bloco.texto}</p>
                     </div>
                   )}
                   {bloco.tipo === "amarelo" && (
                     <div className="p-6 rounded-[16px]" style={{ ...CARD_AMBER, padding: "28px 32px" }}>
                       <div className="flex items-center gap-3 mb-4">
                         <Lightbulb size={20} strokeWidth={1.5} color="#D97706" />
-                        <h3 className="text-[16px] font-bold text-primary">{bloco.titulo}</h3>
+                        <h3 className="text-[15px] font-bold text-primary">{bloco.titulo}</h3>
                       </div>
-                      <p className="text-[14px] text-secondary leading-relaxed whitespace-pre-line">{bloco.texto}</p>
+                      <p className="text-[13px] text-secondary leading-relaxed whitespace-pre-line">{bloco.texto}</p>
                     </div>
                   )}
                   {bloco.tipo === "timeline" && (
                     <div>
-                      <h3 className="text-[18px] font-bold text-primary mb-6">{bloco.titulo}</h3>
+                      <h3 className="text-[16px] font-bold text-primary" style={{ marginBottom: 32 }}>{bloco.titulo}</h3>
                       <div className="flex flex-col">
                         {bloco.passos?.map((passo, j) => (
                           <div key={j} className="flex items-start gap-5 relative">
@@ -136,8 +136,8 @@ export default function ArtigoDetailClient() {
                               )}
                             </div>
                             <div className="min-w-0 pb-8">
-                              <h4 className="text-[15px] font-semibold text-primary">{passo.titulo}</h4>
-                              <p className="text-[14px] text-secondary mt-1.5 leading-relaxed">{passo.texto}</p>
+                              <h4 className="text-[14px] font-semibold text-primary">{passo.titulo}</h4>
+                              <p className="text-[13px] text-secondary mt-1.5 leading-relaxed">{passo.texto}</p>
                             </div>
                           </div>
                         ))}
@@ -148,13 +148,13 @@ export default function ArtigoDetailClient() {
                     <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "28px 32px" }}>
                       <div className="flex items-center gap-3 mb-5">
                         <MessageCircleQuestion size={20} strokeWidth={1.5} color="#FF7A00" />
-                        <h3 className="text-[16px] font-bold text-primary">{bloco.titulo}</h3>
+                        <h3 className="text-[15px] font-bold text-primary">{bloco.titulo}</h3>
                       </div>
                       <div className="flex flex-col gap-4">
                         {bloco.problemas?.map((p, j) => (
                           <div key={j}>
-                            <p className="text-[14px] font-semibold text-primary">"{p.q}"</p>
-                            <p className="text-[14px] text-secondary mt-1.5">{p.a}</p>
+                            <p className="text-[13px] font-semibold text-primary">"{p.q}"</p>
+                            <p className="text-[13px] text-secondary mt-1.5">{p.a}</p>
                           </div>
                         ))}
                       </div>
