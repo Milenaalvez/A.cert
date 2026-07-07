@@ -138,10 +138,15 @@ export default function AjudaDetailClient() {
                     <div
                       key={i}
                       onClick={() => art.slug && router.push(`/dashboard/ajuda/${cat.slug}/${art.slug}`)}
-                      className={`flex items-center gap-2 py-1.5 ${art.slug ? "cursor-pointer hover:bg-subtle rounded-[4px] -mx-1 px-1 transition-colors" : ""}`}
+                      className={`flex items-center justify-between gap-2 py-1.5 px-1.5 -mx-1.5 rounded-[6px] transition-colors ${art.slug ? "cursor-pointer hover:bg-subtle group" : ""}`}
                     >
-                      <ChevronRight size={12} strokeWidth={2} className="text-muted shrink-0" />
-                      <span className="text-[12px] text-primary">{art.titulo}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ChevronRight size={12} strokeWidth={2} className="text-muted shrink-0 group-hover:text-[#FF7A00] transition-colors" />
+                        <span className="text-[12px] text-primary group-hover:text-[#FF7A00] transition-colors truncate">{art.titulo}</span>
+                      </div>
+                      {art.slug && (
+                        <span className="text-[10px] text-muted shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">Ler artigo</span>
+                      )}
                     </div>
                   ))}
                 </div>
