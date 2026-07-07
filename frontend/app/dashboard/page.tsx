@@ -32,6 +32,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { DonutChart } from "@/components/DonutChart";
 import DossierEditModal from "@/components/DossierEditModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import OnboardingModal from "@/components/OnboardingModal";
 
 interface DashboardData {
   dossiersCriados: number;
@@ -214,6 +215,19 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
   const [editDossier, setEditDossier] = useState<Dossier | null>(null);
   const [confirmPriority, setConfirmPriority] = useState<Dossier | null>(null);
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("acert_onboarding_seen")) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  function closeOnboarding() {
+    localStorage.setItem("acert_onboarding_seen", "1");
+    setShowOnboarding(false);
+  }
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -793,6 +807,9 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
         onCancel={() => setConfirmPriority(null)}
         onClose={() => setConfirmPriority(null)}
       />
+
+      {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
+
     </>
   );
 }
