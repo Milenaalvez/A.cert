@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Rocket, CheckCircle2, Lightbulb, MessageCircleQuestion } from "lucide-react";
+import { ChevronLeft, ChevronRight, Rocket, CheckCircle2, Lightbulb, MessageCircleQuestion, Lock, Monitor, Compass, RefreshCw, BarChart3, FolderOpen, Search, User, BookOpen, Building2, Settings, Users, ScrollText, Clock, FileText, MessageSquare } from "lucide-react";
 import { artigosDetalhes, categorias } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
@@ -18,9 +18,26 @@ const CARD_BLUE = { background: "rgba(59,130,246,0.06)", border: "1px solid rgba
 const CARD_GREEN = { background: "rgba(5,150,105,0.06)", border: "1px solid rgba(5,150,105,0.12)" };
 const CARD_AMBER = { background: "rgba(217,119,6,0.06)", border: "1px solid rgba(217,119,6,0.12)" };
 const ICONE_ARTIGO: Record<string, any> = {
-  "bem-vindo-a-acert": Rocket, "primeiro-acesso": Rocket, "conhecendo-dashboard": Rocket,
-  "navegando-sistema": Rocket, "fluxo-completo": Rocket,
+  "bem-vindo-a-acert": Rocket,
+  "primeiro-acesso": Lock,
+  "conhecendo-dashboard": Monitor,
+  "navegando-sistema": Compass,
+  "fluxo-completo": RefreshCw,
 };
+
+const ICO_MAP: Record<string, any> = {
+  "🚀": Rocket, "🔐": Lock, "🖥": Monitor, "🧭": Compass, "🔄": RefreshCw,
+  "📊": BarChart3, "📂": FolderOpen, "🔍": Search, "👤": User, "📚": BookOpen,
+  "🏢": Building2, "⚙": Settings, "👥": Users, "📜": ScrollText, "⏳": Clock,
+  "📄": FileText, "✅": CheckCircle2, "⚠": Lightbulb, "💡": Lightbulb, "❓": MessageCircleQuestion,
+  "💙": CheckCircle2, "🎉": Rocket, "🎫": MessageSquare, "🔗": FileText, "🔑": Lock, "📖": BookOpen,
+};
+
+function Ico({ code, size = 32, className = "" }: { code: string; size?: number; className?: string }) {
+  const icon = ICO_MAP[code];
+  if (!icon) return <span className={className} style={{ fontSize: size, lineHeight: 1 }}>{code}</span>;
+  return React.createElement(icon, { size, strokeWidth: 1.5, color: "#FF7A00", className: `${className} shrink-0` });
+}
 
 export default function ArtigoDetailClient() {
   const { slug, artigo: artigoSlug } = useParams<{ slug: string; artigo: string }>();
@@ -168,12 +185,12 @@ export default function ArtigoDetailClient() {
                   {bloco.tipo === "area" && (
                     <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "24px 28px" }}>
                       <div className="flex items-start gap-4">
-                        <span className="text-[32px] leading-none shrink-0 mt-0.5">{bloco.icone}</span>
+                        {bloco.icone && <Ico code={bloco.icone} size={28} className="mt-0.5" />}
                         <div className="min-w-0">
-                          <h3 className="text-[15px] font-bold text-primary mb-2">{bloco.titulo}</h3>
-                          <p className="text-[13px] text-secondary leading-relaxed mb-3">{bloco.texto}</p>
+                          <h3 className="text-[15px] font-bold text-primary" style={{ marginBottom: 10 }}>{bloco.titulo}</h3>
+                          <p className="text-[13px] text-secondary leading-relaxed" style={{ marginBottom: 12 }}>{bloco.texto}</p>
                           {bloco.itens && bloco.itens.length > 0 && (
-                            <div className="flex flex-col gap-1 mt-2">
+                            <div className="flex flex-col gap-1">
                               {bloco.itens.map((item, j) => (
                                 <div key={j} className="flex items-center gap-2 text-[12px] text-muted">
                                   <span className="w-1 h-1 rounded-full bg-muted shrink-0" />
@@ -188,25 +205,24 @@ export default function ArtigoDetailClient() {
                   )}
                   {bloco.tipo === "fluxograma" && (
                     <div className="p-8 rounded-[16px] bg-surface border border-default" style={{ padding: "32px 36px" }}>
-                      <h3 className="text-[16px] font-bold text-primary text-center mb-6">{bloco.titulo}</h3>
+                      <h3 className="text-[16px] font-bold text-primary text-center" style={{ marginBottom: 28 }}>{bloco.titulo}</h3>
                       <div className="flex flex-col items-center gap-3">
                         {bloco.passos?.map((passo, j) => (
-                          <div key={j} className="flex flex-col items-center" style={{ width: "100%", maxWidth: 280 }}>
+                          <div key={j} className="flex flex-col items-center" style={{ width: "100%", maxWidth: 300 }}>
                             <div
                               className="w-full flex items-center gap-4 p-4 rounded-[12px] cursor-pointer border border-default hover:border-[#FF7A00]/30 transition-all bg-surface"
                               onClick={() => passo.slug && router.push(`/dashboard/ajuda/${slug}/${passo.slug}`)}
                             >
-                              <div className="w-10 h-10 rounded-[8px] flex items-center justify-center shrink-0 text-[18px]" style={{ background: "rgba(255,122,0,0.12)" }}>
-                                {passo.icone}
+                              <div className="w-10 h-10 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
+                                {passo.icone && <Ico code={passo.icone} size={18} />}
                               </div>
                               <div>
                                 <p className="text-[14px] font-semibold text-primary">{passo.titulo}</p>
                               </div>
                             </div>
                             {j < (bloco.passos?.length || 0) - 1 && (
-                              <div className="flex flex-col items-center" style={{ marginTop: 4, marginBottom: 4 }}>
-                                <div style={{ width: 2, height: 28, background: "rgba(255,122,0,0.25)" }} />
-                                <span style={{ color: "var(--text-muted)", fontSize: 14, marginTop: 2 }}>▼</span>
+                              <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 6 }}>
+                                <div style={{ width: 2, height: 24, background: "rgba(255,122,0,0.25)" }} />
                               </div>
                             )}
                           </div>
@@ -216,10 +232,10 @@ export default function ArtigoDetailClient() {
                   )}
                   {bloco.tipo === "etapa" && (
                     <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "24px 28px" }}>
-                      <div className="flex items-start gap-4 mb-3">
-                        <span className="text-[32px] leading-none shrink-0 mt-0.5">{bloco.icone}</span>
+                      <div className="flex items-start gap-4" style={{ marginBottom: 12 }}>
+                        {bloco.icone && <Ico code={bloco.icone} size={28} className="mt-0.5" />}
                         <div className="min-w-0">
-                          <h3 className="text-[15px] font-bold text-primary mb-2">{bloco.titulo}</h3>
+                          <h3 className="text-[15px] font-bold text-primary" style={{ marginBottom: 10 }}>{bloco.titulo}</h3>
                           <p className="text-[13px] text-secondary leading-relaxed">{bloco.texto}</p>
                           {bloco.link && (
                             <button
