@@ -142,7 +142,7 @@ function DashboardInner({
         activePage={activePage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
-        user={user ? { name: user.name || '', position: user.position, role: user.role, avatar: user.avatar } : undefined}
+        user={user ? { name: user.name || '', position: user.position, role: user.role, avatar: user.avatar, createdAt: user.created_at } : undefined}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         collapsed={collapsed}

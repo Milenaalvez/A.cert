@@ -17,6 +17,13 @@ import {
   Moon,
   Trash2,
   Building2,
+  Pencil,
+  Briefcase,
+  User,
+  Lock,
+  Bell,
+  ChevronRight,
+  CalendarDays,
 } from "lucide-react"
 import { useTheme } from "@/contexts/ThemeContext"
 import { useT } from "@/i18n/useT"
@@ -28,7 +35,7 @@ interface SidebarProps {
   onNavigate: (page: string) => void
   onLogout: () => void
   onNovoDossie?: () => void
-  user?: { name: string; position?: string | null; role?: string; avatar?: string | null } | null
+  user?: { name: string; position?: string | null; role?: string; avatar?: string | null; createdAt?: string } | null
   sidebarOpen: boolean
   onToggleSidebar: () => void
   collapsed: boolean
@@ -71,6 +78,11 @@ function saveSectionState(state: Record<string, boolean>) {
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function formatDate(d: string) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /* ── Component ─────────────────────────────────────── */
@@ -360,56 +372,93 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
             {profileOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => closeAll()} />
-                <div className={`absolute ${collapsed ? "left-full ml-2 bottom-0 w-56" : "bottom-full left-0 right-0 mb-1.5"} rounded-xl shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-200`}
+                <div
+                  className="fixed z-20 animate-in fade-in slide-in-from-bottom-2 duration-200"
                   style={{
-                    background: "#0B1220",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    width: 340,
+                    bottom: 96,
+                    left: collapsed ? 92 : 274,
+                    maxHeight: "calc(100vh - 32px)",
+                    borderRadius: 22,
+                    background: "linear-gradient(180deg, #0B1220 0%, #07101F 100%)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: "0 25px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)",
                   }}
                 >
-                  <div className="pt-5 pb-2 px-4 text-[9px] font-semibold uppercase tracking-widest text-[#F0F3FA]/50">
-                    Trocar conta
-                  </div>
-                  <button
-                    onClick={() => { closeAll(); onLogout() }}
-                    className="flex items-center gap-3 w-full h-12 px-4 text-[13px] text-[#F0F3FA] hover:bg-[#FF7A00]/20 hover:text-white transition-all duration-200"
-                  >
-                    <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold overflow-hidden" style={{ background: "#FF7A00" }}>
-                      {user?.avatar ? (
-                        <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left min-w-0 leading-tight">
-                      <div className="truncate text-[13px] font-medium">{user?.name || 'Usuário'}</div>
-                      <div className="text-[10px] text-[#F0F3FA]/60 truncate">{user?.position || user?.role || 'Colaborador'}</div>
-                    </div>
-                  </button>
-                  <div className="h-px bg-white/[0.06] mx-4 my-3" />
-                  <div className="pb-2 px-4 text-[9px] font-semibold uppercase tracking-widest text-[#F0F3FA]/50">
-                    Visualizar como
-                  </div>
-                  {["Corretora", "Administradora"].map((role) => (
+                  {/* Header */}
+                  <div style={{ padding: "32px 28px 24px", position: "relative" }}>
                     <button
-                      key={role}
-                      onClick={() => { closeAll(); onLogout() }}
-                      className="flex items-center gap-3 w-full h-12 px-4 text-[13px] text-[#F0F3FA] hover:bg-[#FF7A00]/20 hover:text-white transition-all duration-200"
+                      onClick={() => { closeAll(); }}
+                      style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
-                      <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold overflow-hidden" style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        <span>{role.slice(0, 2).toUpperCase()}</span>
-                      </div>
-                      <div className="flex-1 text-left min-w-0 leading-tight">
-                        <div className="truncate text-[13px] font-medium">{role}</div>
-                        <div className="text-[10px] text-[#F0F3FA]/60 truncate">Visualizar como</div>
-                      </div>
+                      <Pencil size={14} strokeWidth={1.5} color="rgba(255,255,255,0.6)" />
                     </button>
-                  ))}
-                  <div className="h-px bg-white/[0.06] mx-4 my-3" />
+
+                    <div className="flex flex-col items-center gap-3">
+                      <div
+                        className="rounded-full flex items-center justify-center shrink-0 overflow-hidden"
+                        style={{ width: 72, height: 72, background: "#FF7A00" }}
+                      >
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-[26px] font-bold">{user?.name ? getInitials(user.name) : 'U'}</span>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-[18px] font-bold text-white">{user?.name || 'Usuário'}</h3>
+                        <p className="text-[13px] text-white/50 mt-0.5">{user?.position || user?.role || 'Colaborador'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Info */}
+                  <div style={{ padding: "0 28px" }}>
+                    <div className="flex flex-col gap-4">
+                      {[
+                        { icon: Briefcase, label: "Cargo", value: user?.position || user?.role || "—" },
+                        { icon: Building2, label: "Empresa", value: "A.CERT" },
+                        { icon: CalendarDays, label: "Membro desde", value: user?.createdAt ? formatDate(user.createdAt) : "—" },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <item.icon size={15} strokeWidth={1.5} color="rgba(255,255,255,0.4)" className="shrink-0" />
+                          <span className="text-[12px] text-white/40 w-20 shrink-0">{item.label}</span>
+                          <span className="text-[13px] text-white/80 font-medium">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="mx-7 my-5 border-t border-white/[0.06]" />
+                  {/* Actions */}
+                  <div className="flex flex-col py-1">
+                    {[
+                      { icon: User, label: "Editar perfil" },
+                      { icon: Lock, label: "Alterar senha" },
+                      { icon: Bell, label: "Notificações" },
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={closeAll}
+                        className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                      >
+                        <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        <ChevronRight size={14} strokeWidth={2} className="text-white/30 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="mx-7 border-t border-white/[0.06]" />
+
+                  {/* Logout */}
                   <button
-                    onClick={() => { closeAll(); onLogout() }}
-                    className="flex items-center gap-3 w-full h-12 px-4 text-[13px] font-medium text-[#F0F3FA] hover:bg-[#D94A4A] hover:text-white transition-all duration-200"
+                    onClick={() => { closeAll(); onLogout(); }}
+                    className="flex items-center gap-3 w-full h-12 px-7 text-[13px] font-medium text-[#F87171] hover:bg-[#DC2626]/10 transition-colors cursor-pointer"
                   >
-                    <LogOut size={18} strokeWidth={2} className="shrink-0" />
+                    <LogOut size={16} strokeWidth={2} className="shrink-0" />
                     <span>{t("sidebar.logout")}</span>
                   </button>
                 </div>
