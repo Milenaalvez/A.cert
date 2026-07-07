@@ -61,16 +61,16 @@ export default function ArtigoDetailClient() {
 
         <div className="flex gap-10">
           <div className="flex-1 min-w-0">
-            <div style={{ marginBottom: 36 }}>
-              <div className="flex items-start gap-5">
+            <div style={{ marginBottom: 48 }}>
+              <div className="flex items-start gap-6">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
                   {React.createElement(ICONE_ARTIGO[artigo.slug] || Rocket, { size: 26, strokeWidth: 1.5, color: "#FF7A00" })}
                 </div>
                 <div>
-                  <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-1">{artigo.subtitulo}</p>
+                  <p className="text-[12px] font-semibold text-[#FF7A00] uppercase tracking-wider mb-2">{artigo.subtitulo}</p>
                   <h1 className="text-[28px] font-bold text-primary tracking-tight leading-tight">{artigo.titulo}</h1>
-                  <p className="text-[14px] text-secondary mt-2 leading-relaxed max-w-[640px]">{artigo.descricao}</p>
-                  <div className="flex items-center gap-4 mt-4">
+                  <p className="text-[14px] text-secondary mt-3 leading-relaxed max-w-[640px]">{artigo.descricao}</p>
+                  <div className="flex items-center gap-4 mt-5">
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: NIVEL_COR[artigo.nivel] }}>
                       <span className="w-2 h-2 rounded-full" style={{ background: NIVEL_COR[artigo.nivel] }} />
                       {artigo.nivel === "iniciante" ? "Iniciante" : artigo.nivel === "intermediario" ? "Intermediário" : "Avançado"}
