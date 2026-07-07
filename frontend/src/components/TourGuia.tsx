@@ -37,6 +37,13 @@ const TOUR_STEPS: TourStep[] = [
 ];
 
 export async function iniciarTour() {
+  if (typeof window === "undefined") return;
+
+  if (window.location.pathname !== "/dashboard") {
+    window.location.href = "/dashboard?tour=1";
+    return;
+  }
+
   try {
     const { driver } = await import("driver.js");
     const driverObj = driver({

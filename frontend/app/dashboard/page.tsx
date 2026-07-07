@@ -33,6 +33,7 @@ import { DonutChart } from "@/components/DonutChart";
 import DossierEditModal from "@/components/DossierEditModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import OnboardingModal from "@/components/OnboardingModal";
+import { iniciarTour } from "@/components/TourGuia";
 
 interface DashboardData {
   dossiersCriados: number;
@@ -202,6 +203,13 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
   const router = useRouter();
   const { t } = useT();
   const { user } = useUser();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("tour=1")) {
+      const timer = setTimeout(() => iniciarTour(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
