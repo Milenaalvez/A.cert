@@ -115,33 +115,37 @@ export default function AjudaDetailClient() {
         </div>
 
         {/* Category grid */}
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 gap-6">
           {categoriasFiltradas.map((cat) => {
             const nivel = NIVEL[cat.slug] || { cor: "#059669", label: "Iniciante" };
             return (
               <div
                 key={cat.slug}
                 className="bg-surface border border-default rounded-[14px] hover:border-[#FF7A00]/20 hover:shadow-sm transition-all duration-200 cursor-pointer group"
-                style={{ padding: "24px 28px 28px" }}
+                style={{ padding: "28px 32px 22px" }}
               >
-                <div className="flex items-start gap-4 mb-3">
+                <div className="flex items-start gap-5" style={{ marginBottom: 18 }}>
                   {React.createElement(ICONE_MAP[cat.slug] || BookOpen, { size: 32, strokeWidth: 1.5, color: "#FF7A00", className: "shrink-0", style: { marginTop: 2 } })}
                   <div className="min-w-0">
                     <h3 className="text-[16px] font-bold text-primary group-hover:text-[#FF7A00] transition-colors">{cat.titulo}</h3>
-                    <p className="text-[13px] text-muted mt-1 leading-relaxed">{cat.descricao}</p>
+                    <p className="text-[13px] text-muted mt-1.5 leading-relaxed">{cat.descricao}</p>
                   </div>
                 </div>
-                <div className="border-t border-default mb-3" />
-                <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2">Artigos</p>
-                <div className="flex flex-col gap-0.5 mb-3">
+                <div className="border-t border-default" style={{ marginBottom: 22 }} />
+                <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2.5">Artigos</p>
+                <div className="flex flex-col gap-1" style={{ marginBottom: 40 }}>
                   {cat.artigos.map((art, i) => (
-                    <div key={i} className="flex items-center gap-2 py-1">
+                    <div
+                      key={i}
+                      onClick={() => art.slug && router.push(`/dashboard/ajuda/${cat.slug}/${art.slug}`)}
+                      className={`flex items-center gap-2 py-1.5 ${art.slug ? "cursor-pointer hover:bg-subtle rounded-[4px] -mx-1 px-1 transition-colors" : ""}`}
+                    >
                       <ChevronRight size={12} strokeWidth={2} className="text-muted shrink-0" />
                       <span className="text-[12px] text-primary">{art.titulo}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center justify-between pt-3" style={{ borderTop: "1px solid var(--border-light)" }}>
+                <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--border-light)" }}>
                   <span className="text-[13px] text-secondary font-medium">{cat.artigos.length} artigos</span>
                   <span className="text-[13px] font-semibold" style={{ color: nivel.cor }}>⬤ {nivel.label}</span>
                 </div>
