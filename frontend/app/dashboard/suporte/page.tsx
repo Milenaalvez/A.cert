@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, BookOpen, ChevronRight, CirclePlay, Lightbulb, Mail, Clock, MessageSquare, Zap, X, SendHorizontal, CheckCircle2, AlertTriangle } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useUser } from "@/contexts/UserContext";
@@ -70,6 +71,7 @@ export default function CentralAjudaPage() {
 
 function CentralAjudaContent() {
   const { user } = useUser();
+  const router = useRouter();
   const [expandedDoc, setExpandedDoc] = useState<number | null>(null);
   const [expandedVideo, setExpandedVideo] = useState<number | null>(null);
   const [expandedDica, setExpandedDica] = useState<number | null>(null);
@@ -191,33 +193,39 @@ function CentralAjudaContent() {
           <div className="flex items-start gap-4" style={{ marginBottom: 20 }}>
             <CirclePlay size={48} strokeWidth={1.5} color="#FF7A00" className="shrink-0" style={{ marginTop: 6 }} />
             <div>
-              <h3 className="text-[16px] font-bold text-primary mb-1">Vídeo Tutoriais</h3>
-              <p className="text-[13px] text-secondary leading-relaxed">Aprenda a utilizar a A.CERT com vídeos rápidos e objetivos. Ideal para quem prefere acompanhar cada processo na prática.</p>
+              <h3 className="text-[16px] font-bold text-primary mb-1">Tutoriais</h3>
+              <p className="text-[13px] text-secondary leading-relaxed">Guias passo a passo com vídeos e textos explicativos. Aprenda cada funcionalidade na prática.</p>
             </div>
           </div>
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
           <div className="flex flex-col gap-0.5">
-            {videos.map((item, i) => (
-              <div key={i}>
-                <div
-                  onClick={() => setExpandedVideo(expandedVideo === i ? null : i)}
-                  className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
-                >
-                  <ChevronRight
-                    size={14}
-                    strokeWidth={2}
-                    className={`text-muted shrink-0 transition-transform duration-150 ${expandedVideo === i ? "rotate-90 text-[#FF7A00]" : ""}`}
-                  />
-                  <span className={`text-[12px] transition-colors ${expandedVideo === i ? "font-semibold text-[#FF7A00]" : "font-medium text-primary"}`}>{item.t}</span>
-                </div>
-                {expandedVideo === i && (
-                  <p className="text-[11px] text-muted ml-6 mb-1.5 leading-relaxed">{item.d}</p>
-                )}
+            {[
+              { t: "Conhecendo a plataforma", slug: "conhecendo-plataforma" },
+              { t: "Criando seu primeiro dossiê", slug: "criando-primeiro-dossie" },
+              { t: "Cadastrando pessoas", slug: "cadastrando-pessoas" },
+              { t: "Cadastrando imóveis", slug: "cadastrando-imoveis" },
+              { t: "Emitindo certidões", slug: "emitindo-certidoes" },
+              { t: "Gerenciando pessoas e imóveis", slug: "gerenciando-pessoas-imoveis" },
+              { t: "Gerando e baixando PDFs", slug: "gerando-baixando-pdfs" },
+              { t: "Relatórios e exportações", slug: "relatorios-exportacoes" },
+              { t: "Configurações e usuários", slug: "configuracoes-usuarios" },
+              { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
+            ].map((item, i) => (
+              <div
+                key={i}
+                onClick={() => router.push(`/dashboard/ajuda/${item.slug}`)}
+                className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
+              >
+                <ChevronRight size={14} strokeWidth={2} className="text-muted shrink-0" />
+                <span className="text-[12px] font-medium text-primary">{item.t}</span>
               </div>
             ))}
           </div>
-          <button style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}>
-            Assistir todos os vídeos <ChevronRight size={14} strokeWidth={2.5} />
+          <button
+            onClick={() => router.push("/dashboard/ajuda/conhecendo-plataforma")}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}
+          >
+            Ver todos os tutoriais <ChevronRight size={14} strokeWidth={2.5} />
           </button>
         </div>
 

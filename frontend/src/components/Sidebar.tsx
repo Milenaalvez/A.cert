@@ -442,7 +442,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 <>
                   <div className="flex-1 flex flex-col items-start text-left min-w-0">
                     <div className="flex items-center gap-2 w-full">
-                      <span className="text-[17px] font-semibold text-white truncate">{user?.name || 'Usuário'}</span>
+                      <span className="text-[14px] font-semibold text-white truncate">{user?.name || 'Usuário'}</span>
                       {notifCount > 0 && (
                         <span className="shrink-0 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center" style={{ minWidth: 18, height: 18, padding: "0 5px" }}>{notifCount}</span>
                       )}
@@ -557,20 +557,18 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                       </div>
 
                       {/* Quick Info */}
-                      <div style={{ padding: "0 28px" }}>
-                        <div className="flex flex-col gap-4">
+                      <div className="flex flex-col py-1" style={{ padding: "0 28px" }}>
                           {[
                             { icon: Briefcase, label: "Cargo", value: getRoleLabel(user?.role, user?.position) },
                             { icon: Building2, label: "Empresa", value: "A.CERT" },
                             { icon: CalendarDays, label: "Membro desde", value: user?.createdAt ? formatDate(user.createdAt) : "—" },
                           ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                              <item.icon size={15} strokeWidth={1.5} color="rgba(255,255,255,0.4)" className="shrink-0" />
-                              <span className="text-[12px] text-white/40 w-20 shrink-0">{item.label}</span>
-                              <span className="text-[13px] text-[#FF7A00] font-medium">{item.value}</span>
+                            <div key={i} className="flex items-center gap-3 h-12">
+                              <item.icon size={16} strokeWidth={1.5} className="shrink-0" style={{ color: "rgba(255,255,255,0.4)" }} />
+                              <span className="text-[12px] text-white/40">{item.label}</span>
+                              <span className="flex-1 text-right text-[13px] text-[#FF7A00] font-medium">{item.value}</span>
                             </div>
                           ))}
-                        </div>
                       </div>
 
                       {/* Divider */}
