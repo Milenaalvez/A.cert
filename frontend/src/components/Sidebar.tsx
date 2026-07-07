@@ -428,7 +428,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                         <div key={i} className="flex items-center gap-3">
                           <item.icon size={15} strokeWidth={1.5} color="rgba(255,255,255,0.4)" className="shrink-0" />
                           <span className="text-[12px] text-white/40 w-20 shrink-0">{item.label}</span>
-                          <span className="text-[13px] text-white/80 font-medium">{item.value}</span>
+                          <span className="text-[13px] text-[#FF7A00] font-medium">{item.value}</span>
                         </div>
                       ))}
                     </div>
