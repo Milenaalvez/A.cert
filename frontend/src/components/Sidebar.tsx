@@ -573,11 +573,11 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                         {[
                           { icon: User, label: "Editar perfil", path: "/dashboard/configuracoes" },
                           { icon: Lock, label: "Alterar senha", path: "/dashboard/configuracoes" },
-                          { icon: Bell, label: "Notificações", path: "/dashboard/configuracoes" },
+                          { icon: Bell, label: "Notificações", action: () => { loadNotifications(); setShowNotifications(true); } },
                         ].map((item, i) => (
                           <button
                             key={i}
-                            onClick={() => { closeAll(); router.push(item.path); }}
+                            onClick={() => { if ("action" in item) (item as any).action(); else { closeAll(); router.push((item as any).path); } }}
                             className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
                           >
                             <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
