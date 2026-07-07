@@ -76,6 +76,17 @@ function saveSectionState(state: Record<string, boolean>) {
 
 /* ── Helpers ───────────────────────────────────────── */
 
+function getRoleLabel(role?: string, position?: string | null): string {
+  if (position) return position;
+  const map: Record<string, string> = {
+    ADMIN: "Administrador",
+    ANALYST: "Analista",
+    EMPLOYEE: "Corretor",
+    EMPLOYE: "Corretor",
+  };
+  return map[role || ""] || role || "Colaborador";
+}
+
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
@@ -358,7 +369,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 <>
                   <div className="flex-1 flex flex-col items-start text-left min-w-0">
                     <span className="text-[17px] font-semibold text-white truncate w-full">{user?.name || 'Usuário'}</span>
-                    <span className="text-[12px] text-white/60 truncate w-full">{user?.position || user?.role || 'Colaborador'}</span>
+                    <span className="text-[12px] text-white/60 truncate w-full">{getRoleLabel(user?.role, user?.position)}</span>
                   </div>
                   <ChevronDown
                     size={16}
@@ -386,28 +397,28 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                   }}
                 >
                   {/* Header */}
-                  <div style={{ padding: "32px 28px 24px", position: "relative" }}>
+                  <div style={{ padding: "28px 24px 20px", position: "relative" }}>
                     <button
                       onClick={() => { closeAll(); }}
-                      style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ position: "absolute", top: 16, right: 16, width: 28, height: 28, borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
-                      <Pencil size={14} strokeWidth={1.5} color="rgba(255,255,255,0.6)" />
+                      <Pencil size={12} strokeWidth={1.5} color="rgba(255,255,255,0.4)" />
                     </button>
 
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center gap-2.5">
                       <div
                         className="rounded-full flex items-center justify-center shrink-0 overflow-hidden"
-                        style={{ width: 72, height: 72, background: "#FF7A00" }}
+                        style={{ width: 64, height: 64, background: "#FF7A00" }}
                       >
                         {user?.avatar ? (
                           <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-white text-[26px] font-bold">{user?.name ? getInitials(user.name) : 'U'}</span>
+                          <span className="text-white text-[22px] font-bold">{user?.name ? getInitials(user.name) : 'U'}</span>
                         )}
                       </div>
                       <div className="text-center">
-                        <h3 className="text-[18px] font-bold text-white">{user?.name || 'Usuário'}</h3>
-                        <p className="text-[13px] text-white/50 mt-0.5">{user?.position || user?.role || 'Colaborador'}</p>
+                        <h3 className="text-[14px] font-bold text-white leading-tight">{user?.name || 'Usuário'}</h3>
+                        <p className="text-[11px] text-white/40 mt-0.5">{getRoleLabel(user?.role, user?.position)}</p>
                       </div>
                     </div>
                   </div>
@@ -416,7 +427,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                   <div style={{ padding: "0 28px" }}>
                     <div className="flex flex-col gap-4">
                       {[
-                        { icon: Briefcase, label: "Cargo", value: user?.position || user?.role || "—" },
+                        { icon: Briefcase, label: "Cargo", value: getRoleLabel(user?.role, user?.position) },
                         { icon: Building2, label: "Empresa", value: "A.CERT" },
                         { icon: CalendarDays, label: "Membro desde", value: user?.createdAt ? formatDate(user.createdAt) : "—" },
                       ].map((item, i) => (
