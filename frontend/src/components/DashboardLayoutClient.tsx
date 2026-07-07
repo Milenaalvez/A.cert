@@ -31,6 +31,8 @@ const PAGE_HREF: Record<string, string> = {
   trash: "/dashboard/trash",
 };
 
+let sidebarCollapsedCache: boolean | null = null;
+
 export default function DashboardLayoutClient({
   children,
 }: {
@@ -39,16 +41,17 @@ export default function DashboardLayoutClient({
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useT();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (sidebarCollapsedCache !== null) return sidebarCollapsedCache;
+    if (typeof window !== "undefined") {
+      sidebarCollapsedCache = localStorage.getItem("acert-sidebar-collapsed") === "true";
+      return sidebarCollapsedCache;
+    }
+    return true;
+  });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNovoDossie, setShowNovoDossie] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setCollapsed(localStorage.getItem("acert-sidebar-collapsed") === "true");
-    }
-  }, []);
 
   useEffect(() => {
     if (pathname && pathname.startsWith("/dashboard")) {
@@ -60,6 +63,7 @@ export default function DashboardLayoutClient({
 
   const handleCollapseChange = useCallback((v: boolean) => {
     setCollapsed(v);
+    sidebarCollapsedCache = v;
     localStorage.setItem("acert-sidebar-collapsed", v ? "true" : "false");
     document.cookie = `sidebar-collapsed=${v ? "true" : "false"}; path=/; max-age=31536000; SameSite=Lax`;
   }, []);
