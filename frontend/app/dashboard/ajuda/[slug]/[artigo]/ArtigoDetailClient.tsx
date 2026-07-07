@@ -242,7 +242,7 @@ export default function ArtigoDetailClient() {
                           <p className="text-[13px] text-secondary leading-relaxed">{bloco.texto}</p>
                           {bloco.link && (
                             <button
-                              onClick={() => router.push(`/dashboard/ajuda/${slug}/${bloco.link!.slug}`)}
+                              onClick={() => router.push(`/dashboard/ajuda/${bloco.link!.categoria || slug}/${bloco.link!.slug}`)}
                               className="inline-flex items-center gap-1.5 mt-3 text-[13px] font-medium text-[#FF7A00] hover:text-[#E06900] transition-colors cursor-pointer bg-transparent border-none"
                             >
                               {bloco.link.titulo}
