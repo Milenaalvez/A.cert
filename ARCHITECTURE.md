@@ -61,6 +61,8 @@ A.CERT é uma plataforma SaaS que automatiza a emissão de certidões imobiliár
 | Gráficos | Recharts | Nativos React, responsivos |
 | Ícones | Lucide React | Leves, tree-shakeable |
 | Internacionalização | next-intl | Suporte a múltiplos idiomas |
+| Tour Guiado | Driver.js | Tooltips sobrepostos na interface real |
+| Onboarding | Componente React nativo | 5 cards sequenciais com animação slide |
 
 ---
 
@@ -154,6 +156,32 @@ interface IConnector {
 
 ---
 
+## Sistema de Documentação
+
+A Central de Ajuda conta com um sistema completo de documentação:
+
+- **10 categorias** com **65+ artigos** detalhados
+- Cada artigo possui estrutura modular com blocos de conteúdo: hero, cards coloridos (azul/verde/amarelo), timeline com linhas conectoras, fluxograma visual, problemas comuns e links "Veja também"
+- Dados armazenados em `frontend/src/data/ajuda.ts` — sem necessidade de banco de dados
+- Páginas geradas estaticamente via `generateStaticParams()` — performance máxima
+- Suporte a vídeos embed Loom em cada artigo
+- Navegação entre artigos com links cross-categoria
+- Busca global com filtro em tempo real
+
+### Sistema de Notificações
+
+- Tabela `notifications` no PostgreSQL vinculada a `users`
+- API REST com 4 endpoints: listar, contar, marcar lida, marcar todas
+- Badge no sidebar com contagem em tempo real (polling a cada 30s)
+- Função `createNotification()` para triggers de eventos do sistema
+
+### Onboarding e Tour
+
+- **Onboarding modal**: 5 cards sequenciais com animação slide, barra de progresso, destaque Central de Ajuda. Exibido uma vez no primeiro acesso
+- **Tour guiado**: Tooltips sobrepostos na interface real usando Driver.js, apontando para elementos via `data-tour` attributes
+
+---
+
 ## Banco de Dados
 
 ### Modelagem (21 tabelas)
@@ -183,6 +211,7 @@ interface IConnector {
 - `activities` — Log de atividades geral
 - `support_tickets` — Tickets de suporte
 - `audit_log` — Log de auditoria com informações detalhadas
+- `notifications` — Notificações do usuário (título, mensagem, tipo, status de leitura, link)
 
 **Relacionamentos:**
 - `property_owners` — Vínculo pessoa-imóvel
@@ -222,6 +251,11 @@ interface IConnector {
 
 ## Próximos Passos
 
+- [x] Central de Ajuda com documentação completa (65+ artigos, 10 categorias)
+- [x] Sistema de notificações com badge no sidebar
+- [x] Onboarding modal para novos usuários
+- [x] Tour guiado pela plataforma (Driver.js)
+- [x] Ticket de suporte com envio de email via SMTP
 - [ ] Landing page pública com planos e pagamento
 - [ ] Emissão sequencial por pessoa na interface
 - [ ] Relatórios avançados com gráficos comparativos

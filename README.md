@@ -32,7 +32,33 @@ Plataforma SaaS para automação de certidões imobiliárias com gestão interna
   - **Sistema** — versão, ambiente, banco, uptime
 - Relatórios exportáveis
 - Lixeira com restauração de registros excluídos
-- Busca global com contagem de participantes
+- Busca global no topo de cada página
+- Onboarding interativo no primeiro acesso (5 cards sequenciais com progresso)
+- Tour guiado pela plataforma com tooltips sobrepostos (Driver.js)
+
+### Central de Ajuda
+- 3 cards interativos: Documentação, Tour pela Plataforma e Dicas
+- Barra de busca com filtro em tempo real
+- Modal de ticket de suporte com 6 categorias de motivo
+- Envio de tickets via SMTP para o email de suporte
+- Barra de contato horizontal com email, horário e tempo de resposta
+
+### Sistema de Documentação
+- **65+ artigos** em **10 categorias** (Primeiros passos, Dossiês, Pessoas, Emissão de Certidões, Órgãos Integrados, Dossiês e PDF, Relatórios, Usuários e Empresas, Configurações, Lixeira)
+- Páginas de artigo com: breadcrumb, ícone Lucide, badges de nível/tempo/data
+- Cards coloridos (azul, verde, amarelo), timeline com linhas conectoras, fluxograma visual
+- Espaço para embed de vídeos Loom
+- Navegação entre artigos ("Próximo artigo" / "Voltar")
+- Links cross-categoria ("Veja também")
+- Busca global na documentação com filtros
+- Scroll spy na barra lateral (opcional)
+
+### Sistema de Notificações
+- Badge com contagem no avatar do sidebar (colapsado e expandido)
+- Atualização automática a cada 30 segundos
+- API REST completa: listar, contar, marcar como lida, marcar todas
+- Modal de notificações integrado ao dropdown do perfil
+- Integração futura com eventos do sistema (certidão emitida, dossiê concluído, etc.)
 
 ### Multiempresas
 - Cadastro de empresas pelo administrador
@@ -69,6 +95,7 @@ Plataforma SaaS para automação de certidões imobiliárias com gestão interna
 | **Email** | Nodemailer (SMTP) |
 | **Ícones** | Lucide React |
 | **Gráficos** | Recharts |
+| **Tour Guiado** | Driver.js |
 
 ---
 
@@ -107,6 +134,7 @@ A.CERT/
 │   │   ├── settings.ts                   # /api/settings
 │   │   ├── team.ts                       # /api/team
 │   │   ├── support.ts                    # /api/support
+│   │   ├── notifications.ts              # /api/notifications
 │   │   └── trash.ts                      # /api/trash
 │   ├── middleware/
 │   │   └── auth.ts                       # JWT middleware
@@ -133,10 +161,17 @@ A.CERT/
 │   │       ├── usuarios/                 # Gestão de usuários
 │   │       ├── configuracoes/            # Configurações do sistema
 │   │       ├── suporte/                  # Central de ajuda e tickets
+│   │       │   └── ajuda/                # Sistema de documentação
+│   │       │       └── [slug]/           # Páginas de categoria e artigo
 │   │       └── trash/                    # Lixeira
 │   └── src/
 │       ├── components/                   # Componentes React reutilizáveis
+│       │   ├── OnboardingModal.tsx       # Modal de boas-vindas (5 cards)
+│       │   ├── TicketModal.tsx           # Modal de ticket reutilizável
+│       │   └── TourGuia.tsx              # Tour guiado com Driver.js
 │       ├── contexts/                     # Contextos (User, Theme, Settings, Locale)
+│       ├── data/
+│       │   └── ajuda.ts                  # 65+ artigos de documentação
 │       ├── lib/
 │       │   └── api.ts                    # Cliente de autenticação
 │       └── i18n/                         # Internacionalização
@@ -161,6 +196,7 @@ A.CERT/
 | **Autenticação** | `users`, `user_sessions`, `user_permissions` |
 | **Multiempresas** | `companies`, `company_settings` |
 | **RH** | `departments`, `positions`, `justifications`, `time_records`, `team_activities` |
+| **Notificações** | `notifications` |
 | **Sistema** | `organs`, `certificate_templates`, `settings`, `support_tickets`, `audit_log`, `activities` |
 | **Relacionamentos** | `property_owners`, `property_timeline`, `person_relationships` |
 
@@ -317,6 +353,14 @@ O build compila TypeScript (`tsc`), gera o Prisma Client, e cria o export estát
 |---|---|---|
 | `POST` | `/api/support/ticket` | Criar ticket de suporte |
 | `GET` | `/api/support/ticket/:protocol` | Consultar ticket |
+
+### Notificações
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/notifications` | Listar notificações do usuário |
+| `GET` | `/api/notifications/count` | Contagem de não lidas |
+| `PUT` | `/api/notifications/:id/read` | Marcar como lida |
+| `POST` | `/api/notifications/mark-all-read` | Marcar todas como lidas |
 
 ---
 
