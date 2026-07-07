@@ -47,7 +47,6 @@ function CentralAjudaContent() {
   const { user } = useUser();
   const router = useRouter();
   const [expandedDica, setExpandedDica] = useState<number | null>(null);
-  const [docSearch, setDocSearch] = useState("");
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketName, setTicketName] = useState("");
@@ -135,30 +134,20 @@ function CentralAjudaContent() {
               <p className="text-[13px] text-secondary leading-relaxed">Guias completos, manuais e artigos para utilizar todos os recursos da A.CERT.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 h-9 rounded-[8px] bg-surface border border-default px-3 mb-4 focus-within:border-[#FF7A00] transition-colors">
-            <Search size={14} strokeWidth={2} className="text-muted shrink-0" />
-            <input
-              type="text"
-              placeholder="Buscar na documentação..."
-              value={docSearch}
-              onChange={e => setDocSearch(e.target.value)}
-              className="flex-1 h-full bg-transparent text-[12px] text-primary outline-none placeholder:text-muted"
-            />
-          </div>
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
           <div className="flex flex-col gap-0.5">
             {[
-              { t: "Primeiros passos", slug: "conhecendo-plataforma" },
-              { t: "Criando um dossiê", slug: "criando-primeiro-dossie" },
-              { t: "Pessoas e participantes", slug: "cadastrando-pessoas" },
-              { t: "Imóveis", slug: "cadastrando-imoveis" },
-              { t: "Emissão de certidões", slug: "emitindo-certidoes" },
-              { t: "Dossiês e PDF", slug: "gerando-baixando-pdfs" },
-              { t: "Relatórios", slug: "relatorios-exportacoes" },
-              { t: "Empresas e usuários", slug: "configuracoes-usuarios" },
+              { t: "Primeiros passos", slug: "primeiros-passos" },
+              { t: "Dossiês", slug: "dossies" },
+              { t: "Pessoas", slug: "pessoas" },
+              { t: "Emissão de Certidões", slug: "emissao-certidoes" },
+              { t: "Órgãos Integrados", slug: "orgaos-integrados" },
+              { t: "Dossiês e PDF", slug: "dossies-pdf" },
+              { t: "Relatórios", slug: "relatorios" },
+              { t: "Usuários e Empresas", slug: "usuarios-empresas" },
+              { t: "Configurações", slug: "configuracoes" },
               { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
-              { t: "Configurações", slug: "configuracoes-usuarios" },
-            ].filter(item => !docSearch || item.t.toLowerCase().includes(docSearch.toLowerCase())).map((item, i) => (
+            ].map((item, i) => (
               <div
                 key={i}
                 onClick={() => router.push(`/dashboard/ajuda/${item.slug}`)}
@@ -189,15 +178,15 @@ function CentralAjudaContent() {
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
           <div className="flex flex-col gap-0.5">
             {[
-              { t: "Conhecendo a plataforma", slug: "conhecendo-plataforma" },
-              { t: "Criando seu primeiro dossiê", slug: "criando-primeiro-dossie" },
-              { t: "Cadastrando pessoas", slug: "cadastrando-pessoas" },
-              { t: "Cadastrando imóveis", slug: "cadastrando-imoveis" },
-              { t: "Emitindo certidões", slug: "emitindo-certidoes" },
-              { t: "Gerenciando pessoas e imóveis", slug: "gerenciando-pessoas-imoveis" },
-              { t: "Gerando e baixando PDFs", slug: "gerando-baixando-pdfs" },
-              { t: "Relatórios e exportações", slug: "relatorios-exportacoes" },
-              { t: "Configurações e usuários", slug: "configuracoes-usuarios" },
+              { t: "Primeiros passos", slug: "primeiros-passos" },
+              { t: "Dossiês", slug: "dossies" },
+              { t: "Pessoas", slug: "pessoas" },
+              { t: "Emissão de Certidões", slug: "emissao-certidoes" },
+              { t: "Órgãos Integrados", slug: "orgaos-integrados" },
+              { t: "Dossiês e PDF", slug: "dossies-pdf" },
+              { t: "Relatórios", slug: "relatorios" },
+              { t: "Usuários e Empresas", slug: "usuarios-empresas" },
+              { t: "Configurações", slug: "configuracoes" },
               { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
             ].map((item, i) => (
               <div

@@ -1,8 +1,8 @@
-import { guias } from "@/data/ajuda";
+import { categorias } from "@/data/ajuda";
 import AjudaDetailClient from "./AjudaDetailClient";
 
 export function generateStaticParams() {
-  return guias.map(g => ({ slug: g.slug }));
+  return categorias.map(c => ({ slug: c.slug }));
 }
 
 export default function AjudaDetailPage() {
