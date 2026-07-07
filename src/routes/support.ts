@@ -33,12 +33,24 @@ router.post('/ticket', async (req, res) => {
 
     (async () => {
       try {
-        const dbSettings = await prisma.setting.findMany({ where: { key: { startsWith: 'smtp_' } } });
         const envSettings = getSmtpEnv();
+        const dbSettings = await prisma.setting.findMany({ where: { key: { startsWith: 'smtp_' } } });
         const smtp: Record<string, string> = { ...envSettings };
         for (const s of dbSettings) smtp[s.key] = s.value;
 
-        if (!smtp.smtp_host || !smtp.smtp_user || !smtp.smtp_pass) return;
+        console.log('[Suporte] SMTP config:', {
+          host: smtp.smtp_host,
+          port: smtp.smtp_port,
+          user: smtp.smtp_user,
+          passProvided: !!smtp.smtp_pass,
+          from: smtp.smtp_from_email || smtp.smtp_user,
+          dbKeys: dbSettings.map(s => s.key),
+        });
+
+        if (!smtp.smtp_host || !smtp.smtp_user || !smtp.smtp_pass) {
+          console.error('[Suporte] SMTP incompleto — email NAO enviado');
+          return;
+        }
 
         const nodemailer = await import('nodemailer');
         const transporter = nodemailer.default.createTransport({
@@ -48,7 +60,7 @@ router.post('/ticket', async (req, res) => {
           auth: { user: smtp.smtp_user, pass: smtp.smtp_pass },
         });
 
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
           from: `"${smtp.smtp_from_name}" <${smtp.smtp_from_email || smtp.smtp_user}>`,
           to: 'suporte@acert.tech',
           replyTo: email,
@@ -61,6 +73,8 @@ router.post('/ticket', async (req, res) => {
 <p><strong>Mensagem:</strong></p>
 <p>${message}</p>`,
         });
+
+        console.log('[Suporte] Email enviado:', info.messageId);
       } catch (err) {
         console.error('[Suporte] Erro ao enviar email:', err);
       }
