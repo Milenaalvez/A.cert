@@ -22,32 +22,6 @@ const cardStyle: React.CSSProperties = {
   minHeight: "420px",
 };
 
-const docs = [
-  { t: "Primeiros passos", d: "Aprenda a configurar sua conta e conhecer a plataforma." },
-  { t: "Criando um dossiê", d: "Como criar, editar e gerenciar dossiês imobiliários." },
-  { t: "Pessoas e participantes", d: "Cadastro de pessoas, proprietários, compradores, vendedores, locadores e locatários." },
-  { t: "Imóveis", d: "Cadastro de imóveis, matrículas, vínculos e informações cadastrais." },
-  { t: "Emissão de certidões", d: "Como consultar órgãos públicos, interpretar status e emitir certidões." },
-  { t: "Dossiês e PDF", d: "Geração, organização e download dos dossiês completos." },
-  { t: "Relatórios", d: "Como gerar, filtrar e exportar relatórios do sistema." },
-  { t: "Empresas e usuários", d: "Gestão de empresas, equipes, permissões e acessos." },
-  { t: "Lixeira e recuperação", d: "Como restaurar dossiês e itens excluídos acidentalmente." },
-  { t: "Configurações", d: "Personalização do sistema, integrações, segurança e preferências." },
-];
-
-const videos = [
-  { t: "Conhecendo a plataforma", d: "Visão geral da interface e dos principais recursos." },
-  { t: "Criando seu primeiro dossiê", d: "Passo a passo completo da criação de um dossiê." },
-  { t: "Cadastrando pessoas", d: "Como cadastrar pessoas físicas e jurídicas no sistema." },
-  { t: "Cadastrando imóveis", d: "Registro de imóveis, matrículas e endereços." },
-  { t: "Emitindo certidões", d: "Como iniciar consultas e acompanhar o andamento das emissões." },
-  { t: "Gerenciando pessoas e imóveis", d: "Cadastro, edição e vínculo de participantes e imóveis." },
-  { t: "Gerando e baixando PDFs", d: "Como visualizar, gerar novamente e baixar os dossiês." },
-  { t: "Relatórios e exportações", d: "Como gerar relatórios e exportar dados do sistema." },
-  { t: "Configurações e usuários", d: "Gerenciamento de usuários, permissões e configurações do sistema." },
-  { t: "Lixeira e recuperação", d: "Como recuperar dossiês e registros excluídos acidentalmente." },
-];
-
 const dicas = [
   { t: "Preencha todos os dados", d: "Quanto mais completo o cadastro da pessoa, maior a taxa de acerto nas consultas." },
   { t: "Mantenha o navegador visível", d: "Não minimize o navegador durante as consultas para evitar falhas nos CAPTCHAs." },
@@ -72,8 +46,6 @@ export default function CentralAjudaPage() {
 function CentralAjudaContent() {
   const { user } = useUser();
   const router = useRouter();
-  const [expandedDoc, setExpandedDoc] = useState<number | null>(null);
-  const [expandedVideo, setExpandedVideo] = useState<number | null>(null);
   const [expandedDica, setExpandedDica] = useState<number | null>(null);
 
   const [showTicketModal, setShowTicketModal] = useState(false);
@@ -164,26 +136,32 @@ function CentralAjudaContent() {
           </div>
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
           <div className="flex flex-col gap-0.5">
-            {docs.map((item, i) => (
-              <div key={i}>
-                <div
-                  onClick={() => setExpandedDoc(expandedDoc === i ? null : i)}
-                  className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
-                >
-                  <ChevronRight
-                    size={14}
-                    strokeWidth={2}
-                    className={`text-muted shrink-0 transition-transform duration-150 ${expandedDoc === i ? "rotate-90 text-[#FF7A00]" : ""}`}
-                  />
-                  <span className={`text-[12px] transition-colors ${expandedDoc === i ? "font-semibold text-[#FF7A00]" : "font-medium text-primary"}`}>{item.t}</span>
-                </div>
-                {expandedDoc === i && (
-                  <p className="text-[11px] text-muted ml-6 mb-1.5 leading-relaxed">{item.d}</p>
-                )}
+            {[
+              { t: "Primeiros passos", slug: "conhecendo-plataforma" },
+              { t: "Criando um dossiê", slug: "criando-primeiro-dossie" },
+              { t: "Pessoas e participantes", slug: "cadastrando-pessoas" },
+              { t: "Imóveis", slug: "cadastrando-imoveis" },
+              { t: "Emissão de certidões", slug: "emitindo-certidoes" },
+              { t: "Dossiês e PDF", slug: "gerando-baixando-pdfs" },
+              { t: "Relatórios", slug: "relatorios-exportacoes" },
+              { t: "Empresas e usuários", slug: "configuracoes-usuarios" },
+              { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
+              { t: "Configurações", slug: "configuracoes-usuarios" },
+            ].map((item, i) => (
+              <div
+                key={i}
+                onClick={() => router.push(`/dashboard/ajuda/${item.slug}`)}
+                className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
+              >
+                <ChevronRight size={14} strokeWidth={2} className="text-muted shrink-0" />
+                <span className="text-[12px] font-medium text-primary">{item.t}</span>
               </div>
             ))}
           </div>
-          <button style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}>
+          <button
+            onClick={() => router.push("/dashboard/ajuda/conhecendo-plataforma")}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}
+          >
             Acessar documentação <ChevronRight size={14} strokeWidth={2.5} />
           </button>
         </div>
