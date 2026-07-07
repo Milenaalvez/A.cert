@@ -49,6 +49,7 @@ model User {
   teamActivities TeamActivity[]
   auditLogs      AuditLog[]
   sessions       UserSession[]
+  notifications  Notification[]
 
   @@map("users")
 }

@@ -1,28 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, ScrollText, FileText, CheckCircle2, X, HelpCircle } from "lucide-react";
+import { LayoutDashboard, FileText, ScrollText, FileDown, CheckCircle2, X, HelpCircle } from "lucide-react";
 
 const CARDS = [
   {
-    icon: FolderOpen,
+    icon: LayoutDashboard,
     titulo: "Bem-vinda à A.CERT",
     descricao: "Automatize a emissão de certidões imobiliárias, organize dossiês e acompanhe todo o processo em um único lugar.",
   },
   {
-    icon: FolderOpen,
+    icon: FileText,
     titulo: "Crie dossiês completos",
     descricao: "Organize vendas e locações com múltiplos participantes, imóveis e documentos em poucos cliques.",
   },
   {
     icon: ScrollText,
     titulo: "Emita certidões automaticamente",
-    descricao: "Consulte diversos órgãos públicos e acompanhe o andamento das emissões em tempo real.",
+    descricao: "Consulte diversos órgãos públicos simultaneamente e acompanhe o andamento das emissões em tempo real.",
   },
   {
-    icon: FileText,
+    icon: FileDown,
     titulo: "Gere dossiês profissionais",
-    descricao: "Reúna todas as certidões em um único PDF organizado e pronto para compartilhamento.",
+    descricao: "Reúna todas as certidões em um único PDF organizado por participante e pronto para compartilhar.",
   },
   {
     icon: CheckCircle2,
@@ -56,13 +56,12 @@ export default function OnboardingModal({ onClose }: { onClose: () => void }) {
       <div
         className="relative w-full bg-surface border border-default animate-in fade-in zoom-in-95 duration-200 flex flex-col items-center text-center"
         style={{
-          maxWidth: 480,
-          borderRadius: 16,
-          boxShadow: "0 25px 80px rgba(0,0,0,0.35)",
-          padding: "36px 44px 32px",
+          maxWidth: 500,
+          borderRadius: 20,
+          boxShadow: "0 25px 80px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04)",
+          padding: "44px 48px 36px",
         }}
       >
-        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 rounded-[6px] flex items-center justify-center text-muted hover:text-primary hover:bg-subtle transition-colors cursor-pointer border-none bg-transparent"
@@ -70,33 +69,28 @@ export default function OnboardingModal({ onClose }: { onClose: () => void }) {
           <X size={16} strokeWidth={2} />
         </button>
 
-        {/* Icon */}
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center shrink-0 mb-5"
-          style={{ background: "rgba(255,122,0,0.12)" }}
+          className="rounded-full flex items-center justify-center shrink-0 mb-6"
+          style={{ width: 72, height: 72, background: "linear-gradient(135deg, rgba(255,122,0,0.15), rgba(255,122,0,0.05))" }}
         >
-          <Icon size={32} strokeWidth={1.5} color="#FF7A00" />
+          <Icon size={34} strokeWidth={1.5} color="#FF7A00" />
         </div>
 
-        {/* Content with slide animation */}
-        <div style={{ overflow: "hidden", width: "100%" }}>
+        <div style={{ overflow: "hidden", width: "100%", minHeight: 90 }}>
           <div
             key={step}
             className="flex flex-col items-center"
-            style={{
-              animation: `slide-${dir} 250ms ease-out`,
-            }}
+            style={{ animation: `slide-${dir} 250ms ease-out` }}
           >
-            <h2 className="text-[20px] font-bold text-primary mb-2">{card.titulo}</h2>
-            <p className="text-[14px] text-secondary leading-relaxed mb-6 max-w-[380px]">{card.descricao}</p>
+            <h2 className="text-[22px] font-bold text-primary mb-3">{card.titulo}</h2>
+            <p className="text-[14px] text-secondary leading-relaxed max-w-[380px]">{card.descricao}</p>
           </div>
         </div>
 
-        {/* Central de Ajuda highlight (last card only) */}
         {last && (
           <div
-            className="flex items-start gap-3 w-full text-left mb-6 rounded-[10px]"
-            style={{ background: "rgba(255,122,0,0.06)", border: "1px solid rgba(255,122,0,0.12)", padding: "14px 16px" }}
+            className="flex items-start gap-3 w-full text-left mt-7 mb-6 rounded-[12px]"
+            style={{ background: "rgba(255,122,0,0.05)", border: "1px solid rgba(255,122,0,0.10)", padding: "14px 16px" }}
           >
             <HelpCircle size={18} strokeWidth={1.5} color="#FF7A00" className="shrink-0 mt-0.5" />
             <div>
@@ -108,24 +102,19 @@ export default function OnboardingModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="flex items-center gap-3 w-full mb-6" style={{ maxWidth: 280 }}>
-          <span className="text-[11px] text-muted shrink-0">{step + 1} de {CARDS.length}</span>
+        <div className="flex items-center gap-3 w-full mt-7 mb-7" style={{ maxWidth: 220 }}>
+          <span className="text-[11px] font-medium text-muted shrink-0">{step + 1} de {CARDS.length}</span>
           <div className="flex-1 flex items-center gap-1.5">
             {CARDS.map((_, i) => (
               <div
                 key={i}
                 className="flex-1 rounded-full transition-all duration-300"
-                style={{
-                  height: 4,
-                  background: i <= step ? "#FF7A00" : "var(--bg-elevated)",
-                }}
+                style={{ height: 4, background: i <= step ? "#FF7A00" : "var(--bg-elevated)" }}
               />
             ))}
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex items-center justify-between w-full">
           {!last ? (
             <>
@@ -137,7 +126,7 @@ export default function OnboardingModal({ onClose }: { onClose: () => void }) {
               </button>
               <button
                 onClick={next}
-                className="flex items-center justify-center gap-2 h-[42px] px-6 rounded-[8px] bg-[#FF7A00] text-white text-[13px] font-semibold hover:bg-[#E06900] transition-all duration-150 border-none cursor-pointer"
+                className="flex items-center justify-center gap-2 h-11 px-7 rounded-[10px] bg-[#FF7A00] text-white text-[14px] font-semibold hover:bg-[#E06900] transition-all duration-150 border-none cursor-pointer"
               >
                 Próximo
               </button>
@@ -145,7 +134,7 @@ export default function OnboardingModal({ onClose }: { onClose: () => void }) {
           ) : (
             <button
               onClick={next}
-              className="flex items-center justify-center gap-2 w-full h-[42px] rounded-[8px] bg-[#FF7A00] text-white text-[13px] font-semibold hover:bg-[#E06900] transition-all duration-150 border-none cursor-pointer"
+              className="flex items-center justify-center gap-2 w-full h-11 rounded-[10px] bg-[#FF7A00] text-white text-[14px] font-semibold hover:bg-[#E06900] transition-all duration-150 border-none cursor-pointer"
             >
               Acessar Dashboard
             </button>
