@@ -47,6 +47,7 @@ function CentralAjudaContent() {
   const { user } = useUser();
   const router = useRouter();
   const [expandedDica, setExpandedDica] = useState<number | null>(null);
+  const [docSearch, setDocSearch] = useState("");
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketName, setTicketName] = useState("");
@@ -134,6 +135,16 @@ function CentralAjudaContent() {
               <p className="text-[13px] text-secondary leading-relaxed">Guias completos, manuais e artigos para utilizar todos os recursos da A.CERT.</p>
             </div>
           </div>
+          <div className="flex items-center gap-2.5 h-9 rounded-[8px] bg-surface border border-default px-3 mb-4 focus-within:border-[#FF7A00] transition-colors">
+            <Search size={14} strokeWidth={2} className="text-muted shrink-0" />
+            <input
+              type="text"
+              placeholder="Buscar na documentação..."
+              value={docSearch}
+              onChange={e => setDocSearch(e.target.value)}
+              className="flex-1 h-full bg-transparent text-[12px] text-primary outline-none placeholder:text-muted"
+            />
+          </div>
           <div className="border-t border-default" style={{ marginBottom: 24 }} />
           <div className="flex flex-col gap-0.5">
             {[
@@ -147,7 +158,7 @@ function CentralAjudaContent() {
               { t: "Empresas e usuários", slug: "configuracoes-usuarios" },
               { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
               { t: "Configurações", slug: "configuracoes-usuarios" },
-            ].map((item, i) => (
+            ].filter(item => !docSearch || item.t.toLowerCase().includes(docSearch.toLowerCase())).map((item, i) => (
               <div
                 key={i}
                 onClick={() => router.push(`/dashboard/ajuda/${item.slug}`)}

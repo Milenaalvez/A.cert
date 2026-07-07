@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, BookOpen, Play } from "lucide-react";
+import { ChevronLeft, BookOpen, Play, Search } from "lucide-react";
 import { guias } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -15,7 +16,15 @@ const cardStyle: React.CSSProperties = {
 export default function AjudaDetailClient() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
+  const [busca, setBusca] = useState("");
   const guia = guias.find(g => g.slug === slug);
+
+  const passosFiltrados = busca.trim()
+    ? guia?.passos.filter(p =>
+        p.titulo.toLowerCase().includes(busca.toLowerCase()) ||
+        p.texto.toLowerCase().includes(busca.toLowerCase())
+      )
+    : guia?.passos;
 
   if (!guia) {
     return (
@@ -63,6 +72,18 @@ export default function AjudaDetailClient() {
           </div>
         </div>
 
+        {/* Search */}
+        <div className="flex items-center gap-2.5 h-10 rounded-[10px] bg-surface border border-default px-3.5 mb-8 focus-within:border-[#FF7A00] focus-within:shadow-[0_0_0_3px_rgba(255,122,0,0.12)] transition-all duration-150" style={{ maxWidth: 480 }}>
+          <Search size={16} strokeWidth={2} className="text-muted shrink-0" />
+          <input
+            type="text"
+            placeholder="Buscar no guia..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="flex-1 h-full bg-transparent text-[14px] text-primary outline-none placeholder:text-muted"
+          />
+        </div>
+
         {/* Video (if available) */}
         {guia.videoUrl && (
           <div className={`${sectionBox} mb-8`} style={cardStyle}>
@@ -87,7 +108,8 @@ export default function AjudaDetailClient() {
             <h3 className="text-[15px] font-bold text-primary">Guia passo a passo</h3>
           </div>
           <div className="flex flex-col gap-4">
-            {guia.passos.map((passo, i) => (
+            {passosFiltrados && passosFiltrados.length > 0 ? (
+              passosFiltrados.map((passo, i) => (
               <div key={i} className="flex items-start gap-4">
                 <div
                   className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 text-[13px] font-bold"
@@ -100,7 +122,10 @@ export default function AjudaDetailClient() {
                   <p className="text-[13px] text-secondary mt-1 leading-relaxed">{passo.texto}</p>
                 </div>
               </div>
-            ))}
+            ))
+            ) : (
+              <p className="text-[13px] text-muted text-center py-8">Nenhum resultado encontrado.</p>
+            )}
           </div>
         </div>
 
