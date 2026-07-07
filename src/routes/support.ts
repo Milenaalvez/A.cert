@@ -1,18 +1,19 @@
 import { Router } from 'express';
+import nodemailer from 'nodemailer';
 import prisma from '../lib/prisma.js';
 import { randomUUID } from 'node:crypto';
 
 const router = Router();
 
-function getSmtpEnv(): Record<string, string> {
-  return {
-    smtp_host: process.env.SMTP_HOST || '',
-    smtp_port: process.env.SMTP_PORT || '587',
-    smtp_user: process.env.SMTP_USER || '',
-    smtp_pass: process.env.SMTP_PASS || '',
-    smtp_from_email: process.env.SMTP_FROM_EMAIL || '',
-    smtp_from_name: process.env.SMTP_FROM_NAME || 'A.CERT',
-  };
+function getSmtpFromEnv() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const fromEmail = process.env.SMTP_FROM_EMAIL || user || '';
+  const fromName = process.env.SMTP_FROM_NAME || 'A.CERT';
+  if (!host || !user || !pass) return null;
+  return { host, port, user, pass, fromEmail, fromName };
 }
 
 router.post('/ticket', async (req, res) => {
@@ -33,35 +34,21 @@ router.post('/ticket', async (req, res) => {
 
     (async () => {
       try {
-        const envSettings = getSmtpEnv();
-        const dbSettings = await prisma.setting.findMany({ where: { key: { startsWith: 'smtp_' } } });
-        const smtp: Record<string, string> = { ...envSettings };
-        for (const s of dbSettings) smtp[s.key] = s.value;
-
-        console.log('[Suporte] SMTP config:', {
-          host: smtp.smtp_host,
-          port: smtp.smtp_port,
-          user: smtp.smtp_user,
-          passProvided: !!smtp.smtp_pass,
-          from: smtp.smtp_from_email || smtp.smtp_user,
-          dbKeys: dbSettings.map(s => s.key),
-        });
-
-        if (!smtp.smtp_host || !smtp.smtp_user || !smtp.smtp_pass) {
-          console.error('[Suporte] SMTP incompleto — email NAO enviado');
+        const smtp = getSmtpFromEnv();
+        if (!smtp) {
+          console.log('[Suporte] SMTP nao configurado — email NAO enviado');
           return;
         }
 
-        const nodemailer = await import('nodemailer');
-        const transporter = nodemailer.default.createTransport({
-          host: smtp.smtp_host,
-          port: parseInt(smtp.smtp_port || '587', 10),
-          secure: parseInt(smtp.smtp_port || '587', 10) === 465,
-          auth: { user: smtp.smtp_user, pass: smtp.smtp_pass },
+        const transporter = nodemailer.createTransport({
+          host: smtp.host,
+          port: smtp.port,
+          secure: smtp.port === 465,
+          auth: { user: smtp.user, pass: smtp.pass },
         });
 
         const info = await transporter.sendMail({
-          from: `"${smtp.smtp_from_name}" <${smtp.smtp_from_email || smtp.smtp_user}>`,
+          from: `"${smtp.fromName}" <${smtp.user}>`,
           to: 'suporte@acert.tech',
           replyTo: email,
           subject: `[${protocol}] ${subject}`,
