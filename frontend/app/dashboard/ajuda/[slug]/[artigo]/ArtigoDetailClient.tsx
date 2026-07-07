@@ -31,6 +31,11 @@ export default function ArtigoDetailClient() {
 
   const [showTicket, setShowTicket] = useState(false);
 
+  const artigosCategoria = categoria?.artigos || [];
+  const artigoIndex = artigosCategoria.findIndex(a => a.slug === artigoSlug);
+  const artigoAnterior = artigoIndex > 0 ? artigosCategoria[artigoIndex - 1] : null;
+  const artigoProximo = artigoIndex < artigosCategoria.length - 1 ? artigosCategoria[artigoIndex + 1] : null;
+
   if (!artigo || !categoria) {
     return (
       <DashboardLayout>
@@ -171,6 +176,15 @@ export default function ArtigoDetailClient() {
                   <ChevronLeft size={16} strokeWidth={1.5} />
                   Voltar para {categoria.titulo}
                 </button>
+                {artigoProximo && (
+                  <button
+                    onClick={() => router.push(`/dashboard/ajuda/${slug}/${artigoProximo.slug}`)}
+                    className="flex items-center gap-2 text-[13px] text-secondary hover:text-[#FF7A00] transition-colors cursor-pointer bg-transparent border-none"
+                  >
+                    {artigoProximo.titulo}
+                    <ChevronRight size={16} strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
