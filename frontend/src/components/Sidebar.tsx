@@ -630,6 +630,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
           className="absolute top-1/2 -translate-y-1/2 left-0 w-7 h-16 flex items-center justify-center"
           style={{
             opacity: sidebarHover ? 1 : 0,
+            pointerEvents: sidebarHover ? "auto" : "none",
             transition: "opacity 300ms",
             backgroundImage: "linear-gradient(180deg, #07101F 0%, #020817 100%)",
             border: "1px solid rgba(255,255,255,0.06)",

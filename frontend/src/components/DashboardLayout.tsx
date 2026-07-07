@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import DashboardLayoutClient from "./DashboardLayoutClient";
 
+function getInitialCollapsed(): boolean {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem("acert-sidebar-collapsed") === "true";
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [initialCollapsed, setInitialCollapsed] = useState(true);
-
-  useEffect(() => {
-    setInitialCollapsed(document.cookie.includes("sidebar-collapsed=true"));
-  }, []);
-
   return (
-    <DashboardLayoutClient initialCollapsed={initialCollapsed}>
+    <DashboardLayoutClient initialCollapsed={getInitialCollapsed()}>
       {children}
     </DashboardLayoutClient>
   );
