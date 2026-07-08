@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -112,6 +112,7 @@ export class TJDFTConnector implements IConnector {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForSelector('.q-field, .q-input, input, button', { timeout: 15000 }).catch(() => {});
       await wait(2000);
+      await aceitarCookies(page);
       LOG('Pagina carregada');
 
       if (DEBUG) await diagnosticarFormulario(page);
@@ -128,37 +129,43 @@ export class TJDFTConnector implements IConnector {
       LOG(`CPF: ${cpfOk}, Nome: ${nomeOk}`);
 
       // radio "Especial" (Quasar q-radio - clicar e disparar change)
-      await page.evaluate(() => {
-        const labels = Array.from(document.querySelectorAll('.q-radio__label, .q-radio label'));
+      const radioOk = await page.evaluate(() => {
+        const labels = Array.from(document.querySelectorAll('.q-radio__label, .q-radio label, label'));
         for (const label of labels) {
           const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          if (txt.includes('especial')) {
-            const radio = label.closest('.q-radio');
+          if (txt.includes('especial') || txt.includes('civel') || txt.includes('cível')) {
+            const radio = label.closest('.q-radio, .q-option-group, div') || label.parentElement;
             if (radio) {
-              (radio as HTMLElement).click();
+              const clickable = radio.querySelector('.q-radio__inner, .q-radio__bg, input[type="radio"]') || radio;
+              (clickable as HTMLElement).click();
               const inp = radio.querySelector('input[type="radio"]');
-              if (inp) { (inp as HTMLInputElement).checked = true; inp.dispatchEvent(new Event('change', { bubbles: true })); }
-              return;
+              if (inp) {
+                (inp as HTMLInputElement).checked = true;
+                inp.dispatchEvent(new Event('change', { bubbles: true }));
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+              return txt;
             }
           }
         }
-        // fallback "civel"
-        for (const label of labels) {
-          const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          if (txt.includes('civel')) {
-            const radio = label.closest('.q-radio');
-            if (radio) {
-              (radio as HTMLElement).click();
-              const inp = radio.querySelector('input[type="radio"]');
-              if (inp) { (inp as HTMLInputElement).checked = true; inp.dispatchEvent(new Event('change', { bubbles: true })); }
-              return;
-            }
-          }
-        }
+        return null;
       });
+      LOG(`Radio: ${radioOk || 'nao encontrado'}`);
       await wait(500);
 
-      await clicarBotaoPorTexto(page, 'proximo');
+      const proximoClicado = await clicarBotaoPorTexto(page, 'proximo');
+      if (!proximoClicado) {
+        await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, .q-btn'));
+          for (const b of btns) {
+            const t = (b.textContent?.trim() || '').toLowerCase();
+            if (t.includes('proximo') || t.includes('próximo') || t.includes('avancar') || t.includes('avançar') || t.includes('continuar')) {
+              (b as HTMLElement).click();
+              return;
+            }
+          }
+        });
+      }
       LOG('Proximo clicado - aguardando wizard step 2...');
 
       try {

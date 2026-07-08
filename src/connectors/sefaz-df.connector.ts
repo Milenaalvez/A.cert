@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -158,6 +158,7 @@ export class SefazDFConnector implements IConnector {
       LOG('Navegando para certidao...');
       await page.goto(CERTIDAO_URL, { waitUntil: 'networkidle2', timeout: 30000 });
       await wait(3000);
+      await aceitarCookies(page);
 
       if (DEBUG) await diagnosticarFormulario(page);
       await injectFillHelper(page);
@@ -223,10 +224,16 @@ export class SefazDFConnector implements IConnector {
           const txt = e.textContent?.trim();
           if (txt && txt.length > 5) return txt;
         }
+        const body = document.body.textContent?.toLowerCase() || '';
+        if (body.includes('cpf inválido') || body.includes('cpf invalido') || body.includes('não foi possivel') || body.includes('erro')) {
+          return body.slice(0, 300);
+        }
         return null;
       });
       if (erroMsg) {
-        LOG(`Mensagem de erro: ${erroMsg.slice(0, 200)}`);
+        LOG(`Erro detectado: ${erroMsg.slice(0, 150)}`);
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] ${erroMsg}` };
       }
 
       const protocolo = `SEFAZ-DF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;

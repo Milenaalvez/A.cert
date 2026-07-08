@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { tentarBaixarPDF } from '../utils/dom-helper.js';
+import { tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
@@ -34,6 +34,7 @@ export class TSTConnector implements IConnector {
       // 1. Navega + aguarda carregamento
       await page.goto('https://www.tst.jus.br/certidao1', { waitUntil: 'domcontentloaded', timeout: 30000 });
       await wait(3000);
+      await aceitarCookies(page);
       LOG(`URL: ${page.url()}`);
 
       // 2. Aguarda input CPF aparecer (max 60s — usuario aceita cookies)

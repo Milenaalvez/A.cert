@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -111,6 +111,7 @@ export class TRTConnector implements IConnector {
       LOG('Navegando...');
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       await wait(3000);
+      await aceitarCookies(page);
 
       if (DEBUG) await diagnosticarFormulario(page);
       await injectFillHelper(page);
@@ -131,20 +132,9 @@ export class TRTConnector implements IConnector {
       LOG(`Nome: ${nomeOk || 'nao encontrado'}`);
 
       if (!cpfOk && !nomeOk) {
-        LOG('Nenhum campo encontrado, tentando fallback generico...');
-        await page.evaluate((cpf, nome) => {
-          const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"]');
-          if (inputs.length >= 1) {
-            const proto = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-            const setter = proto?.set;
-            if (setter) { setter.call(inputs[0], cpf); inputs[0].dispatchEvent(new Event('input', { bubbles: true })); }
-          }
-          if (inputs.length >= 2) {
-            const proto = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-            const setter = proto?.set;
-            if (setter) { setter.call(inputs[1], nome); inputs[1].dispatchEvent(new Event('input', { bubbles: true })); }
-          }
-        }, cpfDigits, nomeCompleto);
+        LOG('Nenhum campo encontrado, abortando');
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Campos CPF e Nome nao encontrados no formulario' };
       }
 
       await wait(1000);

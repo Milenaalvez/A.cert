@@ -12,6 +12,7 @@ import { gerarDossiePDF } from './services/dossie.service.js';
 import { closeBrowser } from './utils/browser.js';
 import { enviarEmailConfirmacao } from './services/email.service.js';
 import authRoutes from './routes/auth.js';
+import { authMiddleware } from './middleware/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import peopleRoutes from './routes/people.js';
 import dossierRoutes from './routes/dossiers.js';
@@ -205,7 +206,7 @@ function checkDocsLoop(jobId: string): void {
   }, 500);
 }
 
-app.post('/api/consultar', (req, res) => {
+app.post('/api/consultar', authMiddleware, (req, res) => {
   try {
     const { nome, cpf, dataNascimento, nomeMae, nomePai, email, personId, dossierId, organs, certKeys } = req.body;
 
@@ -229,8 +230,8 @@ app.post('/api/consultar', (req, res) => {
   }
 });
 
-app.get('/api/consultar/:jobId', (req, res) => {
-  const job = getJob(req.params.jobId);
+app.get('/api/consultar/:jobId', authMiddleware, (req, res) => {
+  const job = getJob(req.params.jobId as string);
   if (!job) {
     res.status(404).json({ error: 'Job não encontrado' });
     return;
@@ -255,8 +256,8 @@ app.get('/api/consultar/:jobId', (req, res) => {
   });
 });
 
-app.post('/api/consultar/:jobId/retry', (req, res) => {
-  const job = getJob(req.params.jobId);
+app.post('/api/consultar/:jobId/retry', authMiddleware, (req, res) => {
+  const job = getJob(req.params.jobId as string);
   if (!job) {
     res.status(404).json({ error: 'Job não encontrado' });
     return;

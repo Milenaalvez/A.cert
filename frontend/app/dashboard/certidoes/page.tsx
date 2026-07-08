@@ -9,7 +9,7 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import { useT } from "@/i18n/useT";
 
-const apiBase = "http://localhost:3001";
+const apiBase = "";
 
 const sectionTitle = { fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8, marginBottom: 16 } as React.CSSProperties;
 const inputBase = { height: "42px", borderRadius: "6px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", padding: "0 12px", outline: "none", width: "100%", boxSizing: "border-box", transition: "border-color 0.15s ease, box-shadow 0.15s ease" } as React.CSSProperties;

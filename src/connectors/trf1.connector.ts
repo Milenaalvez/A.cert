@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { PDFDocument } from 'pdf-lib';
@@ -244,6 +244,7 @@ async function preencherEEnviarMulti(
     await page.goto(FORM_URL, { waitUntil: 'networkidle2', timeout: 30000 });
   });
   await wait(3000);
+  await aceitarCookies(page);
 
   if (DEBUG) await diagnosticarFormulario(page);
   await injectFillHelper(page);
@@ -308,11 +309,6 @@ export class TRF1Connector implements IConnector {
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
     LOG('Iniciando consulta');
-    const page = await createPage().catch(e => { LOG(`ERRO createPage: ${e.message}`); throw e; });
-
-    try {
-      let pageClosed = false;
-      page.once('close', () => { pageClosed = true; });
 
   const runs = [
     {
@@ -360,8 +356,10 @@ export class TRF1Connector implements IConnector {
       await wait(5000);
     }
 
+    const page = await createPage().catch(e => { errors.push(`${run.tipo}: ${e.message}`); return null; });
+    if (!page) continue;
+
     try {
-      if (pageClosed) throw new Error('Pagina fechada pelo usuario');
       await throttle();
 
       LOG(`--- ${run.tipo} (${run.orgaos.join(' + ')}) ---`);
@@ -369,7 +367,7 @@ export class TRF1Connector implements IConnector {
 
       let captchaType = null;
       for (let tentativa = 0; tentativa < 30; tentativa++) {
-        if (pageClosed) throw new Error('Pagina fechada pelo usuario');
+        if (page.isClosed()) break;
         captchaType = await detectarCaptcha(page);
         if (captchaType) break;
         await wait(500);
@@ -391,15 +389,15 @@ export class TRF1Connector implements IConnector {
       } else {
         errors.push(`${run.tipo}/${run.orgaos.join('+')}: PDF vazio`);
       }
-        } catch (err: unknown) {
-          const m = err instanceof Error ? err.message : 'Erro';
-          errors.push(`${run.tipo}/${run.orgaos.join('+')}: ${m}`);
-          LOG(`ERRO: ${m}`);
-        }
+    } catch (err: unknown) {
+      const m = err instanceof Error ? err.message : 'Erro';
+      errors.push(`${run.tipo}/${run.orgaos.join('+')}: ${m}`);
+      LOG(`ERRO: ${m}`);
+    }
+    await page.close().catch(() => {});
   }
 
       if (pdfs.length === 0) {
-        await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: `Nenhuma certidao. ${errors.join('; ')}` };
       }
 
@@ -414,13 +412,6 @@ export class TRF1Connector implements IConnector {
       }
       const mergedBytes = await mergedPdf.save();
 
-      await page.close();
       return { status: 'success', orgao: this.nome, dataConsulta, protocolo: `TRF1-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`, documento: mergedBytes };
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-      LOG(`ERRO FATAL: ${msg}`);
-      await page.close().catch(() => {});
-      return { status: 'error', orgao: this.nome, dataConsulta, error: `[TRF1] ${msg}` };
-    }
   }
 }

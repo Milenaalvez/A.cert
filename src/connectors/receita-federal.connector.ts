@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -56,6 +56,7 @@ export class ReceitaFederalConnector implements IConnector {
 
       await page.goto('https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cpf', { waitUntil: 'networkidle2', timeout: 30000 });
       await wait(4000);
+      await aceitarCookies(page);
 
       if (DEBUG) await diagnosticarInputs(page);
       await injectFillHelper(page);
@@ -87,6 +88,8 @@ export class ReceitaFederalConnector implements IConnector {
         }
       } else {
         LOG('ERRO: Input CPF nao encontrado');
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Input CPF nao encontrado no formulario' };
       }
 
       await wait(500);
@@ -117,6 +120,8 @@ export class ReceitaFederalConnector implements IConnector {
         }
       } else {
         LOG('ERRO: Input data nao encontrado');
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Input data de nascimento nao encontrado' };
       }
 
       await wait(500);
@@ -190,6 +195,13 @@ export class ReceitaFederalConnector implements IConnector {
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
+
+      // Verifica se houve erro ou sucesso antes de capturar PDF
+      const pageText = await page.evaluate(() => document.body.textContent?.toLowerCase() || '');
+      if (pageText.includes('cpf inválido') || pageText.includes('cpf invalido') || pageText.includes('não foi possível') || pageText.includes('erro ao')) {
+        await page.close();
+        return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Erro na consulta: ' + pageText.slice(0, 200) };
+      }
 
       const protocolo = `RF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
       const pdfBuffer = await tentarBaixarPDF(page);
