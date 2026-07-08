@@ -48,7 +48,7 @@ export default function DashboardLayoutClient({
       sidebarCollapsedCache = localStorage.getItem("acert-sidebar-collapsed") === "true";
       return sidebarCollapsedCache;
     }
-    return true;
+    return false;
   });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
