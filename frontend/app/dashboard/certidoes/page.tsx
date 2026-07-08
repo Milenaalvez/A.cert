@@ -254,6 +254,12 @@ export default function CertidoesPage() {
     const poll = async () => {
       try {
         const r = await fetch(`${apiBase}/api/consultar/${jobId}`, { headers: authHeaders });
+        if (r.status === 404) {
+          setPolling(false);
+          setProcessingFlow(false);
+          setFlowStatus("Job expirado. Reinicie a consulta.");
+          return;
+        }
         const data = await r.json();
         setJobStatus(data);
         if (data.status === "complete" || data.status === "partial") {
