@@ -22,7 +22,9 @@ export default function LoginPage() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('acert_token') : null;
     if (token && window.location.pathname === '/') {
-      window.location.href = '/dashboard';
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect');
+      window.location.href = redirect || '/dashboard';
     } else {
       setCheckingToken(false);
     }

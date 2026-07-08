@@ -20,7 +20,9 @@ export default function LoginTransition({ onComplete }: { onComplete?: () => voi
       if (onComplete) {
         onComplete();
       } else {
-        window.location.href = "/dashboard";
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect');
+        window.location.href = redirect || "/dashboard";
       }
     }, 1800);
 

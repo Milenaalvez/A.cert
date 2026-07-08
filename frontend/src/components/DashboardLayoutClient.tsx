@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, createContext, useContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
@@ -10,6 +10,8 @@ import ElectronTitleBar from "./ElectronTitleBar";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { useT } from "@/i18n/useT";
 import { iniciarTour } from "@/components/TourGuia";
+
+export const DashboardLayoutContext = createContext(false);
 
 function pathToPage(pathname: string): string {
   if (pathname === "/dashboard") return "dashboard";
@@ -99,25 +101,27 @@ export default function DashboardLayoutClient({
   const activePage = pathToPage(pathname);
 
   return (
-    <UserProvider>
-      <DashboardInner
-        activePage={activePage}
-        pathname={pathname}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        collapsed={collapsed}
-        handleCollapseChange={handleCollapseChange}
-        handleNavigate={handleNavigate}
-        handleNavigateWithLoading={handleNavigateWithLoading}
-        handleLogout={handleLogout}
-        showNovoDossie={showNovoDossie}
-        setShowNovoDossie={setShowNovoDossie}
-        pageLoading={pageLoading}
-        sidebarWidth={sidebarWidth}
-      >
-        {children}
-      </DashboardInner>
-    </UserProvider>
+    <DashboardLayoutContext.Provider value={true}>
+      <UserProvider>
+        <DashboardInner
+          activePage={activePage}
+          pathname={pathname}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          collapsed={collapsed}
+          handleCollapseChange={handleCollapseChange}
+          handleNavigate={handleNavigate}
+          handleNavigateWithLoading={handleNavigateWithLoading}
+          handleLogout={handleLogout}
+          showNovoDossie={showNovoDossie}
+          setShowNovoDossie={setShowNovoDossie}
+          pageLoading={pageLoading}
+          sidebarWidth={sidebarWidth}
+        >
+          {children}
+        </DashboardInner>
+      </UserProvider>
+    </DashboardLayoutContext.Provider>
   );
 }
 

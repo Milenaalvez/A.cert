@@ -139,6 +139,8 @@ router.delete('/:entity/:id', authMiddleware, async (req, res) => {
     }
 
     if (entity === 'usuarios') {
+      await executeRaw('DELETE FROM user_sessions WHERE user_id = $1', id);
+      await executeRaw('DELETE FROM user_permissions WHERE user_id = $1', id);
       await executeRaw('DELETE FROM users WHERE id = $1', id);
     } else if (entity === 'pessoas') {
       await executeRaw('DELETE FROM persons WHERE id = $1', id);
