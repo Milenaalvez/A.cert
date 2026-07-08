@@ -282,12 +282,19 @@ app.post('/api/consultar/:jobId/retry', authMiddleware, (req, res) => {
 
   const conectores = criarConectores();
 
+  const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '90000', 10);
+
   (async () => {
     for (const connector of conectores) {
       if (!falhos.includes(connector.nome)) continue;
       LOG(`>>> Retry conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(job.dados, job.id);
+        const resultado = await Promise.race([
+          connector.consultar(job.dados, job.id),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout (${CONNECTOR_TIMEOUT_MS}ms): ${connector.nome}`)), CONNECTOR_TIMEOUT_MS)
+          ),
+        ]);
         job.resultados.push(resultado);
         LOG(`<<< Retry finalizado: ${connector.nome} → ${resultado.status}`);
       } catch (err) {

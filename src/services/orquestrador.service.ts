@@ -79,7 +79,18 @@ async function persistirResultado(
   }
 }
 
+const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '90000', 10);
+
 const JOBS = new Map<string, ConsultaJob>();
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout (${ms}ms): ${label}`)), ms)
+    ),
+  ]);
+}
 
 export function getJob(jobId: string): ConsultaJob | undefined {
   return JOBS.get(jobId);
@@ -107,7 +118,11 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
     for (const connector of conectores) {
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(dados, jobId, dados.certKeys);
+        const resultado = await withTimeout(
+          connector.consultar(dados, jobId, dados.certKeys),
+          CONNECTOR_TIMEOUT_MS,
+          connector.nome
+        );
         job.resultados.push(resultado);
         LOG(`<<< Conector finalizado: ${connector.nome} → ${resultado.status}`);
 
