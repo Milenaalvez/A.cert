@@ -209,7 +209,10 @@ router.post('/', async (req, res) => {
     if (cpf) {
       const cpfClean = cpf.replace(/\D/g, '');
       if (cpfClean.length === 11) {
-        const existingCpf = await queryRawOne('SELECT id FROM persons WHERE cpf = $1', cpfClean);
+        const existingCpf = await queryRawOne(
+          "SELECT id FROM persons WHERE REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = $1",
+          cpfClean
+        );
         if (existingCpf) {
           res.status(409).json({ error: 'Este CPF já está cadastrado' });
           return;
