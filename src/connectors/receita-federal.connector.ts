@@ -189,7 +189,12 @@ export class ReceitaFederalConnector implements IConnector {
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
         LOG('CAPTCHA detectado - resolva na janela do navegador...');
-        await esperarCaptchaInterativo(page, captchaType);
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
+        if (!captchaOk) {
+          LOG('CAPTCHA nao resolvido no tempo limite');
+          await page.close();
+          return { status: 'error', orgao: this.nome, dataConsulta, error: `[RF] CAPTCHA nao resolvido no tempo limite` };
+        }
         LOG('CAPTCHA resolvido, continuando...');
         await wait(3000);
       }

@@ -196,7 +196,12 @@ export class ONRConnector implements IConnector {
           LOG(`CAPTCHA no login: ${captchaLogin}`);
           await focusPageForCaptcha(page, captchaLogin);
           LOG('CAPTCHA detectado - resolva na janela do navegador...');
-          await esperarCaptchaInterativo(page, captchaLogin);
+          const captchaOk = await esperarCaptchaInterativo(page, captchaLogin);
+          if (!captchaOk) {
+            LOG('CAPTCHA do login nao resolvido no tempo limite');
+            await page.close();
+            return { status: 'error', orgao: this.nome, dataConsulta, error: `[ONR] CAPTCHA do login nao resolvido no tempo limite` };
+          }
           LOG('CAPTCHA do login resolvido');
           await wait(3000);
         }
@@ -289,7 +294,12 @@ export class ONRConnector implements IConnector {
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
         LOG('CAPTCHA detectado - resolva na janela do navegador...');
-        await esperarCaptchaInterativo(page, captchaType);
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
+        if (!captchaOk) {
+          LOG('CAPTCHA nao resolvido no tempo limite');
+          await page.close();
+          return { status: 'error', orgao: this.nome, dataConsulta, error: `[ONR] CAPTCHA nao resolvido no tempo limite` };
+        }
         LOG('CAPTCHA resolvido, continuando...');
         await wait(3000);
       }

@@ -1,10 +1,15 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, preencherCampoRobusto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
 
 const LOG = (msg: string) => console.log(`[SEFAZ-DF] ${msg}`);
 const DEBUG = process.env.DEBUG;
@@ -71,7 +76,7 @@ async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto
   }, lblNorm);
 
   if (!sel) return false;
-  return preencherInputRapido(page, sel, valor);
+  return preencherCampoRobusto(page, sel, valor);
 }
 
 async function preencherInputFallback(page: import('puppeteer').Page, busca: string, valor: string): Promise<boolean> {
@@ -89,7 +94,7 @@ async function preencherInputFallback(page: import('puppeteer').Page, busca: str
     return null;
   }, busca);
   if (!sel) return false;
-  return preencherInputRapido(page, sel, valor);
+  return preencherCampoRobusto(page, sel, valor);
 }
 
 async function selecionarSelectPorTexto(page: import('puppeteer').Page, busca: string, valorTexto: string): Promise<boolean> {
@@ -186,6 +191,9 @@ export class SefazDFConnector implements IConnector {
 
       await wait(500);
 
+      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
+      LOG('CDP preparado para captura de download');
+
       const submitOk = await clicarBotaoPorTexto(page, 'emitir')
         || await clicarBotaoPorTexto(page, 'consultar')
         || await clicarBotaoPorTexto(page, 'gerar')
@@ -210,7 +218,12 @@ export class SefazDFConnector implements IConnector {
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
         LOG('CAPTCHA detectado - resolva na janela do navegador...');
-        await esperarCaptchaInterativo(page, captchaType);
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
+        if (!captchaOk) {
+          LOG('CAPTCHA nao resolvido no tempo limite');
+          await page.close();
+          return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] CAPTCHA nao resolvido no tempo limite` };
+        }
         LOG('CAPTCHA resolvido, continuando...');
         await wait(3000);
       }
@@ -237,7 +250,7 @@ export class SefazDFConnector implements IConnector {
       }
 
       const protocolo = `SEFAZ-DF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+      const pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };

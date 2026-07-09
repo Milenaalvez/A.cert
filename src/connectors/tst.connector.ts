@@ -1,9 +1,14 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
+import { tentarBaixarPDF, aceitarCookies, preencherCampoRobusto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
 
 const LOG = (msg: string) => console.log(`[TST] ${msg}`);
 
@@ -56,42 +61,15 @@ export class TSTConnector implements IConnector {
       }
       LOG(`CAPTCHA pre: ${captchaType || 'nao'}`);
 
-      // 4. Preenche CPF via setter nativo + eventos (JSF com onkeyup=formataCnpjCpf)
+      // 4. Preenche CPF usando preencherCampoRobusto (foco real + digitacao + fallback JSF)
       const cpfDigits = dados.cpf.replace(/\D/g, '');
       LOG(`CPF: ${cpfDigits}`);
-      const cpfOk = await page.evaluate((cpf) => {
-        // Busca input pelo ID exato, name, ou classe caixaTexto
-        const inp = document.querySelector<HTMLInputElement>(
-          '[id="gerarCertidaoForm:cpfCnpj"], [name="gerarCertidaoForm:cpfCnpj"], input.caixaTexto[maxlength="18"]'
-        );
-        if (!inp) return false;
-
-        // Foca
-        inp.focus();
-
-        // Seta valor via setter nativo
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-        if (setter) setter.call(inp, cpf);
-
-        // Chama formatador JSF diretamente
-        if (typeof (window as any).formataCnpjCpf === 'function') {
-          (window as any).formataCnpjCpf(inp);
-        }
-
-        // Dispara eventos na ordem correta
-        inp.dispatchEvent(new Event('keydown', { bubbles: true }));
-        inp.dispatchEvent(new Event('input', { bubbles: true }));
-        inp.dispatchEvent(new Event('keyup', { bubbles: true }));
-        inp.dispatchEvent(new Event('change', { bubbles: true }));
-        inp.dispatchEvent(new Event('blur', { bubbles: true }));
-
-        return true;
-      }, cpfDigits);
+      const cpfOk = await preencherCampoRobusto(page, SEL_CPF, cpfDigits, 'formataCnpjCpf');
       LOG(`CPF: ${cpfOk ? 'OK' : 'FALHOU'}`);
 
       if (!cpfOk) {
         await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Input CPF nao encontrado' };
+        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Input CPF nao encontrado ou preenchimento falhou' };
       }
 
       // Verifica visualmente se o valor foi aceito
@@ -100,20 +78,6 @@ export class TSTConnector implements IConnector {
         return inp?.value || '(vazio)';
       });
       LOG(`Valor no input: ${valorConfirmado}`);
-
-      // Se valor nao entrou, tenta de novo com click + keyboard (fallback)
-      if (valorConfirmado === '(vazio)' || !valorConfirmado.includes(cpfDigits)) {
-        LOG('Valor nao aceito! Tentando click + type...');
-        await page.click(SEL_CPF, { clickCount: 3 });
-        await wait(200);
-        await page.keyboard.type(cpfDigits, { delay: 50 });
-        await wait(500);
-        const v2 = await page.evaluate(() => {
-          const inp = document.querySelector<HTMLInputElement>('[id="gerarCertidaoForm:cpfCnpj"]');
-          return inp?.value || '(vazio)';
-        });
-        LOG(`Valor apos retry: ${v2}`);
-      }
 
       // 5. CAPTCHA (ja tentamos detectar antes, verifica de novo)
       if (!captchaType) {
@@ -140,12 +104,16 @@ export class TSTConnector implements IConnector {
 
       if (pageClosed) throw new Error('Pagina fechada');
 
-      // 5. Clica "Emitir Certidão" (AJAX via A4J, nao submit HTTP)
+      // 5. Prepara CDP para capturar download antes de clicar
+      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
+      LOG('CDP preparado para captura de download');
+
+      // 6. Clica "Emitir Certidão" (AJAX via A4J, nao submit HTTP)
       LOG('Clicando Emitir Certidão...');
       await page.click(SEL_SUBMIT);
       LOG('Botao clicado, aguardando AJAX + download...');
 
-      // 6. Aguarda: network idle (AJAX terminou) + texto resultado ou download
+      // 7. Aguarda: network idle (AJAX terminou) + texto resultado ou download
       try { await page.waitForNetworkIdle({ idleTime: 3000, timeout: 30000 }); } catch {}
       await wait(2000);
 
@@ -160,11 +128,11 @@ export class TSTConnector implements IConnector {
 
       if (pageClosed) throw new Error('Pagina fechada');
 
-      // 7. Captura PDF (fazerDownload() do TST pode ja ter rodado)
+      // 8. Captura PDF (fazerDownload() do TST pode ja ter rodado)
       const protocolo = `TST-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
 
-      // Tenta capturar download, fallback: PDF da pagina
-      let pdfBuffer = await tentarBaixarPDF(page);
+      // Tenta CDP primeiro (Nivel 0), fallback: niveis 1-3 existentes
+      let pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
       }
