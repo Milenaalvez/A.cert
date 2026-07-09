@@ -657,6 +657,10 @@ export default function CertidoesPage() {
               Órgão: <span className="text-primary font-semibold">{captchaModal.orgao}</span>
             </p>
             <div className="mb-6">
+              {captchaModal.screenshot && (
+                <img src={captchaModal.screenshot} alt="CAPTCHA"
+                  style={{ borderRadius: 8, border: "1px solid var(--border-default)", width: "100%", maxHeight: 200, objectFit: "contain", background: "var(--bg-app)" }} />
+              )}
               {captchaModal.captchaUrl && (
                 <img src={`${apiBase}${captchaModal.captchaUrl}`} alt="CAPTCHA"
                   style={{ borderRadius: 8, border: "1px solid var(--border-default)", width: "100%", maxHeight: 160, objectFit: "contain", background: "var(--bg-app)" }} />

@@ -230,7 +230,7 @@ app.post('/api/consultar', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/consultar/:jobId', authMiddleware, (req, res) => {
+app.get('/api/consultar/:jobId', authMiddleware, async (req, res) => {
   const job = getJob(req.params.jobId as string);
   if (!job) {
     res.status(404).json({ error: 'Job não encontrado' });
@@ -246,14 +246,49 @@ app.get('/api/consultar/:jobId', authMiddleware, (req, res) => {
     documentoId: r.documento ? `${job.id}-${r.orgao.replace(/\s+/g, '_')}` : undefined,
   }));
 
+  const { captchaStore } = await import('./services/captcha-solver.service.js');
+  const captchaPendente = Array.from(captchaStore.entries())
+    .filter(([k]) => k.startsWith(job.id))
+    .map(([, entry]) => ({
+      orgao: entry.orgao,
+      chave: entry.chave,
+      screenshot: entry.screenshot,
+    }));
+  const captchaList = captchaPendente.length > 0 ? captchaPendente : undefined;
+
   res.json({
     id: job.id,
     status: job.status,
     dados: job.dados,
     resultados,
+    captchaPendente: captchaList,
     inicio: job.inicio,
     fim: job.fim,
   });
+});
+
+app.post('/api/consultar/:jobId/captcha', authMiddleware, (req, res) => {
+  const job = getJob(req.params.jobId as string);
+  if (!job) {
+    res.status(404).json({ error: 'Job não encontrado' });
+    return;
+  }
+
+  const { chave, solution } = req.body;
+  if (!chave || !solution) {
+    res.status(400).json({ error: 'chave e solution são obrigatórios' });
+    return;
+  }
+
+  const { resolverCaptcha, captchaStore } = require('./services/captcha-solver.service.js');
+  const ok = resolverCaptcha(chave, solution);
+
+  if (ok) {
+    const entry = captchaStore.get(chave);
+    if (entry) entry.resolvido = true;
+  }
+
+  res.json({ success: ok });
 });
 
 app.post('/api/consultar/:jobId/retry', authMiddleware, (req, res) => {

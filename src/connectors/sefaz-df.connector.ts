@@ -3,7 +3,7 @@ import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
 import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, preencherCampoRobusto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
+import { focusPageForCaptcha, esperarCaptchaComSuporteRemoto } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -217,8 +217,8 @@ export class SefazDFConnector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-        LOG('CAPTCHA detectado - resolva na janela do navegador...');
-        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA detectado - enviando para resolucao remota...');
+        const captchaOk = await esperarCaptchaComSuporteRemoto(page, captchaType, jobId || '', this.nome);
         if (!captchaOk) {
           LOG('CAPTCHA nao resolvido no tempo limite');
           await page.close();
