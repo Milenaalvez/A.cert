@@ -13,8 +13,12 @@ let browser: Browser | null = null;
 
 export async function getBrowser(): Promise<Browser> {
   if (!browser || !browser.connected) {
+    const headless = process.env.PUPPETEER_HEADLESS === 'true';
+    const isLinux = process.platform === 'linux';
+    const hasDisplay = !!process.env.DISPLAY;
+
     browser = await puppeteerExtra.launch({
-      headless: process.env.PUPPETEER_HEADLESS === 'true',
+      headless,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -27,6 +31,7 @@ export async function getBrowser(): Promise<Browser> {
         '--disable-features=IsolateOrigins,site-per-process',
         '--disable-web-security',
         '--disable-features=BlockInsecurePrivateNetworkRequests',
+        ...(isLinux ? ['--disable-software-rasterizer', '--disable-features=VizDisplayCompositor'] : []),
       ],
       ignoreDefaultArgs: ['--enable-automation'],
     }) as Browser;
