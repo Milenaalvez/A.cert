@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('acert_token') : null;
-    if (token && window.location.pathname === '/') {
+    if (token && window.location.pathname === '/login') {
       const params = new URLSearchParams(window.location.search);
       const redirect = params.get('redirect');
       window.location.href = redirect || '/dashboard';
