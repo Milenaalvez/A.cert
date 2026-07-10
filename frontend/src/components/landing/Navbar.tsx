@@ -61,32 +61,32 @@ export default function Navbar() {
     }
   };
 
+  const navBg = scrolled ? "rgba(255,255,255,0.85)" : "transparent";
+  const navBorder = scrolled ? "1px solid rgba(0,0,0,0.06)" : "none";
+
   return (
     <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled
-          ? "backdrop-blur-xl bg-[#030205]/90 border-b border-white/[0.06]"
-          : "bg-transparent"
-      }`}
+      className="fixed top-0 w-full z-50 transition-all duration-300"
+      style={{ background: navBg, backdropFilter: scrolled ? "blur(16px)" : "none", borderBottom: navBorder }}
     >
       <div
         className="flex items-center relative"
-        style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px", height: "88px" }}
+        style={{ padding: "0 24px", height: "88px" }}
       >
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <Image src="/images/logo.png" alt="A.CERT" width={42} height={42} className="object-contain" />
-          <span className="text-white text-[22px] font-bold tracking-tight">A.CERT</span>
+          <span className="text-[#111827] text-[22px] font-bold tracking-tight">A.CERT</span>
         </Link>
 
         <div
-          className="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2"
+          className="hidden lg:flex items-center gap-6 absolute left-1/2 -translate-x-1/2 text-light"
         >
           <NavDropdown label="Produto" items={PRODUTO} />
           <NavDropdown label="Soluções" items={SOLUCOES} />
           <Link
             href="#planos"
             onClick={(e) => { e.preventDefault(); scrollTo("#planos"); }}
-            className="relative text-[13px] text-[#8899B0] hover:text-white transition-colors duration-300 font-medium py-1 px-3 group"
+            className="relative text-[14px] text-[#6B7280] hover:text-[#111827] transition-colors duration-300 font-medium py-1 px-3 group"
           >
             Preços
             <span className="absolute bottom-0 left-3 right-3 h-[1.5px] bg-gradient-to-r from-[#FF7A00] to-[#FF7A00]/40 rounded-full transition-all duration-300 scale-x-0 group-hover:scale-x-100" />
@@ -94,7 +94,7 @@ export default function Navbar() {
           <NavDropdown label="Clientes" items={CLIENTES} />
           <Link
             href="/dashboard/ajuda/primeiros-passos"
-            className="relative text-[13px] text-[#8899B0] hover:text-white transition-colors duration-300 font-medium py-1 px-3 group"
+            className="relative text-[14px] text-[#6B7280] hover:text-[#111827] transition-colors duration-300 font-medium py-1 px-3 group"
           >
             Contato
             <span className="absolute bottom-0 left-3 right-3 h-[1.5px] bg-gradient-to-r from-[#FF7A00] to-[#FF7A00]/40 rounded-full transition-all duration-300 scale-x-0 group-hover:scale-x-100" />
@@ -111,9 +111,9 @@ export default function Navbar() {
               height: 42,
               padding: "0 20px",
               borderRadius: 6,
-              border: "1px solid rgba(255,255,255,0.10)",
+              border: "1px solid #E5E7EB",
               background: "transparent",
-              color: "rgba(255,255,255,0.75)",
+              color: "#374151",
               fontSize: 13,
               fontWeight: 500,
               cursor: "pointer",
@@ -122,13 +122,13 @@ export default function Navbar() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "#FF7A00";
-              e.currentTarget.style.background = "rgba(255,122,0,0.06)";
-              e.currentTarget.style.color = "#fff";
+              e.currentTarget.style.background = "rgba(255,122,0,0.04)";
+              e.currentTarget.style.color = "#FF7A00";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
+              e.currentTarget.style.borderColor = "#E5E7EB";
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "rgba(255,255,255,0.75)";
+              e.currentTarget.style.color = "#374151";
             }}
           >
             Entrar
@@ -162,20 +162,20 @@ export default function Navbar() {
           </Link>
         </div>
 
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden text-white p-2 ml-auto">
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden text-[#111827] p-2 ml-auto">
           {mobileOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {mobileOpen && (
-        <div className="lg:hidden backdrop-blur-xl bg-[#030205]/95 border-t border-white/[0.06]">
+        <div className="lg:hidden backdrop-blur-xl bg-white/95 border-t border-gray-100">
           <div className="px-6 py-8 flex flex-col gap-1">
             <MobileSection label="Produto" items={PRODUTO} onClick={() => setMobileOpen(false)} />
             <MobileSection label="Soluções" items={SOLUCOES} onClick={() => setMobileOpen(false)} />
             <Link
               href="#planos"
               onClick={() => { setMobileOpen(false); scrollTo("#planos"); }}
-              className="text-[15px] text-[#8899B0] hover:text-white transition-colors font-medium py-3 border-b border-white/[0.04]"
+              className="text-[15px] text-[#6B7280] hover:text-[#111827] transition-colors font-medium py-3 border-b border-gray-100"
             >
               Preços
             </Link>
@@ -183,11 +183,11 @@ export default function Navbar() {
             <Link
               href="/dashboard/ajuda/primeiros-passos"
               onClick={() => setMobileOpen(false)}
-              className="text-[15px] text-[#8899B0] hover:text-white transition-colors font-medium py-3 border-b border-white/[0.04]"
+              className="text-[15px] text-[#6B7280] hover:text-[#111827] transition-colors font-medium py-3 border-b border-gray-100"
             >
               Contato
             </Link>
-            <div className="flex gap-2 pt-4 border-t border-white/[0.08] mt-2">
+            <div className="flex gap-2 pt-4 border-t border-gray-100 mt-2">
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
@@ -198,9 +198,9 @@ export default function Navbar() {
                   justifyContent: "center",
                   height: 42,
                   borderRadius: 6,
-                  border: "1px solid rgba(255,255,255,0.10)",
+                  border: "1px solid #E5E7EB",
                   background: "transparent",
-                  color: "rgba(255,255,255,0.75)",
+                  color: "#374151",
                   fontSize: 13,
                   fontWeight: 500,
                   textDecoration: "none",
@@ -238,8 +238,8 @@ export default function Navbar() {
 
 function MobileSection({ label, items, onClick }: { label: string; items: DropdownItem[]; onClick: () => void }) {
   return (
-    <details className="group border-b border-white/[0.04]">
-      <summary className="text-[15px] text-[#8899B0] hover:text-white transition-colors font-medium py-3 cursor-pointer list-none flex items-center justify-between">
+    <details className="group border-b border-gray-100">
+      <summary className="text-[15px] text-[#6B7280] hover:text-[#111827] transition-colors font-medium py-3 cursor-pointer list-none flex items-center justify-between">
         {label}
         <svg className="w-3 h-3 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path d="M6 9l6 6 6-6" />
@@ -251,9 +251,9 @@ function MobileSection({ label, items, onClick }: { label: string; items: Dropdo
             key={i}
             href={item.href}
             onClick={onClick}
-            className="text-[13px] text-[#8899B0] hover:text-white transition-colors py-1.5 flex items-center gap-2"
+            className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors py-1.5 flex items-center gap-2"
           >
-            {item.icon && <item.icon size={14} strokeWidth={1.5} style={{ color: "rgba(255,122,0,0.7)" }} />}
+            {item.icon && <item.icon size={14} strokeWidth={1.5} style={{ color: "#FF7A00" }} />}
             {item.label}
           </Link>
         ))}

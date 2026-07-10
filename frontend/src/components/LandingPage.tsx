@@ -5,7 +5,7 @@ import Hero from "./landing/Hero";
 
 export default function LandingPage() {
   return (
-    <div style={{ background: "#030205", minHeight: "100vh" }}>
+    <div style={{ background: "#F8F9FA", minHeight: "100vh" }}>
       <Navbar />
       <Hero />
     </div>
