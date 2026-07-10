@@ -44,7 +44,7 @@ export default function RemoteDisplay({ displayId, displayPort, jobStatus }: Pro
         )}
       </button>
 
-      {show && (
+      {show ? (
         <div
           style={{
             position: "fixed",
@@ -148,7 +148,7 @@ export default function RemoteDisplay({ displayId, displayPort, jobStatus }: Pro
             allow="clipboard-read; clipboard-write"
           />
         </div>
-      );
+      ) : null}
     </>
   );
 }
