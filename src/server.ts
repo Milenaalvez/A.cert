@@ -13,7 +13,7 @@ import { iniciarJob, getJob } from './services/orquestrador.service.js';
 import { criarConectores } from './connectors/index.js';
 import { gerarDossiePDF } from './services/dossie.service.js';
 import { closeBrowser, getCurrentDisplayId, acquireDisplayForJob, releaseDisplayForJob } from './utils/browser.js';
-import { displayPool } from './services/display-pool-manager.js';
+import { displayPool } from './utils/display-pool-manager.js';
 import { enviarEmailConfirmacao } from './services/email.service.js';
 import authRoutes from './routes/auth.js';
 import { authMiddleware } from './middleware/auth.js';

@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
 import { createRequire } from 'node:module';
-import { displayPool } from '../services/display-pool-manager.js';
+import { displayPool } from './display-pool-manager.js';
 
 const require = createRequire(import.meta.url);
 

@@ -44,7 +44,6 @@ function getBrowserArgs(displayNum?: number): string[] {
     '--disable-features=IsolateOrigins,site-per-process',
     '--disable-web-security',
     '--disable-features=BlockInsecurePrivateNetworkRequests',
-    // Prevent "Chrome is being controlled by automated software" banner
     '--disable-infobars',
     ...(isLinux ? ['--disable-software-rasterizer', '--disable-features=VizDisplayCompositor'] : []),
   ];
