@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from '../connectors/index.js';
 import { criarConectores } from '../connectors/index.js';
 import prisma, { executeRaw } from '../lib/prisma.js';
+import { acquireDisplayForJob, releaseDisplayForJob, getCurrentDisplayId } from '../utils/browser.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
 
@@ -115,6 +116,11 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
   });
 
   (async () => {
+    const displayId = await acquireDisplayForJob(jobId, conectores[0]?.nome);
+    if (displayId) {
+      LOG(`Display ${displayId} alocado para job ${jobId}`);
+    }
+
     for (const connector of conectores) {
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
@@ -140,6 +146,12 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
         });
       }
     }
+
+    if (displayId) {
+      await releaseDisplayForJob(jobId);
+      LOG(`Display ${displayId} liberado do job ${jobId}`);
+    }
+
     job.status = 'complete';
     job.fim = new Date().toISOString();
   })();

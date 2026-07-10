@@ -3,7 +3,7 @@ import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
 import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { focusPageForCaptcha, esperarCaptchaComSuporteRemoto } from '../services/captcha-solver.service.js';
+import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { PDFDocument } from 'pdf-lib';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
@@ -377,7 +377,7 @@ export class TRF1Connector implements IConnector {
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
         LOG('CAPTCHA detectado - enviando para resolucao remota...');
-        const captchaOk = await esperarCaptchaComSuporteRemoto(page, captchaType, jobId || '', this.nome);
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
         if (!captchaOk) {
           LOG('CAPTCHA nao resolvido no tempo limite');
           await page.close();

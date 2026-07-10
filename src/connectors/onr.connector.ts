@@ -3,7 +3,7 @@ import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
 import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { focusPageForCaptcha, esperarCaptchaComSuporteRemoto } from '../services/captcha-solver.service.js';
+import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 
 const LOG = (msg: string) => console.log(`[ONR] ${msg}`);
@@ -196,7 +196,7 @@ export class ONRConnector implements IConnector {
           LOG(`CAPTCHA no login: ${captchaLogin}`);
           await focusPageForCaptcha(page, captchaLogin);
           LOG('CAPTCHA detectado - enviando para resolucao remota...');
-          const captchaOk = await esperarCaptchaComSuporteRemoto(page, captchaLogin, jobId || '', this.nome);
+          const captchaOk = await esperarCaptchaInterativo(page, captchaLogin);
           if (!captchaOk) {
             LOG('CAPTCHA do login nao resolvido no tempo limite');
             await page.close();
@@ -294,7 +294,7 @@ export class ONRConnector implements IConnector {
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
         LOG('CAPTCHA detectado - enviando para resolucao remota...');
-        const captchaOk = await esperarCaptchaComSuporteRemoto(page, captchaType, jobId || '', this.nome);
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
         if (!captchaOk) {
           LOG('CAPTCHA nao resolvido no tempo limite');
           await page.close();

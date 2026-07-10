@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useT } from "@/i18n/useT";
+import RemoteDisplay from "@/components/RemoteDisplay";
 
 const apiBase = "";
 
@@ -539,6 +540,12 @@ export default function CertidoesPage() {
             <div style={{ marginBottom: 14, padding: "10px 16px", borderRadius: 8, background: "rgba(255,122,0,0.08)", border: "1px solid rgba(255,122,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 16, height: 16, border: "2px solid rgba(255,122,0,0.3)", borderTopColor: "#FF7A00", borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: "#FF7A00", fontWeight: 600 }}>{flowStatus}</span>
+              <div style={{ flex: 1 }} />
+              <RemoteDisplay
+                displayId={jobStatus?.displayId ?? null}
+                displayPort={jobStatus?.displayPort ?? null}
+                jobStatus={jobStatus?.status}
+              />
             </div>
           )}
 

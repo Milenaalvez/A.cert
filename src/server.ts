@@ -1,5 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
+import http from 'node:http';
+import net from 'node:net';
+import { WebSocketServer, type WebSocket } from 'ws';
 import compression from 'compression';
 import cors from 'cors';
 import path from 'node:path';
@@ -9,7 +12,8 @@ import { fileURLToPath } from 'node:url';
 import { iniciarJob, getJob } from './services/orquestrador.service.js';
 import { criarConectores } from './connectors/index.js';
 import { gerarDossiePDF } from './services/dossie.service.js';
-import { closeBrowser } from './utils/browser.js';
+import { closeBrowser, getCurrentDisplayId, acquireDisplayForJob, releaseDisplayForJob } from './utils/browser.js';
+import { displayPool } from './services/display-pool-manager.js';
 import { enviarEmailConfirmacao } from './services/email.service.js';
 import authRoutes from './routes/auth.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -230,12 +234,14 @@ app.post('/api/consultar', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/consultar/:jobId', authMiddleware, async (req, res) => {
+app.get('/api/consultar/:jobId', authMiddleware, (req, res) => {
   const job = getJob(req.params.jobId as string);
   if (!job) {
     res.status(404).json({ error: 'Job não encontrado' });
     return;
   }
+
+  const displayInfo = displayPool.getDisplayByJob(job.id);
 
   const resultados = job.resultados.map(r => ({
     status: r.status,
@@ -246,49 +252,16 @@ app.get('/api/consultar/:jobId', authMiddleware, async (req, res) => {
     documentoId: r.documento ? `${job.id}-${r.orgao.replace(/\s+/g, '_')}` : undefined,
   }));
 
-  const { captchaStore } = await import('./services/captcha-solver.service.js');
-  const captchaPendente = Array.from(captchaStore.entries())
-    .filter(([k]) => k.startsWith(job.id))
-    .map(([, entry]) => ({
-      orgao: entry.orgao,
-      chave: entry.chave,
-      screenshot: entry.screenshot,
-    }));
-  const captchaList = captchaPendente.length > 0 ? captchaPendente : undefined;
-
   res.json({
     id: job.id,
     status: job.status,
     dados: job.dados,
     resultados,
-    captchaPendente: captchaList,
     inicio: job.inicio,
     fim: job.fim,
+    displayId: displayInfo?.id ?? null,
+    displayPort: displayInfo?.port ?? null,
   });
-});
-
-app.post('/api/consultar/:jobId/captcha', authMiddleware, (req, res) => {
-  const job = getJob(req.params.jobId as string);
-  if (!job) {
-    res.status(404).json({ error: 'Job não encontrado' });
-    return;
-  }
-
-  const { chave, solution } = req.body;
-  if (!chave || !solution) {
-    res.status(400).json({ error: 'chave e solution são obrigatórios' });
-    return;
-  }
-
-  const { resolverCaptcha, captchaStore } = require('./services/captcha-solver.service.js');
-  const ok = resolverCaptcha(chave, solution);
-
-  if (ok) {
-    const entry = captchaStore.get(chave);
-    if (entry) entry.resolvido = true;
-  }
-
-  res.json({ success: ok });
 });
 
 app.post('/api/consultar/:jobId/retry', authMiddleware, (req, res) => {
@@ -320,6 +293,11 @@ app.post('/api/consultar/:jobId/retry', authMiddleware, (req, res) => {
   const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '90000', 10);
 
   (async () => {
+    const displayId = await acquireDisplayForJob(job.id, falhos[0]);
+    if (displayId) {
+      LOG(`Display ${displayId} alocado para retry do job ${job.id}`);
+    }
+
     for (const connector of conectores) {
       if (!falhos.includes(connector.nome)) continue;
       LOG(`>>> Retry conector: ${connector.nome}`);
@@ -343,6 +321,12 @@ app.post('/api/consultar/:jobId/retry', authMiddleware, (req, res) => {
         });
       }
     }
+
+    if (displayId) {
+      await releaseDisplayForJob(job.id);
+      LOG(`Display ${displayId} liberado do retry ${job.id}`);
+    }
+
     job.status = 'complete';
     job.fim = new Date().toISOString();
 
@@ -428,11 +412,116 @@ app.get('/api/dossie/:jobId', async (req, res) => {
   }
 });
 
+// ============ Display Pool & VNC ============
+
+app.get('/api/displays', authMiddleware, (_req, res) => {
+  res.json({
+    displays: displayPool.getAllDisplays(),
+    poolSize: displayPool.poolSize,
+    available: displayPool.availableCount,
+    busy: displayPool.busyCount,
+  });
+});
+
+app.get('/api/displays/status/:jobId', authMiddleware, (req, res) => {
+  const displayInfo = displayPool.getDisplayByJob(req.params.jobId as string);
+  if (!displayInfo) {
+    res.json({ displayId: null, displayPort: null, status: 'no_display' });
+    return;
+  }
+  res.json(displayInfo);
+});
+
+app.get('/api/displays/novnc-url/:displayId', authMiddleware, (req, res) => {
+  const info = displayPool.getDisplayInfo(req.params.displayId as string);
+  if (!info) {
+    res.status(404).json({ error: 'Display não encontrado' });
+    return;
+  }
+  res.json({
+    displayId: info.id,
+    novncUrl: `/novnc/viewer.html?displayId=${info.id}&port=${info.port}`,
+  });
+});
+
+// Serve noVNC standalone viewer page
+app.get('/novnc/viewer.html', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'novnc', 'viewer.html'));
+});
+
+const httpServer = http.createServer(app);
+
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', (ws: WebSocket, _req) => {
+  ws.on('error', (err: Error) => console.error('[WS] Client error:', err.message));
+});
+
+httpServer.on('upgrade', (request, socket, head) => {
+  const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+  const match = url.pathname.match(/^\/ws\/display\/(.+)$/);
+
+  if (!match) {
+    socket.destroy();
+    return;
+  }
+
+  const displayId = match[1];
+  const displayInfo = displayPool.getDisplayInfo(displayId);
+
+  if (!displayInfo) {
+    socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
+  wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
+    LOG(`[WebSocket] noVNC proxy: ${displayId} → localhost:${displayInfo.port}`);
+
+    const vncSocket = new net.Socket();
+
+    vncSocket.connect(displayInfo.port, '127.0.0.1', () => {
+      LOG(`[WebSocket] VNC connected to port ${displayInfo.port}`);
+    });
+
+    vncSocket.on('data', (data: Buffer) => {
+      if (ws.readyState === ws.OPEN) {
+        ws.send(data);
+      }
+    });
+
+    ws.on('message', (data: Buffer | ArrayBuffer | Buffer[]) => {
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer);
+      if (!vncSocket.destroyed) {
+        vncSocket.write(buf);
+      }
+    });
+
+    ws.on('close', () => {
+      if (!vncSocket.destroyed) vncSocket.end();
+      LOG(`[WebSocket] Client disconnected from display ${displayId}`);
+    });
+
+    vncSocket.on('close', () => {
+      if (ws.readyState === ws.OPEN) ws.close();
+    });
+
+    vncSocket.on('error', (err) => {
+      LOG(`[WebSocket] VNC socket error for ${displayId}: ${err.message}`);
+      if (ws.readyState === ws.OPEN) ws.close();
+    });
+  });
+});
+
 process.on('SIGINT', async () => {
+  await displayPool.shutdown();
   await closeBrowser();
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  console.log(`A.CERT rodando em http://localhost:${PORT}`);
+displayPool.initialize().then(() => {
+  httpServer.listen(PORT, () => {
+    console.log(`A.CERT rodando em http://localhost:${PORT}`);
+    console.log(`[DisplayPool] ${displayPool.poolSize} displays prontos (available: ${displayPool.availableCount})`);
+  });
 });

@@ -3,7 +3,6 @@ import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
 import { tentarBaixarPDF, aceitarCookies, preencherCampoRobusto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { esperarCaptchaComSuporteRemoto } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -94,7 +93,7 @@ export class TSTConnector implements IConnector {
       if (captchaType) {
         try { await page.bringToFront(); } catch {}
         LOG('>>> CAPTCHA detectado - enviando para resolucao remota...');
-        const ok = await esperarCaptchaComSuporteRemoto(page, captchaType as any, jobId || '', this.nome, 300000);
+        const ok = await esperarCaptchaInterativo(page, captchaType as any);
         if (!ok) {
           await page.close();
           return { status: 'error', orgao: this.nome, dataConsulta, error: 'CAPTCHA nao resolvido' };
