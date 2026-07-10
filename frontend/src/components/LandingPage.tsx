@@ -5,7 +5,7 @@ import Hero from "./landing/Hero";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0D1425]">
+    <div style={{ background: "#030205", minHeight: "100vh" }}>
       <Navbar />
       <Hero />
     </div>
