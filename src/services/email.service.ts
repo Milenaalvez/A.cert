@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 function getSmtpFromEnv() {
+  if (process.env.SMTP_DISABLED === 'true') return null;
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER;
@@ -104,7 +105,15 @@ export async function enviarEmailConfirmacao(email: string, name: string, token:
 
     console.log('  ✅ Enviado! MessageId:', info.messageId);
   } catch (err: any) {
-    console.error('  ❌ FALHA:', err.code, err.response || err.message);
+    const code = err.code || 'UNKNOWN';
+    const msg = err.response || err.message || String(err);
+    console.error(`  ❌ FALHA [${code}]:`, msg);
+    if (code === 'EAUTH') {
+      console.error('     → Verifique SMTP_USER/SMTP_PASS no .env (Hostinger pode exigir senha de app)');
+    }
+    if (code === 'ECONNREFUSED' || code === 'ETIMEDOUT') {
+      console.error(`     → Verifique SMTP_HOST=${smtp.host} e SMTP_PORT=${smtp.port}`);
+    }
   }
   console.log('───────────────────────────────────────────');
 }
@@ -140,7 +149,12 @@ export async function enviarEmailRedefinirSenha(email: string, name: string, tok
 
     console.log('  ✅ Enviado! MessageId:', info.messageId);
   } catch (err: any) {
-    console.error('  ❌ FALHA:', err.code, err.response || err.message);
+    const code = err.code || 'UNKNOWN';
+    const msg = err.response || err.message || String(err);
+    console.error(`  ❌ FALHA [${code}]:`, msg);
+    if (code === 'EAUTH') {
+      console.error('     → Verifique SMTP_USER/SMTP_PASS no .env (Hostinger pode exigir senha de app)');
+    }
   }
   console.log('───────────────────────────────────────────');
 }
@@ -186,7 +200,12 @@ export async function enviarEmailBoasVindas(email: string, name: string, tempPas
 
     console.log('  ✅ Enviado! MessageId:', info.messageId);
   } catch (err: any) {
-    console.error('  ❌ FALHA:', err.code, err.response || err.message);
+    const code = err.code || 'UNKNOWN';
+    const msg = err.response || err.message || String(err);
+    console.error(`  ❌ FALHA [${code}]:`, msg);
+    if (code === 'EAUTH') {
+      console.error('     → Verifique SMTP_USER/SMTP_PASS no .env (Hostinger pode exigir senha de app)');
+    }
   }
   console.log('───────────────────────────────────────────');
 }
