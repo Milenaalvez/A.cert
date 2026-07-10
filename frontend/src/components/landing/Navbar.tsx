@@ -38,7 +38,7 @@ export default function Navbar() {
       }`}
     >
       <div
-        className="mx-auto flex items-center justify-between"
+        className="mx-auto flex items-center relative"
         style={{ maxWidth: "1280px", padding: "0 24px", height: "88px" }}
       >
         <Link href="/" className="flex items-center gap-3 shrink-0">
@@ -46,7 +46,9 @@ export default function Navbar() {
           <span className="text-white text-[22px] font-bold tracking-tight">A.CERT</span>
         </Link>
 
-        <div className="hidden lg:flex items-center gap-10">
+        <div
+          className="hidden lg:flex items-center gap-10 absolute left-1/2 -translate-x-1/2"
+        >
           {LINKS.map((link) => (
             <button
               key={link.href}
@@ -59,16 +61,16 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3 ml-auto">
           <Link
             href="/login"
-            className="text-[13px] font-medium text-white/70 hover:text-white px-5 py-2.5 rounded-[10px] border border-white/[0.10] hover:border-white/20 transition-all duration-300"
+            className="text-[13px] font-medium text-white/70 hover:text-white px-6 py-3 rounded-[10px] border border-white/[0.10] hover:border-white/20 transition-all duration-300"
           >
             Entrar
           </Link>
           <Link
             href="/cadastro"
-            className="text-[13px] font-semibold text-white bg-[#FF7A00] hover:bg-[#E06900] px-5 py-2.5 rounded-[10px] transition-all duration-300 shadow-[0_4px_20px_rgba(255,122,0,0.2)] hover:shadow-[0_6px_30px_rgba(255,122,0,0.35)]"
+            className="text-[13px] font-semibold text-white bg-[#FF7A00] hover:bg-[#E06900] px-6 py-3 rounded-[10px] transition-all duration-300 shadow-[0_4px_20px_rgba(255,122,0,0.2)] hover:shadow-[0_6px_30px_rgba(255,122,0,0.35)]"
           >
             Criar conta
           </Link>
