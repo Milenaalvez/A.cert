@@ -1,4 +1,6 @@
 import type { Page } from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
 
 export async function injectFillHelper(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -31,7 +33,20 @@ const DOWNLOAD_BUTTON_TEXTS = [
   'emitir', 'obter certidão', 'visualizar', 'abrir pdf',
 ];
 
-export async function tentarBaixarPDF(page: Page): Promise<Uint8Array | null> {
+export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise<Uint8Array | null> {
+  // Nível 0 — CDP (resolve download via blob/JS customizado, ex: TST)
+  if (downloadDir) {
+    try {
+      const pdfPath = await aguardarDownloadCDP(downloadDir, { timeoutMs: 15000 });
+      if (pdfPath) {
+        const buf = fs.readFileSync(pdfPath);
+        if (buf.length > 1000) {
+          return new Uint8Array(buf);
+        }
+      }
+    } catch {}
+  }
+
   // Nível 1: clicar em botão de download e capturar nova aba/página
   try {
     const newTargetPromise = new Promise<import('puppeteer').Target | null>((resolve) => {
@@ -167,4 +182,112 @@ export async function preencherInputPorLabelTexto(
     }
     return false;
   }, labelTexto, valor);
+}
+
+export async function prepararCapturaPDFViaCDP(
+  page: Page,
+  downloadDir: string
+): Promise<void> {
+  if (!fs.existsSync(downloadDir)) {
+    fs.mkdirSync(downloadDir, { recursive: true });
+  }
+  const client = await page.target().createCDPSession();
+  await client.send('Page.setDownloadBehavior', {
+    behavior: 'allow',
+    downloadPath: downloadDir,
+  });
+}
+
+export async function aguardarDownloadCDP(
+  downloadDir: string,
+  opts: { timeoutMs?: number; pollMs?: number } = {}
+): Promise<string | null> {
+  const timeoutMs = opts.timeoutMs ?? 20000;
+  const pollMs = opts.pollMs ?? 300;
+  const start = Date.now();
+  const arquivosAntes = new Set(
+    fs.existsSync(downloadDir) ? fs.readdirSync(downloadDir) : []
+  );
+
+  while (Date.now() - start < timeoutMs) {
+    if (fs.existsSync(downloadDir)) {
+      const arquivosAgora = fs.readdirSync(downloadDir);
+      const novo = arquivosAgora.find(
+        (f) => !arquivosAntes.has(f) && !f.endsWith('.crdownload')
+      );
+      if (novo) {
+        const caminhoCompleto = path.join(downloadDir, novo);
+        await new Promise((r) => setTimeout(r, 500));
+        return caminhoCompleto;
+      }
+    }
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
+  return null;
+}
+
+export async function preencherCampoRobusto(
+  page: Page,
+  selector: string,
+  valor: string,
+  maskFnName?: string
+): Promise<boolean> {
+  const el = await page.$(selector);
+  if (!el) return false;
+
+  await el.click({ clickCount: 3 });
+  await page.keyboard.press('Backspace').catch(() => {});
+  await page.keyboard.type(valor, { delay: 60 });
+
+  let valorAtual = await page.evaluate(
+    (e) => (e as HTMLInputElement).value,
+    el
+  );
+  const digitosEsperados = valor.replace(/\D/g, '');
+  if (
+    valorAtual &&
+    digitosEsperados &&
+    valorAtual.replace(/\D/g, '').length >= Math.min(3, digitosEsperados.length)
+  ) {
+    return true;
+  }
+
+  await page.evaluate(
+    (e, val, maskFn) => {
+      const input = e as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )!.set!;
+      setter.call(input, val);
+      ['keydown', 'input', 'keyup', 'change', 'blur'].forEach((evt) =>
+        input.dispatchEvent(new Event(evt, { bubbles: true }))
+      );
+      if (maskFn && typeof (window as any)[maskFn] === 'function') {
+        (window as any)[maskFn](input);
+      }
+    },
+    el,
+    valor,
+    maskFnName
+  );
+
+  valorAtual = await page.evaluate((e) => (e as HTMLInputElement).value, el);
+  return !!valorAtual && valorAtual.trim() !== '';
+}
+
+export async function encontrarPorSufixoId(
+  page: Page,
+  sufixo: string,
+  tag = '*'
+): Promise<string | null> {
+  return page.evaluate(
+    (suf: string, t: string) => {
+      const els = Array.from(document.querySelectorAll(t));
+      const found = els.find((el) => el.id && el.id.endsWith(suf));
+      return found ? `#${CSS.escape(found.id)}` : null;
+    },
+    sufixo,
+    tag
+  );
 }

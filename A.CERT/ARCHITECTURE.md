@@ -1,31 +1,38 @@
-# Arquitetura — A.CERT v1.2
+# Arquitetura — A.CERT
 
-Documentação técnica completa da stack, fluxos de dados e decisões arquiteturais.
+Documentação técnica da stack, fluxos de dados e decisões arquiteturais.
 
 ---
 
 ## Visão Geral
 
-A A.CERT é uma plataforma SaaS que automatiza a emissão de certidões imobiliárias em 7 órgãos públicos brasileiros. O sistema opera como uma aplicação web com backend Express + banco PostgreSQL (Prisma ORM) e frontend Next.js 15.
-
-**v1.2 (Jun/2026):** Migrei o banco de dados de SQLite para PostgreSQL com Prisma ORM, mantendo compatibilidade total com a API existente.
+A.CERT é uma plataforma SaaS que automatiza a emissão de certidões imobiliárias em 7 órgãos públicos brasileiros. Opera como aplicação web com backend Express + PostgreSQL (Prisma ORM) e frontend Next.js 15.
 
 ### Diagrama de Alto Nível
 
 ```
-Cliente (Navegador)
-    │
-    ├─── Frontend Next.js (porta 3000)
-    │     │
-    │     ├── Dashboard (React 19 + Tailwind 4)
-    │     └── Página Pública (HTML/CSS/JS vanilla)
-    │
-    └─── Backend Express (porta 3001)
-          │
-          ├── Rotas REST (/api/*)
-          ├── Conectores (Puppeteer)
-          ├── Serviços (Orquestrador, CAPTCHA, Dossiê, Email)
-          └── Banco SQLite (better-sqlite3, modo WAL)
+                          ┌──────────────────────────┐
+                          │     Nginx (Porta 80/443)  │
+                          │     Proxy Reverso + HTTPS │
+                          └──────────┬───────────────┘
+                                     │
+                          ┌──────────┴───────────┐
+                          │                      │
+                    ┌─────┴─────┐          ┌─────┴─────┐
+                    │  Arquivos │          │   API     │
+                    │ Estáticos │          │ Express 5 │
+                    │ (out/)    │          │ :3001     │
+                    └───────────┘          └─────┬─────┘
+                                                 │
+                          ┌──────────────────────┼──────────────────────┐
+                          │                      │                      │
+                    ┌─────┴─────┐          ┌─────┴─────┐          ┌─────┴─────┐
+                    │ Conectores│          │  Serviços  │          │  Prisma   │
+                    │ Puppeteer │          │ Orquestrador│          │   ORM     │
+                    │ 7 órgãos  │          │ CAPTCHA     │          │ PostgreSQL│
+                    └───────────┘          │ Dossiê PDF  │          └───────────┘
+                                           │ Email SMTP  │
+                                           └─────────────┘
 ```
 
 ---
@@ -36,197 +43,46 @@ Cliente (Navegador)
 
 | Componente | Tecnologia | Justificativa |
 |---|---|---|
-| **Runtime** | Node.js 22 + TypeScript 5 | Tipagem forte, compatibilidade com Puppeteer |
-| **Servidor** | Express 5 | Leve, maduro, ampla compatibilidade |
-| **Banco** | PostgreSQL (pg) + Prisma ORM | Type-safe via Prisma Client, raw SQL via pool pg para queries complexas |
-| **Browser** | Puppeteer + Stealth Plugin | Automação realista, evasão de detecção anti-bot |
-| **PDF** | pdf-lib | Manipulação programática de PDFs (merge, embed) |
-| **Auth** | JWT + bcryptjs | Stateless, seguro, simples de implementar |
-| **Email** | Nodemailer | Flexível, compatível com qualquer SMTP |
-| **Uploads** | Multer | Padrão Express para upload de arquivos |
+| Runtime | Node.js + TypeScript 5 | Tipagem forte, compatibilidade com Puppeteer |
+| Servidor | Express 5 | Leve, maduro, ampla compatibilidade |
+| Banco | PostgreSQL + Prisma ORM + pg Pool | Type-safe via Prisma Client, raw SQL para queries complexas |
+| Browser | Puppeteer + Stealth Plugin | Automação realista, evasão de detecção anti-bot |
+| PDF | pdf-lib | Manipulação programática de PDFs (merge, embed) |
+| Auth | JWT + bcryptjs | Stateless, seguro |
+| Email | Nodemailer | Compatível com qualquer SMTP |
+| Uploads | Multer | Padrão Express para upload de arquivos |
 
 ### Frontend
 
 | Componente | Tecnologia | Justificativa |
 |---|---|---|
-| **Framework** | Next.js 15 + React 19 | SSR/SSG opcional, roteamento baseado em arquivos |
-| **Estilo** | Tailwind CSS 4 | Utility-first, rápido protótipo |
-| **Gráficos** | Recharts | Nativos React, responsivos |
-| **Ícones** | Lucide React | Leves, tree-shakeable |
-| **Tabelas** | @tanstack/react-table | Headless, flexível |
-
----
-
-## Estrutura de Diretórios
-
-```
-A.CERT/
-├── src/
-│   ├── server.ts                    # Entry point do backend
-│   ├── database.ts                  # Schema + migrations + seed
-│   ├── connectors/                  # 7 conectores de órgãos
-│   │   ├── connector.interface.ts   # Interface IConnector
-│   │   ├── types.ts                 # Tipos compartilhados
-│   │   ├── index.ts                 # Factory criarConectores()
-│   │   ├── receita-federal.connector.ts
-│   │   ├── trf1.connector.ts
-│   │   ├── tjdft.connector.ts
-│   │   ├── trt.connector.ts
-│   │   ├── tst.connector.ts
-│   │   ├── sefaz-df.connector.ts
-│   │   └── onr.connector.ts
-│   ├── services/
-│   │   ├── orquestrador.service.ts  # Orquestração de consultas
-│   │   ├── captcha-manager.service.ts
-│   │   ├── captcha-solver.service.ts
-│   │   ├── dossie.service.ts        # Geração de PDFs
-│   │   └── email.service.ts
-│   ├── routes/                      # 13 arquivos de rotas
-│   │   ├── auth.ts                  # /api/auth
-│   │   ├── companies.ts             # /api/companies (novo v1.1)
-│   │   ├── dashboard.ts             # /api/dashboard
-│   │   ├── people.ts                # /api/people
-│   │   ├── dossiers.ts              # /api/dossiers
-│   │   ├── properties.ts            # /api/properties
-│   │   ├── reports.ts               # /api/reports
-│   │   ├── search.ts                # /api/search
-│   │   ├── captcha.ts               # /api/captcha
-│   │   ├── settings.ts              # /api/settings
-│   │   ├── team.ts                  # /api/team, /api/justifications, /api/time-records
-│   │   ├── support.ts               # /api/support
-│   │   └── trash.ts                 # /api/trash
-│   ├── middleware/
-│   │   └── auth.ts                  # JWT middleware
-│   └── utils/
-│       ├── browser.ts               # Puppeteer + Stealth config
-│       ├── captcha.ts               # Detecção de CAPTCHA
-│       ├── dom-helper.ts            # Preenchimento de formulários
-│       ├── retry-manager.service.ts
-│       └── validation.ts            # CPF, CNPJ, email, etc.
-├── frontend/
-│   ├── app/                         # Páginas Next.js (App Router)
-│   │   ├── dashboard/               # Dashboard principal
-│   │   │   ├── page.tsx             # Home do dashboard
-│   │   │   ├── dossies/             # Dossiês
-│   │   │   ├── pessoas/             # Pessoas
-│   │   │   ├── imoveis/             # Imóveis
-│   │   │   ├── certidoes/           # Certidões
-│   │   │   ├── relatorios/          # Relatórios
-│   │   │   ├── usuarios/            # Usuários (Team)
-│   │   │   ├── configuracoes/       # Configurações
-│   │   │   ├── suporte/             # Suporte
-│   │   │   └── trash/               # Lixeira
-│   │   ├── cadastro/                # Registro
-│   │   ├── recuperar-senha/         # Esqueci senha
-│   │   └── page.tsx                 # Landing page
-│   └── src/
-│       ├── components/              # 31+ componentes React
-│       ├── contexts/
-│       │   └── ThemeContext.tsx
-│       ├── lib/
-│       │   └── api.ts               # Cliente auth
-│       └── services/
-│           └── teamApi.ts
-├── electron/                        # Desktop (congelado v1.1)
-├── extension/                       # Chrome Extension (Manifest V3)
-├── public/                          # Interface pública standalone
-├── scripts/                         # Utilidades de manutenção
-└── data/                            # SQLite DB + documentos + backups
-```
-
----
-
-## Banco de Dados
-
-### Tabelas Principais (21 tabelas)
-
-#### Core do Negócio
-
-| Tabela | Descrição |
-|---|---|
-| `persons` | Cadastro de pessoas (CPF, nome, dados pessoais) |
-| `properties` | Imóveis (identificador, matrícula, endereço) |
-| `dossiers` | Dossiês com `transaction_type` (venda/locação) |
-| `certificates` | Certidões por dossiê com `person_id` (v1.1) |
-| `dossier_participants` | Vínculo pessoa-dossiê com `role` (v1.1) |
-
-#### Multiempresas (v1.1)
-
-| Tabela | Descrição |
-|---|---|
-| `companies` | Empresas cadastradas (plano, licença, logo) |
-| `company_settings` | Configurações por empresa (key-value) |
-
-#### RH Interno
-
-| Tabela | Descrição |
-|---|---|
-| `users` | Usuários com `password_change_required` (v1.1) |
-| `departments` | Departamentos |
-| `positions` | Cargos |
-| `justifications` | Justificativas de ausência |
-| `time_records` | Registros de ponto |
-| `user_permissions` | Permissões por usuário |
-| `team_activities` | Log de atividades da equipe |
-
-#### Suporte
-
-| Tabela | Descrição |
-|---|---|
-| `organs` | Órgãos integrados |
-| `certificate_templates` | Templates de certidões disponíveis |
-| `activities` | Log de atividades geral |
-| `settings` | Configurações globais do sistema |
-| `support_tickets` | Tickets de suporte |
-| `audit_log` | Log de auditoria |
-
-#### Relacionamentos
-
-| Tabela | Descrição |
-|---|---|
-| `property_owners` | Vínculo pessoa-imóvel |
-| `property_timeline` | Histórico do imóvel |
-| `person_relationships` | Vínculo parental entre pessoas |
-
-### Diagrama de Relacionamentos (Core)
-
-```
-companies ──< users
-users ──< team_activities
-users ──< time_records
-users ──< justifications
-users ──< user_permissions
-
-dossiers ──< certificates
-dossiers ──< dossier_participants >── persons
-dossiers ── properties
-persons ──< property_owners >── properties
-persons ──< person_relationships >── persons
-```
+| Framework | Next.js 15 + React 19 | App Router, export estático |
+| Estilo | Tailwind CSS 4 | Utility-first, design system consistente |
+| Gráficos | Recharts | Nativos React, responsivos |
+| Ícones | Lucide React | Leves, tree-shakeable |
+| Internacionalização | next-intl | Suporte a múltiplos idiomas |
+| Tour Guiado | Driver.js | Tooltips sobrepostos na interface real |
+| Onboarding | Componente React nativo | 5 cards sequenciais com animação slide |
 
 ---
 
 ## Fluxo de Dados
 
-### 1. Criação de Dossiê (v1.1)
+### 1. Criação de Dossiê
 
 ```
 1. Usuário preenche modal (4 passos):
    a. Tipo de transação (venda/locação)
    b. Imóvel (identificação + checkbox matrícula)
-   c. Partes envolvidas (múltiplos com roles)
+   c. Partes envolvidas (múltiplos papéis)
    d. Revisão
 
 2. POST /api/dossiers
    ├── Cria property (se informada)
    ├── Cria dossier com transaction_type
-   ├── Para cada participante:
-   │   ├── Busca ou cria person por CPF
-   │   └── Insere em dossier_participants
-   └── Retorna { id, identifier }
-
-3. Modal pós-criação:
-   "Ver Dossiê" / "Emitir Certidões"
+   └── Para cada participante:
+       ├── Busca ou cria person por CPF
+       └── Insere em dossier_participants
 ```
 
 ### 2. Emissão de Certidões
@@ -238,11 +94,7 @@ persons ──< person_relationships >── persons
 2. Orquestrador (orquestrador.service.ts)
    ├── Cria jobId
    ├── Dispara conectores em paralelo
-   └── Ao final de cada conector:
-       └── persistirResultado(personId, dossierId, resultado)
-           ├── Insere em dossier_participants (se não existe)
-           ├── Insere certificate com person_id
-           └── Salva documento PDF em data/documents/
+   └── Persiste resultados com person_id e dossier_id
 
 3. Polling: GET /api/consultar/:jobId
    ├── Status por órgão
@@ -254,27 +106,22 @@ persons ──< person_relationships >── persons
 
 ```
 1. GET /api/dossiers/:id
-   ├── Query dossier + property + participants
+   ├── Query dossier + property + participants + certificates
    └── Retorna dados completos
 
 2. POST /api/dossiers/:id/generate
-   ├── Monta payload com participants + certificates
-   ├── Chama gerarDossiePDFFromDB(payload)
-   │   ├── Capa: tipo de transação, nº participantes
-   │   ├── Para cada participante:
-   │   │   ├── Nome, CPF, papel, certs
-   │   │   └── Embeda PDFs reais via document_path
-   │   ├── Propriedade (se existir)
-   │   ├── Tabela resumo de certidões
-   │   └── Estatísticas finais
+   ├── Monta payload com participantes e certidões
+   ├── Gera PDF:
+   │   ├── Capa: tipo de transação, participantes
+   │   ├── Seção por participante (nome, CPF, certidões embedadas)
+   │   ├── Informações do imóvel
+   │   └── Tabela resumo e estatísticas
    └── Retorna Buffer PDF
 ```
 
 ---
 
-## Padrões de Código
-
-### Conectores (IConnector)
+## Conectores (IConnector)
 
 Cada conector implementa a interface:
 
@@ -290,42 +137,102 @@ interface IConnector {
 }
 ```
 
-Padrão comum:
+**Fluxo padrão:**
 1. `createPage()` — Nova página Puppeteer com stealth
 2. Preenche formulário com dados do proprietário
-3. Detecta CAPTCHA → pausa e aguarda resolução
+3. Detecta CAPTCHA → pausa e aguarda resolução manual
 4. Captura PDF do resultado
 5. Retorna `ConnectorResult { status, orgao, documento, protocolo }`
 
-### Rotas
+| Órgão | Tipo de Certidão | Método de Captura |
+|---|---|---|
+| Receita Federal | CPF/CNPJ | Navegação + PDF |
+| TRF 1ª Região | Cível e Criminal | Navegação + PDF |
+| TJDFT | Distribuição Cível | Navegação + PDF |
+| TRT 10ª Região | Trabalhista | Navegação + PDF |
+| TST | Trabalhista | Navegação + PDF |
+| SEFAZ-DF | Débitos Fiscais | Navegação + PDF |
+| ONR | Ônus Reais | Navegação + PDF |
 
-- Arquivos separados por domínio (auth, people, dossiers, etc.)
-- Middleware `authMiddleware` nas rotas protegidas
-- Respostas padronizadas: `{ error }` ou `{ success, data }`
-- Validação no servidor com funções utilitárias em `validation.ts`
+---
 
-### Frontend
+## Sistema de Documentação
 
-- Componentes na pasta `frontend/src/components/`
-- Contextos em `frontend/src/contexts/`
-- API client em `frontend/src/lib/api.ts`
-- Páginas no App Router (`frontend/app/dashboard/`)
+A Central de Ajuda conta com um sistema completo de documentação:
+
+- **10 categorias** com **65+ artigos** detalhados
+- Cada artigo possui estrutura modular com blocos de conteúdo: hero, cards coloridos (azul/verde/amarelo), timeline com linhas conectoras, fluxograma visual, problemas comuns e links "Veja também"
+- Dados armazenados em `frontend/src/data/ajuda.ts` — sem necessidade de banco de dados
+- Páginas geradas estaticamente via `generateStaticParams()` — performance máxima
+- Suporte a vídeos embed Loom em cada artigo
+- Navegação entre artigos com links cross-categoria
+- Busca global com filtro em tempo real
+
+### Sistema de Notificações
+
+- Tabela `notifications` no PostgreSQL vinculada a `users`
+- API REST com 4 endpoints: listar, contar, marcar lida, marcar todas
+- Badge no sidebar com contagem em tempo real (polling a cada 30s)
+- Função `createNotification()` para triggers de eventos do sistema
+
+### Onboarding e Tour
+
+- **Onboarding modal**: 5 cards sequenciais com animação slide, barra de progresso, destaque Central de Ajuda. Exibido uma vez no primeiro acesso
+- **Tour guiado**: Tooltips sobrepostos na interface real usando Driver.js, apontando para elementos via `data-tour` attributes
+
+---
+
+## Banco de Dados
+
+### Modelagem (21 tabelas)
+
+**Core do Negócio:**
+- `persons` — Cadastro de pessoas (CPF, nome, dados pessoais)
+- `properties` — Imóveis (identificador, matrícula, endereço)
+- `dossiers` — Dossiês com `transaction_type` (venda/locação)
+- `certificates` — Certidões por dossiê vinculadas a `person_id`
+- `dossier_participants` — Vínculo pessoa-dossiê com `role`
+
+**Multiempresas:**
+- `companies` — Empresas cadastradas (plano, licença, logo)
+- `company_settings` — Configurações por empresa (key-value)
+
+**RH Interno:**
+- `users` — Usuários com controle de acesso
+- `departments`, `positions` — Estrutura organizacional
+- `justifications`, `time_records` — Controle de ponto
+- `user_permissions` — Permissões granulares por usuário
+- `team_activities` — Log de atividades da equipe
+
+**Sistema:**
+- `organs` — Órgãos integrados com status e tokens
+- `certificate_templates` — Templates de certidões disponíveis
+- `settings` — Configurações globais (key-value)
+- `activities` — Log de atividades geral
+- `support_tickets` — Tickets de suporte
+- `audit_log` — Log de auditoria com informações detalhadas
+- `notifications` — Notificações do usuário (título, mensagem, tipo, status de leitura, link)
+
+**Relacionamentos:**
+- `property_owners` — Vínculo pessoa-imóvel
+- `property_timeline` — Histórico de alterações do imóvel
+- `person_relationships` — Vínculo entre pessoas (parentesco)
 
 ---
 
 ## Decisões Arquiteturais
 
-1. **PostgreSQL em vez de SQLite**: Escolhido para deploy em produção na Hostinger KVM2. O Prisma ORM fornece type-safety nas operações CRUD, enquanto o pool `pg` mantém flexibilidade para queries analíticas complexas.
+1. **PostgreSQL (antes SQLite):** Migrado para deploy em produção. Prisma ORM fornece type-safety nas operações CRUD, pool `pg` mantém flexibilidade para queries analíticas.
 
-2. **Puppeteer com Stealth**: Necessário porque órgãos públicos usam detecção anti-bot agressiva (Cloudflare, DataDome).
+2. **Puppeteer com Stealth:** Órgãos públicos usam detecção anti-bot agressiva (Cloudflare, DataDome). O stealth plugin modifica fingerprints do navegador para parecer tráfego humano.
 
-3. **CAPTCHA interativo**: Impossível automatizar 100% — o sistema abre o navegador para o usuário resolver manualmente quando necessário.
+3. **CAPTCHA interativo:** Impossível automatizar 100%. O sistema detecta CAPTCHAs e pausa para resolução manual. Cloudflare Turnstile é usado para proteção no registro.
 
-4. **pdf-lib para merge**: Escolhido por ser puro JavaScript (sem dependências nativas), permitindo manipulação programática de PDFs.
+4. **pdf-lib para merge:** JavaScript puro, sem dependências nativas, permitindo manipulação programática de PDFs em qualquer plataforma.
 
-5. **Multiempresas manual (MVP)**: O cadastro de empresas é feito pelo admin do A.CERT, não self-service. Landing page pública com pagamento será fase 2.
+5. **Export estático do Next.js:** O frontend é buildado como HTML/CSS/JS estático (`NEXT_EXPORT=1`) e servido pelo Express, eliminando a necessidade de um servidor Node.js dedicado para o frontend.
 
-6. **Electron congelado**: O cliente optou por não usar o app desktop inicialmente, mantendo apenas a versão web.
+6. **Multiempresas manual:** Cadastro de empresas feito pelo admin. Self-service com landing page pública será implementado em fase futura.
 
 ---
 
@@ -333,16 +240,25 @@ Padrão comum:
 
 - Senhas hashadas com bcryptjs (12 rounds)
 - JWT com expiração de 7 dias
-- `password_change_required` força troca no primeiro login
+- `password_change_required` força troca de senha no primeiro login
+- Middleware de autorização em todas as rotas protegidas
 - `.env`, `data/`, `dist/`, `release/`, `tmp/` no `.gitignore`
-- ⚠️ Credenciais ONR hardcoded — extrair para `.env`
+- Logs de auditoria para ações críticas (criação, edição, exclusão)
+- Sessões rastreáveis com dispositivo, navegador, OS e IP
+- Rate limiting via Cloudflare (nível de CDN)
 
 ---
 
 ## Próximos Passos
 
+- [x] Central de Ajuda com documentação completa (65+ artigos, 10 categorias)
+- [x] Sistema de notificações com badge no sidebar
+- [x] Onboarding modal para novos usuários
+- [x] Tour guiado pela plataforma (Driver.js)
+- [x] Ticket de suporte com envio de email via SMTP
+- [x] Meus Chamados no Card 3 da Central de Ajuda
+- [ ] Credenciais ONR (em desenvolvimento)
 - [ ] Landing page pública com planos e pagamento
-- [ ] Configuração SMTP Hostinger para emails transacionais
-- [ ] Finalizar design das abas de Configurações e Suporte
-- [ ] Emissão sequencial por pessoa na UI
-- [ ] Extrair credenciais ONR para `.env`
+- [ ] Emissão sequencial por pessoa na interface
+- [ ] Relatórios avançados com gráficos comparativos
+- [ ] Webhooks para integração com sistemas externos

@@ -53,6 +53,13 @@ export async function scrollAteCaptcha(page: Page, tipo: CaptchaType): Promise<v
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    if (t === 'texto') {
+      // Rola ate a imagem do captcha ou input de texto
+      const img = document.querySelector<HTMLElement>('img[src*="captcha"], img[alt*="captcha"], img[alt*="seguran"], img[alt*="codigo"]');
+      if (img) img.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const inp = document.querySelector<HTMLInputElement>('input[name*="captcha"], input[id*="captcha"], input[placeholder*="captcha"], input[name*="Captcha"], input[id*="Captcha"]');
+      if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }, tipo);
 }
 

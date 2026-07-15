@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
+import { fileURLToPath } from 'url';
 import prisma, { queryRaw, queryRawOne, executeRaw, getSetting } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { gerarDossiePDFFromDB } from '../services/dossie.service.js';
@@ -124,7 +128,7 @@ router.post('/', authMiddleware, async (req, res) => {
     `,
       `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       userName,
-      participants.length > 1 ? `criou o dossiê com ${participants.length} participantes` : 'criou o dossiê',
+      participants.length > 1 ? `Criou o dossiê com ${participants.length} participantes` : 'Criou o dossiê',
       identifier,
       dossierId
     );
@@ -197,10 +201,12 @@ router.get('/', async (req, res) => {
     const dossiers = await queryRaw(`
       SELECT d.id, d.identifier, d.status, d.priority, d.created_by, d.created_at, d.updated_at, d.observation,
              p.id as person_id, p.name as person_name, p.cpf as person_cpf,
-             prop.identifier as property_identifier, prop.type as property_type, prop.address as property_address
+             prop.identifier as property_identifier, prop.type as property_type, prop.address as property_address,
+             u.avatar as responsible_avatar
       FROM dossiers d
       LEFT JOIN persons p ON p.id = d.person_id
       LEFT JOIN properties prop ON prop.id = d.property_id
+      LEFT JOIN users u ON u.name = d.created_by
       ${where}
       ORDER BY d.updated_at DESC
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
@@ -223,12 +229,17 @@ router.get('/', async (req, res) => {
         `SELECT COUNT(*) as count FROM activities WHERE dossier_ref = $1`, d.id
       );
 
+      const obsCount = await queryRawOne(
+        `SELECT COUNT(*) as count FROM dossier_observations WHERE dossier_id = $1`, d.id
+      );
+
       return {
         id: d.id,
         identifier: d.identifier,
         status: derivedStatus,
         priority: d.priority,
         responsible: d.created_by || 'Não atribuído',
+        responsibleAvatar: d.responsible_avatar || null,
         observation: d.observation || '',
         createdAt: d.created_at,
         updatedAt: d.updated_at,
@@ -242,11 +253,12 @@ router.get('/', async (req, res) => {
           type: d.property_type,
           address: d.property_address,
         } : null,
-        certificateCount: certStats.total,
-        certificatesObtidas: certStats.obtidas,
-        certificatesPendentes: certStats.pendentes,
-        progress: certStats.total > 0 ? Math.round((certStats.obtidas / certStats.total) * 100) : 0,
-        commentsCount: activityCount.count,
+      certificateCount: certStats.total,
+      certificatesObtidas: certStats.obtidas,
+      certificatesPendentes: certStats.pendentes,
+      progress: certStats.total > 0 ? Math.round((certStats.obtidas / certStats.total) * 100) : 0,
+      commentsCount: activityCount.count,
+      observationsCount: (obsCount as any)?.count || 0,
       };
     }));
 
@@ -348,28 +360,115 @@ router.get('/:id/certificates', async (_req, res) => {
   }
 });
 
-// POST /api/dossiers/:id/certificates/ingest
-router.post('/:id/certificates/ingest', authMiddleware, async (_req, res) => {
+// Cert upload setup
+const certUploadDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'uploads', 'certificates');
+if (!fs.existsSync(certUploadDir)) { fs.mkdirSync(certUploadDir, { recursive: true }); }
+
+const certMulter = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, certUploadDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.pdf';
+      cb(null, `cert-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.originalname.endsWith('.pdf')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos PDF são aceitos'));
+    }
+  },
+});
+
+// POST /api/dossiers/:id/certificates/add — adicionar certidão com upload opcional
+router.post('/:id/certificates/add', authMiddleware, certMulter.single('file'), async (req, res) => {
   try {
-    const { id } = _req.params;
-    const { cert_key } = _req.body;
+    const { id } = req.params;
+    const { cert_key, person_id } = req.body;
+    const file = (req as any).file;
+
     if (!cert_key) { res.status(400).json({ error: 'cert_key é obrigatório' }); return; }
     const template = await queryRawOne(`SELECT * FROM certificate_templates WHERE key = $1`, cert_key);
     if (!template) { res.status(404).json({ error: 'Template não encontrado' }); return; }
-    const existing = await queryRawOne(`SELECT id FROM certificates WHERE dossier_id = $1 AND name = $2`, id, template.label);
+
+    const existing = person_id
+      ? await queryRawOne(`SELECT id FROM certificates WHERE dossier_id = $1 AND name = $2 AND person_id = $3`, id, template.label, person_id)
+      : await queryRawOne(`SELECT id FROM certificates WHERE dossier_id = $1 AND name = $2`, id, template.label);
+
     const now = new Date().toISOString();
+    const userRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, req.user!.userId);
+    const userName = userRow?.name || req.user!.email;
+
+    const certFilePath = file ? `uploads/certificates/${file.filename}` : null;
+
     if (existing) {
-      await executeRaw(`UPDATE certificates SET status = 'Obtida', obtained_at = $1, updated_at = $2 WHERE id = $3`, now, now, existing.id);
+      const updates: string[] = ['status = $1', 'obtained_at = $2', 'updated_at = $3'];
+      const values: any[] = ['Obtida', now, now];
+      if (certFilePath) { updates.push('document_path = $4'); values.push(certFilePath); }
+      values.push(existing.id);
+      await executeRaw(`UPDATE certificates SET ${updates.join(', ')} WHERE id = $${values.length}`, ...values);
+      res.json({ success: true, cert_key, cert_id: existing.id, status: 'Obtida', obtained_at: now, document_path: certFilePath });
     } else {
+      const maxOrder = await queryRawOne(`SELECT COALESCE(MAX(sort_order), 0) as max_order FROM certificates WHERE dossier_id = $1`, id);
+      const sortOrder = ((maxOrder as any)?.max_order || 0) + 1;
       const certId = `cert_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      await executeRaw(`INSERT INTO certificates (id, dossier_id, name, organ, status, protocol, obtained_at, created_at) VALUES ($1, $2, $3, $4, 'Obtida', $5, $6, $7)`, certId, id, template.label, template.requires_orgao || 'Sistema', `AUTO-${Date.now()}`, now, now);
+      await executeRaw(
+        `INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, document_path, obtained_at, created_at, sort_order) VALUES ($1, $2, $3, $4, $5, 'Obtida', $6, $7, $8, $9, $10)`,
+        certId, id, person_id || null, template.label, template.requires_orgao || 'Sistema', `AUTO-${Date.now()}`,
+        certFilePath, now, now, sortOrder
+      );
+      await executeRaw(`UPDATE dossiers SET updated_at = NOW() WHERE id = $1`, id);
+      await executeRaw(
+        `INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+        `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        userName, `Adicionou a certidão ${template.label}`, template.label, id
+      );
+      res.json({ success: true, cert_key, cert_id: certId, name: template.label, organ: template.requires_orgao || 'Sistema', status: 'Obtida', obtained_at: now, created_at: now, document_path: certFilePath, sort_order: sortOrder });
     }
-    await executeRaw(`UPDATE dossiers SET updated_at = NOW() WHERE id = $1`, id);
-    const userRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, _req.user!.userId);
-    await executeRaw(`INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`, `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, userRow?.name || _req.user!.email, `obteve certidão: ${template.label}`, template.label, id);
-    res.json({ success: true, cert_key, status: 'Obtida', obtained_at: now });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao processar certidão' });
+    console.error('[Cert Add] Erro:', error);
+    res.status(500).json({ error: 'Erro ao adicionar certidão' });
+  }
+});
+
+// PATCH /api/dossiers/:id/certificates/reorder — reordenar certidões
+router.patch('/:id/certificates/reorder', authMiddleware, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) { res.status(400).json({ error: 'items deve ser um array' }); return; }
+    for (const item of items) {
+      await executeRaw(`UPDATE certificates SET sort_order = $1 WHERE id = $2`, item.sort_order, item.id);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Cert Reorder] Erro:', error);
+    res.status(500).json({ error: 'Erro ao reordenar certidões' });
+  }
+});
+
+// DELETE /api/dossiers/:dossierId/certificates/:certId — excluir certidão
+router.delete('/:dossierId/certificates/:certId', authMiddleware, async (req, res) => {
+  try {
+    const cert = await queryRawOne(`SELECT id, name, document_path FROM certificates WHERE id = $1 AND dossier_id = $2`, req.params.certId, req.params.dossierId);
+    if (!cert) { res.status(404).json({ error: 'Certidão não encontrada' }); return; }
+    await executeRaw(`DELETE FROM certificates WHERE id = $1`, req.params.certId);
+    if (cert.document_path) {
+      const absPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', cert.document_path);
+      try { if (fs.existsSync(absPath)) fs.unlinkSync(absPath); } catch {}
+    }
+    const userRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, req.user!.userId);
+    const userName = userRow?.name || req.user!.email;
+    await executeRaw(
+      `INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userName, `Removeu a certidão ${cert.name}`, cert.name, req.params.dossierId
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Cert Delete] Erro:', error);
+    res.status(500).json({ error: 'Erro ao excluir certidão' });
   }
 });
 
@@ -408,13 +507,13 @@ router.get('/:id', async (_req, res) => {
     const derivedStatus = allCertsObtained && personComplete ? 'Concluído' : 'Pendente';
 
     const certificates = await queryRaw(`
-      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.document_path
-      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.created_at DESC
+      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.document_path, c.person_id, c.sort_order
+      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.sort_order ASC, c.created_at ASC
     `, id);
 
     const activities = await queryRaw(`
       SELECT a.user_name, a.action, a.reference, a.created_at
-      FROM activities a WHERE a.dossier_ref = $1 ORDER BY a.created_at DESC LIMIT 20
+      FROM activities a WHERE a.dossier_ref = $1 ORDER BY a.created_at DESC LIMIT 50
     `, id);
 
     const personProperties = dossier.person_id ? await queryRaw(`
@@ -434,6 +533,17 @@ router.get('/:id', async (_req, res) => {
       WHERE dp.dossier_id = $3
       ORDER BY dp.role = 'proprietario' DESC, p.name ASC
     `, id, id, id);
+
+    const documents = await queryRaw(
+      `SELECT id, dossier_id, person_id, name, label, file_path, file_type, file_size, uploaded_at, description, sort_order, uploaded_by
+       FROM dossier_documents WHERE dossier_id = $1 ORDER BY sort_order ASC, uploaded_at ASC`,
+      id
+    );
+
+    const observations = await queryRaw(
+      `SELECT id, dossier_id, user_id, user_name, text, created_at FROM dossier_observations WHERE dossier_id = $1 ORDER BY created_at DESC`,
+      id
+    );
 
     res.json({
       id: dossier.id,
@@ -481,6 +591,8 @@ router.get('/:id', async (_req, res) => {
       progress: certStats.total > 0 ? Math.round((certStats.obtidas / certStats.total) * 100) : 0,
       certificates,
       activities,
+      documents,
+      observations,
     });
   } catch (error) {
     console.error('[Dossier] Erro ao carregar:', error);
@@ -543,7 +655,7 @@ router.post('/merge', authMiddleware, async (req, res) => {
     `,
       `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       userName,
-      'criou dossiê conjunto',
+      'Criou dossiê conjunto',
       primaryDossier.identifier,
       primaryDossier.id
     );
@@ -696,19 +808,20 @@ router.post('/:id/generate', authMiddleware, async (req, res) => {
     }
 
     const certStats = await queryRawOne(`
-      SELECT COUNT(*) as total,
-        COALESCE(SUM(CASE WHEN status = 'Obtida' THEN 1 ELSE 0 END), 0) as obtidas,
-        COALESCE(SUM(CASE WHEN status = 'Pendente' THEN 1 ELSE 0 END), 0) as pendentes
-      FROM certificates WHERE dossier_id = $1
+      SELECT
+        COALESCE((SELECT COUNT(*) FROM certificates WHERE dossier_id = $1 AND status = 'Obtida'), 0) as obtidas
     `, id);
+    const totalTemplates = 9;
+    const obtidas = certStats.obtidas || 0;
+    const pendentes = totalTemplates - obtidas;
 
     const certificates = await queryRaw(`
-      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.person_id, c.document_path
-      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.created_at DESC
+      SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.person_id, c.document_path, c.sort_order
+      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.sort_order ASC, c.created_at ASC
     `, id);
 
     const personComplete = dossier.person_cpf && dossier.person_cpf.length > 0;
-    const allCertsObtained = certStats.obtidas >= 9;
+    const allCertsObtained = obtidas >= totalTemplates;
     const derivedStatus = allCertsObtained && personComplete ? 'Concluído' : 'Pendente';
 
     const participants = await queryRaw(`
@@ -720,6 +833,12 @@ router.post('/:id/generate', authMiddleware, async (req, res) => {
       WHERE dp.dossier_id = $3
       ORDER BY dp.role = 'proprietario' DESC, p.name ASC
     `, id, id, id);
+
+    const documents = await queryRaw(
+      `SELECT id, dossier_id, person_id, name, label, file_path, file_type, file_size, uploaded_at, description, sort_order, uploaded_by
+       FROM dossier_documents WHERE dossier_id = $1 ORDER BY sort_order ASC, uploaded_at ASC`,
+      id
+    );
 
     const payload = {
       identifier: dossier.identifier,
@@ -746,24 +865,35 @@ router.post('/:id/generate', authMiddleware, async (req, res) => {
         registration: dossier.property_registration,
         cartorio: dossier.property_cartorio,
       } : null,
-      certificateCount: certStats.total,
-      certificatesObtidas: certStats.obtidas,
-      certificatesPendentes: certStats.pendentes,
-      progress: certStats.total > 0 ? Math.round((certStats.obtidas / certStats.total) * 100) : 0,
+      certificateCount: totalTemplates,
+      certificatesObtidas: obtidas,
+      certificatesPendentes: pendentes,
+      progress: totalTemplates > 0 ? Math.round((obtidas / totalTemplates) * 100) : 0,
       certificates,
       participants: participants.map(p => ({
         id: p.id, name: p.name, cpf: p.cpf, role: p.role,
         certTotal: p.cert_total, certObtidas: p.cert_obtidas,
       })),
+      documents,
     };
 
     const pdfBuffer = await gerarDossiePDFFromDB(payload);
+
+    const genUserRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, req.user!.userId);
+    const genUserName = genUserRow?.name || req.user!.email;
+    await executeRaw(
+      `INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      genUserName, `Gerou o PDF consolidado do dossiê`, dossier.identifier, id
+    );
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="dossie_${dossier.identifier.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf"`);
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {
-    console.error('[Dossiers Generate] Erro:', error);
-    res.status(500).json({ error: 'Erro ao gerar dossiê' });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Dossiers Generate] Erro:', msg, error);
+    res.status(500).json({ error: `Erro ao gerar dossiê: ${msg}` });
   }
 });
 
@@ -837,6 +967,138 @@ router.delete('/:id/link-property', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Dossiers Unlink Property] Erro:', error);
     res.status(500).json({ error: 'Erro ao desvincular imóvel' });
+  }
+});
+
+// GET /api/dossiers/:id/documents — listar documentos
+router.get('/:id/documents', async (req, res) => {
+  try {
+    const docs = await queryRaw(
+      `SELECT id, dossier_id, person_id, name, label, file_path, file_type, file_size, uploaded_at, description, sort_order, uploaded_by
+       FROM dossier_documents WHERE dossier_id = $1 ORDER BY sort_order ASC, uploaded_at ASC`,
+      req.params.id
+    );
+    res.json({ documents: docs });
+  } catch (error) {
+    console.error('[Dossiers Docs] Erro ao listar:', error);
+    res.status(500).json({ error: 'Erro ao listar documentos' });
+  }
+});
+
+// DELETE /api/dossiers/:id/documents/:docId — remover documento
+router.delete('/:id/documents/:docId', authMiddleware, async (req, res) => {
+  try {
+    const doc = await queryRawOne(
+      `SELECT name, file_path FROM dossier_documents WHERE id = $1 AND dossier_id = $2`,
+      req.params.docId, req.params.id
+    );
+    if (!doc) { res.status(404).json({ error: 'Documento não encontrado' }); return; }
+
+    await executeRaw(`DELETE FROM dossier_documents WHERE id = $1`, req.params.docId);
+
+    // Remove arquivo do disco
+    try {
+      const baseDir = path.dirname(fileURLToPath(import.meta.url));
+      const absPath = path.join(baseDir, '..', '..', doc.file_path);
+      if (fs.existsSync(absPath)) fs.unlinkSync(absPath);
+    } catch {}
+
+    const userRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, req.user!.userId);
+    const userName = userRow?.name || req.user!.email;
+    await executeRaw(
+      `INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userName, `Removeu o documento "${doc.name}"`, doc.name, req.params.id
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Dossiers Docs] Erro ao deletar:', error);
+    res.status(500).json({ error: 'Erro ao deletar documento' });
+  }
+});
+
+// PATCH /api/dossiers/:id/documents/reorder — reordenar documentos
+router.patch('/:id/documents/reorder', authMiddleware, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) { res.status(400).json({ error: 'items deve ser um array' }); return; }
+
+    for (const item of items) {
+      await executeRaw(
+        `UPDATE dossier_documents SET sort_order = $1 WHERE id = $2 AND dossier_id = $3`,
+        item.sort_order, item.id, req.params.id
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Dossiers Docs] Erro ao reordenar:', error);
+    res.status(500).json({ error: 'Erro ao reordenar documentos' });
+  }
+});
+
+// GET /api/documents/:docId/download — download de documento
+router.get('/documents/:docId/download', async (req, res) => {
+  try {
+    const doc = await queryRawOne(
+      `SELECT file_path, label FROM dossier_documents WHERE id = $1`,
+      req.params.docId
+    );
+    if (!doc || !doc.file_path) { res.status(404).json({ error: 'Documento não encontrado' }); return; }
+
+    const baseDir = path.dirname(fileURLToPath(import.meta.url));
+    const absPath = path.join(baseDir, '..', '..', doc.file_path);
+    if (!fs.existsSync(absPath)) { res.status(404).json({ error: 'Arquivo não encontrado' }); return; }
+
+    const safeName = (doc.label || 'documento').replace(/[^a-zA-Z0-9._-]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.sendFile(absPath);
+  } catch (error) {
+    console.error('[Docs Download] Erro:', error);
+    res.status(500).json({ error: 'Erro ao baixar documento' });
+  }
+});
+
+// POST /api/dossiers/:id/observations — adicionar observação
+router.post('/:id/observations', authMiddleware, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || !text.trim()) { res.status(400).json({ error: 'Texto é obrigatório' }); return; }
+
+    const userRow = await queryRawOne(`SELECT name, avatar FROM users WHERE id = $1`, req.user!.userId);
+    const userName = userRow?.name || req.user!.email;
+
+    const obsId = `obs_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    await executeRaw(
+      `INSERT INTO dossier_observations (id, dossier_id, user_id, user_name, text, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      obsId, req.params.id, req.user!.userId, userName, text.trim()
+    );
+
+    await executeRaw(
+      `INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+      `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userName, `Adicionou uma observação: "${text.trim().substring(0, 80)}${text.trim().length > 80 ? '...' : ''}"`, text.trim(), req.params.id
+    );
+
+    res.json({ id: obsId, dossier_id: req.params.id, user_id: req.user!.userId, user_name: userName, text: text.trim(), created_at: new Date().toISOString() });
+  } catch (error) {
+    console.error('[Dossiers Obs] Erro ao criar:', error);
+    res.status(500).json({ error: 'Erro ao criar observação' });
+  }
+});
+
+// GET /api/dossiers/:id/observations — listar observações
+router.get('/:id/observations', async (req, res) => {
+  try {
+    const obs = await queryRaw(
+      `SELECT id, dossier_id, user_id, user_name, text, created_at FROM dossier_observations WHERE dossier_id = $1 ORDER BY created_at DESC`,
+      req.params.id
+    );
+    res.json(obs);
+  } catch (error) {
+    console.error('[Dossiers Obs] Erro ao listar:', error);
+    res.status(500).json({ error: 'Erro ao listar observações' });
   }
 });
 

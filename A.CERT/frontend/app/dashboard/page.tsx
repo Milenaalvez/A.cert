@@ -19,6 +19,7 @@ import {
   Settings,
   Star,
   RefreshCw,
+  Search,
   Activity,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -31,6 +32,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { DonutChart } from "@/components/DonutChart";
 import DossierEditModal from "@/components/DossierEditModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import OnboardingModal from "@/components/OnboardingModal";
 
 interface DashboardData {
   dossiersCriados: number;
@@ -214,6 +216,19 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
   const [editDossier, setEditDossier] = useState<Dossier | null>(null);
   const [confirmPriority, setConfirmPriority] = useState<Dossier | null>(null);
 
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("acert_onboarding_seen")) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  function closeOnboarding() {
+    localStorage.setItem("acert_onboarding_seen", "1");
+    setShowOnboarding(false);
+  }
+
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -383,18 +398,28 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
         <div style={{ marginBottom: 32 }}>
           <div style={{ marginTop: 24 }}>
             <div className="flex items-center justify-between gap-6">
-              <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
-              <button
-                onClick={() => { fetchDashboard(); fetchDossiers(); }}
-                className="h-9 px-4 rounded-[7px] text-[12px] font-medium text-secondary border border-default bg-transparent hover:border-[#FF7A00] hover:text-[#FF7A00] transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw size={13} /> Atualizar métricas
-              </button>
+              <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} hideSearch />
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2.5 w-[280px] h-[38px] rounded-[7px] bg-surface border border-default px-3.5 focus-within:border-[#FF7A00] transition-colors">
+                  <Search size={15} strokeWidth={2} className="text-muted shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Buscar dossiê, pessoa ou imóvel..."
+                    className="flex-1 h-full bg-transparent text-[13px] text-primary outline-none placeholder:text-muted"
+                  />
+                </div>
+                <button
+                  onClick={() => { fetchDashboard(); fetchDossiers(); }}
+                  className="h-[38px] px-4 rounded-[7px] text-[12px] font-medium text-secondary border border-default bg-transparent hover:border-[#FF7A00] hover:text-[#FF7A00] transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <RefreshCw size={13} /> Atualizar métricas
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="dashboard-stats" style={{ marginBottom: 0, marginTop: -12 }}>
+        <div className="dashboard-stats" data-tour="dashboard-stats" style={{ marginBottom: 0, marginTop: -12 }}>
           <StatsCard
             icon={FolderOpen}
             title="Dossiês criados"
@@ -782,6 +807,9 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
         onCancel={() => setConfirmPriority(null)}
         onClose={() => setConfirmPriority(null)}
       />
+
+      {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}
+
     </>
   );
 }

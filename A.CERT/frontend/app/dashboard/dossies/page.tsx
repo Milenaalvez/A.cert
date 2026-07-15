@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
-  FolderOpen, Search, Plus, ChevronLeft, ChevronRight, Clock, MessageSquare, FileText, Calendar, AlertTriangle, XCircle,
+  FolderOpen, Search, Plus, ChevronLeft, ChevronRight, Clock, MessageSquare, FileText, AlertTriangle, XCircle,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import NovoDossieModal from "@/components/NovoDossieModal";
@@ -12,11 +12,12 @@ import { useSettings } from "@/contexts/SettingsContext";
 
 interface Dossier {
   id: string; identifier: string; status: string; priority: string; responsible: string;
+  responsibleAvatar: string | null;
   createdAt: string; updatedAt: string;
   person: { id: string; name: string; cpf: string | null } | null;
   property: { identifier: string; type: string; address: string } | null;
   certificateCount: number; certificatesObtidas: number; certificatesPendentes: number;
-  progress: number; commentsCount: number;
+  progress: number; commentsCount: number; observationsCount: number;
 }
 interface ApiResponse { dossiers: Dossier[]; pagination: { page: number; limit: number; total: number; totalPages: number }; }
 
@@ -37,35 +38,39 @@ function DossierCard({ dossier }: { dossier: Dossier }) {
   const ini = dossier.responsible ? dossier.responsible.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() : "?";
   return (
     <Link href={`/dashboard/dossies/${dossier.id}`} className="block group h-full">
-      <div className="bg-surface rounded-[14px] flex flex-col gap-4 transition-all duration-200 cursor-pointer h-full" style={{ padding: "22px 22px 32px", border: "1px solid var(--border-light)" }}>
+      <div className="bg-surface rounded-[14px] flex flex-col gap-4 transition-all duration-200 cursor-pointer h-full" style={{ padding: "24px 24px 20px", border: "1px solid var(--border-light)" }}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <FileText size={20} strokeWidth={1.5} className="shrink-0" style={{ color: sc.text }} />
-            <span className="text-[16px] font-bold text-primary tracking-tight truncate">{dossier.identifier}</span>
+            <span className="text-[15px] font-bold text-primary tracking-tight truncate">{dossier.identifier}</span>
           </div>
-          <span className="text-[12px] font-semibold px-3.5 py-1 shrink-0 rounded-[4px]" style={{ background: sc.bg, color: sc.text }}>{dossier.status}</span>
+          <span className="text-[11px] font-semibold px-3 py-0.5 shrink-0 rounded-[4px]" style={{ background: sc.bg, color: sc.text }}>{dossier.status}</span>
         </div>
         <div className="min-w-0">
-          <div className="text-[15px] font-semibold text-body truncate">{dossier.person?.name || "Sem titular"}</div>
-          {dossier.property && <div className="text-[13px] text-secondary truncate mt-1">{dossier.property.type}{dossier.property.address ? ` — ${dossier.property.address.split("—")[0]?.trim() || dossier.property.address}` : ""}</div>}
+          <div className="text-[14px] font-semibold text-body truncate">{dossier.person?.name || "Sem titular"}</div>
+          {dossier.property && <div className="text-[12px] text-secondary truncate mt-1">{dossier.property.type}{dossier.property.address ? ` — ${dossier.property.address.split("—")[0]?.trim() || dossier.property.address}` : ""}</div>}
         </div>
         {dossier.certificateCount > 0 ? (
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[12px] text-secondary font-medium">{dossier.certificatesObtidas}/{dossier.certificateCount} certidões</span>
-              <span className="text-[12px] font-bold tabular-nums" style={{ color: dossier.progress >= 80 ? "#059669" : dossier.progress >= 50 ? "#D97706" : "#DC2626" }}>{dossier.progress}%</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] text-secondary font-medium">{dossier.certificatesObtidas}/{dossier.certificateCount} certidões</span>
+              <span className="text-[11px] font-bold tabular-nums" style={{ color: dossier.progress >= 80 ? "#059669" : dossier.progress >= 50 ? "#D97706" : "#DC2626" }}>{dossier.progress}%</span>
             </div>
             <div className="w-full h-1.5 rounded-full" style={{ background: "var(--border-default)" }}><div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${dossier.progress}%`, background: dossier.progress >= 80 ? "#059669" : dossier.progress >= 50 ? "#D97706" : "#DC2626" }} /></div>
           </div>
-        ) : <div className="text-[12px] text-muted italic">Nenhuma certidão vinculada</div>}
-        <div className="flex items-center justify-between pt-8" style={{ borderTop: "1px solid var(--border-light)" }}>
-          <div className="flex items-center gap-6 min-w-0">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0" style={{ background: sc.bg, color: sc.text }}>{ini}</div>
-            <div className="min-w-0"><div className="text-[14px] font-medium text-body truncate">{dossier.responsible}</div></div>
+        ) : <div className="text-[11px] text-muted italic">Nenhuma certidão vinculada</div>}
+        <div className="flex items-center justify-between" style={{ paddingTop: 18, borderTop: "1px solid var(--border-light)" }}>
+          <div className="flex items-center gap-3 min-w-0">
+            {dossier.responsibleAvatar ? (
+              <img src={dossier.responsibleAvatar} className="w-9 h-9 rounded-full object-cover border shrink-0" style={{ borderColor: "var(--border-light)" }} />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0" style={{ background: sc.bg, color: sc.text }}>{ini}</div>
+            )}
+            <div className="min-w-0"><div className="text-[13px] font-medium text-body truncate">{dossier.responsible}</div></div>
           </div>
-          <div className="flex items-center gap-8 shrink-0">
-            <span className="flex items-center gap-3 text-[14px] text-muted font-medium"><MessageSquare size={15} strokeWidth={1.5} />{dossier.commentsCount}</span>
-            <span className="flex items-center gap-3 text-[14px] text-muted font-medium"><Calendar size={15} strokeWidth={1.5} />{timeAgo(dossier.updatedAt)}</span>
+          <div className="flex items-center gap-5 shrink-0">
+            <span className="flex items-center gap-1.5 text-[12px] text-muted font-medium"><MessageSquare size={14} strokeWidth={1.5} />{dossier.observationsCount > 0 ? dossier.observationsCount : dossier.commentsCount}</span>
+            <span className="flex items-center gap-1.5 text-[12px] text-muted font-medium"><Clock size={14} strokeWidth={1.5} />{timeAgo(dossier.updatedAt)}</span>
           </div>
         </div>
       </div>
@@ -130,7 +135,7 @@ export default function DossiesPage() {
       <div className="flex flex-col px-20 pt-36 pb-32 w-full">
         {showNovoDossie && <NovoDossieModal onClose={() => setShowNovoDossie(false)} onCreated={() => { setShowNovoDossie(false); fetchData(); }} />}
         <div style={{ marginTop: 24 }} className="flex items-start justify-between gap-8">
-          <div className="flex flex-col gap-1.5 min-w-0"><h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Dossiês</h1><p className="text-[14px] text-secondary leading-relaxed">Organize e acompanhe todos os dossiês.</p></div>
+          <div className="flex flex-col gap-1.5 min-w-0" data-tour="dossies-lista"><h1 className="text-[26px] font-bold text-primary tracking-tight leading-none">Dossiês</h1><p className="text-[14px] text-secondary leading-relaxed">Organize e acompanhe todos os dossiês.</p></div>
           <div className="flex items-center gap-3 shrink-0 pt-0.5">
             <div className="relative">
               <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />

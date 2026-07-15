@@ -1,8 +1,20 @@
 import { Router } from 'express';
+import nodemailer from 'nodemailer';
 import prisma from '../lib/prisma.js';
 import { randomUUID } from 'node:crypto';
 
 const router = Router();
+
+function getSmtpFromEnv() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const fromEmail = process.env.SMTP_FROM_EMAIL || user || '';
+  const fromName = process.env.SMTP_FROM_NAME || 'A.CERT';
+  if (!host || !user || !pass) return null;
+  return { host, port, user, pass, fromEmail, fromName };
+}
 
 router.post('/ticket', async (req, res) => {
   try {
@@ -22,32 +34,37 @@ router.post('/ticket', async (req, res) => {
 
     (async () => {
       try {
-        const smtpHost = await prisma.setting.findUnique({ where: { key: 'smtp_host' } });
-        if (smtpHost?.value) {
-          const settings = await prisma.setting.findMany({
-            where: { key: { startsWith: 'smtp_' } },
-          });
-          const allSettings = await prisma.setting.findMany();
-          const smtp: Record<string, string> = {};
-          for (const s of allSettings) smtp[s.key] = s.value;
-          for (const s of settings) smtp[s.key] = s.value;
-
-          const nodemailer = await import('nodemailer');
-          const transporter = nodemailer.default.createTransport({
-            host: smtp.smtp_host,
-              port: parseInt(smtp.smtp_port || '465', 10),
-              secure: parseInt(smtp.smtp_port || '465', 10) === 465,
-            auth: { user: smtp.smtp_user, pass: smtp.smtp_pass || '' },
-          });
-
-          await transporter.sendMail({
-            from: `"${smtp.smtp_from_name || 'A.CERT'}" <${smtp.smtp_from_email || smtp.smtp_user}>`,
-            to: smtp.smtp_from_email || smtp.smtp_user,
-            subject: `[${protocol}] ${subject}`,
-            html: `<h3>Nova solicitação de suporte</h3><p><strong>Protocolo:</strong> ${protocol}</p><p><strong>Nome:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Categoria:</strong> ${category}</p><p><strong>Mensagem:</strong></p><p>${message}</p>`,
-          });
+        const smtp = getSmtpFromEnv();
+        if (!smtp) {
+          console.log('[Suporte] SMTP nao configurado — email NAO enviado');
+          return;
         }
-      } catch {}
+
+        const transporter = nodemailer.createTransport({
+          host: smtp.host,
+          port: smtp.port,
+          secure: smtp.port === 465,
+          auth: { user: smtp.user, pass: smtp.pass },
+        });
+
+        const info = await transporter.sendMail({
+          from: `"${smtp.fromName}" <${smtp.user}>`,
+          to: 'suporte@acert.tech',
+          replyTo: email,
+          subject: `[${protocol}] ${subject}`,
+          html: `<h3>Nova solicitação de suporte</h3>
+<p><strong>Protocolo:</strong> ${protocol}</p>
+<p><strong>Nome:</strong> ${name}</p>
+<p><strong>Email:</strong> ${email}</p>
+<p><strong>Categoria:</strong> ${category}</p>
+<p><strong>Mensagem:</strong></p>
+<p>${message}</p>`,
+        });
+
+        console.log('[Suporte] Email enviado:', info.messageId);
+      } catch (err) {
+        console.error('[Suporte] Erro ao enviar email:', err);
+      }
     })();
 
     res.json({ success: true, protocol });

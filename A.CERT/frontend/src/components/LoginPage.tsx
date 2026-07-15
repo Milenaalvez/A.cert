@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, Search, FileText, Shield } from "lucide-react";
 import AuthLayout from "./AuthLayout";
 import LoginTransition from "./LoginTransition";
@@ -10,7 +9,6 @@ import { login, salvarToken } from "@/lib/api";
 import { useT } from "@/i18n/useT";
 
 export default function LoginPage() {
-  const router = useRouter();
   const { t } = useT();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,13 +20,8 @@ export default function LoginPage() {
   const [checkingToken, setCheckingToken] = useState(true);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('acert_token') : null;
-    if (token && window.location.pathname === '/') {
-      router.replace('/dashboard');
-    } else {
-      setCheckingToken(false);
-    }
-  }, [router]);
+    setCheckingToken(false);
+  }, []);
 
   if (transition) {
     return <LoginTransition />;

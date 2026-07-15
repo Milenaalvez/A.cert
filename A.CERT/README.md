@@ -1,14 +1,83 @@
 # A.CERT — Central de Certidões Imobiliárias
 
-Plataforma completa de automação de certidões imobiliárias com gestão interna de equipe, desenvolvida em TypeScript.
+Plataforma SaaS para automação de certidões imobiliárias com gestão interna de equipe, desenvolvida em TypeScript. Consulte múltiplos órgãos públicos brasileiros, emita certidões e gere dossiês documentais completos em PDF.
 
 ---
 
-## Sobre o Projeto
+## Funcionalidades
 
-A A.CERT automatiza consultas a **7 órgãos públicos brasileiros** para emissão de certidões imobiliárias e cíveis. O sistema realiza consultas via Puppeteer, gerencia CAPTCHAs interativos e consolida os resultados em um dossiê PDF profissional.
+### Emissão de Certidões
+- Consulta automatizada a **7 órgãos públicos**: Receita Federal, TRF 1ª Região, TJDFT, TRT 10ª Região, TST, SEFAZ-DF e ONR
+- Navegação realista com Puppeteer + Stealth Plugin (evasão de detecção anti-bot)
+- CAPTCHA interativo com suporte a hCaptcha, reCAPTCHA e CAPTCHA de texto
+- Sistema de retry com backoff exponencial e jitter
+- Consolidação em dossiê PDF profissional com capa, certidões por participante e sumário
 
-A partir da versão 1.1, o fluxo de dossiês foi reestruturado com suporte a **múltiplos participantes** (proprietários, comprador, vendedor, locador, locatário), **tipos de transação** (venda ou locação) e **emissão de certidões por pessoa**, garantindo que cada participante tenha suas certidões organizadas separadamente dentro do mesmo dossiê.
+### Gestão de Dossiês
+- Criação de dossiês com múltiplos participantes (proprietário, comprador, vendedor, locador, locatário)
+- Tipos de transação: Venda ou Locação
+- Vínculo de imóveis com matrícula opcional (certidões de ONR, matrícula e ficha cadastral)
+- Emissão individual por participante — cada pessoa tem suas certidões salvas separadamente
+- Geração de PDF organizado: capa → seção por participante → tabela resumo → estatísticas
+
+### Dashboard
+- Métricas agregadas em tempo real (dossiês, certidões, taxa de conclusão)
+- CRUD completo de Pessoas, Imóveis e Dossiês
+- Gestão de Usuários com perfis de acesso e permissões granulares
+- Central de Configurações com abas:
+  - **Perfil** — avatar, dados pessoais, atividades recentes
+  - **Geral** — regionalização, formato de data/hora, preferências
+  - **Conectores** — status dos órgãos integrados
+  - **Auditoria** — logs de ações com filtros por usuário e período
+  - **Sistema** — versão, ambiente, banco, uptime
+- Relatórios exportáveis
+- Lixeira com restauração de registros excluídos
+- Busca global no topo de cada página
+- Onboarding interativo no primeiro acesso (5 cards sequenciais com progresso)
+- Tour guiado pela plataforma com tooltips sobrepostos (Driver.js)
+
+### Central de Ajuda
+- 3 cards interativos: Documentação, Tour pela Plataforma e Dicas
+- Barra de busca com filtro em tempo real
+- Modal de ticket de suporte com 6 categorias de motivo
+- Envio de tickets via SMTP para o email de suporte
+- Barra de contato horizontal com email, horário e tempo de resposta
+
+### Sistema de Documentação
+- **65+ artigos** em **10 categorias** (Primeiros passos, Dossiês, Pessoas, Emissão de Certidões, Órgãos Integrados, Dossiês e PDF, Relatórios, Usuários e Empresas, Configurações, Lixeira)
+- Páginas de artigo com: breadcrumb, ícone Lucide, badges de nível/tempo/data
+- Cards coloridos (azul, verde, amarelo), timeline com linhas conectoras, fluxograma visual
+- Espaço para embed de vídeos Loom
+- Navegação entre artigos ("Próximo artigo" / "Voltar")
+- Links cross-categoria ("Veja também")
+- Busca global na documentação com filtros
+- Scroll spy na barra lateral (opcional)
+
+### Sistema de Notificações
+- Badge com contagem no avatar do sidebar (colapsado e expandido)
+- Atualização automática a cada 30 segundos
+- API REST completa: listar, contar, marcar como lida, marcar todas
+- Modal de notificações integrado ao dropdown do perfil
+- Integração futura com eventos do sistema (certidão emitida, dossiê concluído, etc.)
+
+### Multiempresas
+- Cadastro de empresas pelo administrador
+- Geração de credenciais provisórias para o admin da empresa
+- Logo customizada por empresa
+- Configurações independentes por empresa
+- Controle de licença: plano, status (ativa/trial/expirada), data de expiração
+
+### Autenticação e Segurança
+- Login/registro com JWT (expiração de 7 dias)
+- Senhas hashadas com bcryptjs (12 rounds)
+- Troca de senha obrigatória no primeiro acesso
+- Confirmação de email via SMTP
+- Recuperação de senha com token temporário
+- Sessões rastreáveis por dispositivo e IP
+
+### Extensão Chrome
+- Manifest V3 para captura de dados diretamente dos sites dos órgãos
+- Content scripts por órgão para extração automatizada
 
 ---
 
@@ -16,217 +85,320 @@ A partir da versão 1.1, o fluxo de dossiês foi reestruturado com suporte a **m
 
 | Camada | Tecnologia |
 |---|---|
-| **Backend** | Node.js, Express 5, TypeScript, Prisma ORM, PostgreSQL (pg) |
-| **Frontend (Dashboard)** | Next.js 15, React 19, Tailwind CSS 4 |
-| **Frontend (Público)** | HTML5, CSS3, JavaScript Vanilla |
-| **Desktop** | Electron (NSIS installer) — congelado |
-| **Browser Automation** | Puppeteer + puppeteer-extra (Stealth Plugin) |
-| **PDF** | pdf-lib (dossiês), Puppeteer page.pdf() (captura) |
-| **Auth** | JWT (jsonwebtoken), bcryptjs |
-| **Database** | PostgreSQL (pg) + Prisma Client para type-safe, raw SQL via pg Pool para queries complexas |
+| **Runtime** | Node.js + TypeScript 5 |
+| **Backend** | Express 5 |
+| **Frontend** | Next.js 15 + React 19 + Tailwind CSS 4 |
+| **Banco de Dados** | PostgreSQL + Prisma ORM |
+| **Automação** | Puppeteer + puppeteer-extra (Stealth Plugin) |
+| **PDF** | pdf-lib (merge/embed), Puppeteer page.pdf() (captura) |
+| **Autenticação** | JWT (jsonwebtoken) + bcryptjs |
 | **Email** | Nodemailer (SMTP) |
-| **CAPTCHA** | svg-captcha (registro), hCaptcha/reCAPTCHA (órgãos) |
-| **Extensão Chrome** | Manifest V3 |
+| **Ícones** | Lucide React |
+| **Gráficos** | Recharts |
+| **Tour Guiado** | Driver.js |
 
 ---
 
-## Arquitetura
+## Estrutura do Projeto
 
 ```
 A.CERT/
-├── src/                          # Backend TypeScript
-│   ├── server.ts                 # Entry point Express (porta 3001)
-│   ├── database.ts               # Schema SQLite (21 tabelas) + seed — REMOVIDO (v1.2)
-│   ├── connectors/               # Conectores por órgão (7 agências)
+├── src/
+│   ├── server.ts                         # Entry point do backend (Express, porta 3001)
+│   ├── connectors/                       # Conectores por órgão (implementam IConnector)
+│   │   ├── connector.interface.ts        # Interface padronizada
+│   │   ├── types.ts                      # Tipos compartilhados
+│   │   ├── index.ts                      # Factory criarConectores()
 │   │   ├── receita-federal.connector.ts
-│   │   ├── trf1.connector.ts     # TRF 1ª Região (Cível + Criminal)
-│   │   ├── tjdft.connector.ts    # TJDFT
-│   │   ├── trt.connector.ts      # TRT 10ª Região
-│   │   ├── tst.connector.ts      # TST
-│   │   ├── sefaz-df.connector.ts # SEFAZ-DF
-│   │   └── onr.connector.ts      # ONR (Ônus Reais)
+│   │   ├── trf1.connector.ts
+│   │   ├── tjdft.connector.ts
+│   │   ├── trt.connector.ts
+│   │   ├── tst.connector.ts
+│   │   ├── sefaz-df.connector.ts
+│   │   └── onr.connector.ts
 │   ├── services/
-│   │   ├── orquestrador.service.ts   # Orquestração de consultas por pessoa
-│   │   ├── captcha-manager.service.ts # Gerenciador de CAPTCHA
-│   │   ├── dossie.service.ts         # Geração de dossiê PDF (organizado por pessoa)
-│   │   └── email.service.ts          # Emails transacionais
-│   ├── routes/                   # Rotas REST
-│   │   ├── auth.ts               # /api/auth (login, registro, troca de senha)
-│   │   ├── companies.ts          # /api/companies (gestão multiempresas)
-│   │   ├── dashboard.ts          # /api/dashboard
-│   │   ├── people.ts             # /api/people
-│   │   ├── dossiers.ts           # /api/dossiers
-│   │   ├── properties.ts         # /api/properties
-│   │   ├── reports.ts            # /api/reports
-│   │   ├── search.ts             # /api/search
-│   │   ├── captcha.ts            # /api/captcha
-│   │   ├── settings.ts           # /api/settings (config, backup, SMTP, auditoria)
-│   │   ├── team.ts               # /api/team (RH interno)
-│   │   ├── support.ts            # /api/support
-│   │   └── trash.ts              # /api/trash (lixeira)
+│   │   ├── orquestrador.service.ts       # Orquestração de consultas em paralelo
+│   │   ├── captcha-manager.service.ts    # Gerenciamento de CAPTCHAs
+│   │   ├── dossie.service.ts             # Geração de dossiê PDF
+│   │   └── email.service.ts              # Emails transacionais
+│   ├── routes/
+│   │   ├── auth.ts                       # /api/auth
+│   │   ├── companies.ts                  # /api/companies
+│   │   ├── dashboard.ts                  # /api/dashboard
+│   │   ├── people.ts                     # /api/people
+│   │   ├── dossiers.ts                   # /api/dossiers
+│   │   ├── properties.ts                 # /api/properties
+│   │   ├── reports.ts                    # /api/reports
+│   │   ├── search.ts                     # /api/search
+│   │   ├── captcha.ts                    # /api/captcha
+│   │   ├── settings.ts                   # /api/settings
+│   │   ├── team.ts                       # /api/team
+│   │   ├── support.ts                    # /api/support
+│   │   ├── notifications.ts              # /api/notifications
+│   │   └── trash.ts                      # /api/trash
 │   ├── middleware/
-│   │   └── auth.ts               # JWT middleware
+│   │   └── auth.ts                       # JWT middleware
 │   └── utils/
-│       ├── browser.ts            # Puppeteer + Stealth
-│       ├── captcha.ts            # Detecção de CAPTCHA
-│       ├── dom-helper.ts         # Helper para formulários reativos
-│       ├── retry-manager.service.ts
-│       └── validation.ts         # CPF, CNPJ, email, etc.
-├── frontend/                     # Next.js 15 Dashboard
+│       ├── browser.ts                    # Configuração Puppeteer + Stealth
+│       ├── captcha.ts                    # Detecção de CAPTCHA
+│       ├── dom-helper.ts                 # Preenchimento de formulários
+│       ├── retry-manager.service.ts      # Retry com backoff
+│       └── validation.ts                 # Validação de CPF, CNPJ, email
+├── frontend/
+│   ├── app/                              # Next.js App Router
+│   │   ├── page.tsx                      # Landing page / login
+│   │   ├── cadastro/                     # Registro de usuário
+│   │   ├── recuperar-senha/              # Recuperação de senha
+│   │   ├── redefinir-senha/              # Redefinição de senha
+│   │   ├── confirmar-email/              # Confirmação de email
+│   │   └── dashboard/                    # Área autenticada
+│   │       ├── page.tsx                  # Home com métricas
+│   │       ├── dossies/                  # Gestão de dossiês
+│   │       ├── pessoas/                  # Gestão de pessoas
+│   │       ├── certidoes/                # Emissão de certidões
+│   │       ├── empresas/                 # Gestão de empresas
+│   │       ├── relatorios/               # Relatórios
+│   │       ├── usuarios/                 # Gestão de usuários
+│   │       ├── configuracoes/            # Configurações do sistema
+│   │       ├── suporte/                  # Central de ajuda e tickets
+│   │       │   └── ajuda/                # Sistema de documentação
+│   │       │       └── [slug]/           # Páginas de categoria e artigo
+│   │       └── trash/                    # Lixeira
 │   └── src/
-│       ├── components/           # 31+ componentes React
-│       ├── contexts/
-│       │   └── ThemeContext.tsx   # Tema claro/escuro
-│       ├── lib/api.ts            # Cliente de autenticação
-│       └── services/teamApi.ts   # API de gestão de equipe
-├── electron/                     # Electron Desktop (congelado)
-├── extension/                    # Extensão Chrome
-│   ├── manifest.json             # Manifest V3
-│   ├── background.js             # Service worker
-│   └── content/                  # Content scripts por órgão
-├── public/                       # Interface pública standalone
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
-└── scripts/                      # Manutenção do banco
-    ├── fix-db.mjs
-    └── fix-dates.mjs
+│       ├── components/                   # Componentes React reutilizáveis
+│       │   ├── OnboardingModal.tsx       # Modal de boas-vindas (5 cards)
+│       │   ├── TicketModal.tsx           # Modal de ticket reutilizável
+│       │   └── TourGuia.tsx              # Tour guiado com Driver.js
+│       ├── contexts/                     # Contextos (User, Theme, Settings, Locale)
+│       ├── data/
+│       │   └── ajuda.ts                  # 65+ artigos de documentação
+│       ├── lib/
+│       │   └── api.ts                    # Cliente de autenticação
+│       └── i18n/                         # Internacionalização
+├── prisma/
+│   ├── schema.prisma                     # Schema do banco (PostgreSQL)
+│   └── seed.ts                           # Dados iniciais
+├── extension/                            # Extensão Chrome (Manifest V3)
+└── scripts/                              # Utilidades de manutenção
 ```
-
----
-
-## Funcionalidades
-
-### Automação de Certidões
-- Consulta automatizada a 7 órgãos públicos (RF, TRF1, TJDFT, TRT, TST, SEFAZ-DF, ONR)
-- Puppeteer com Stealth Plugin para evitar detecção
-- CAPTCHA interativo (hCaptcha, reCAPTCHA, texto)
-- Consolidação em dossiê PDF (capa, certidões por pessoa, sumário)
-- Retry com backoff exponencial + jitter
-
-### Novo Fluxo de Dossiê (v1.1)
-- **Tipos de transação**: Venda ou Locação
-- **Partes envolvidas**: múltiplos proprietários, comprador/vendedor (venda) ou locador/locatário (locação)
-- **Imóvel com matrícula opcional**: checkbox que ativa certidões de ONR, matrícula e ficha cadastral
-- **Emissão por pessoa**: cada participante tem suas certidões salvas com `person_id`
-- **PDF organizado**: capa → seção por participante com certidões embedadas → resumo
-
-### Gestão Interna (Dashboard)
-- Dashboard com métricas agregadas
-- CRUD de Pessoas com vínculo aos dossiês
-- CRUD de Imóveis com categorias
-- CRUD de Dossiês com participantes e templates de certidão
-- Gestão de Usuários com perfis de acesso e permissões
-- Central de Configurações (9 abas):
-  - **Perfil**: avatar, dados pessoais, atividades recentes
-  - **Geral**: fuso horário, formato de data/hora, preferências do sistema
-  - **Segurança**: alteração de senha, sessões ativas
-  - **Órgãos Integrados**: status, sincronização, tokens
-  - **E-mail (SMTP)**: configuração e teste de conexão
-  - **Templates PDF**: cores, logotipo, elementos dos documentos
-  - **Backup**: gerar, baixar, restaurar e excluir backups
-  - **Auditoria**: logs de ações com filtros por usuário/período
-  - **Sistema**: versão, ambiente, banco de dados, uptime
-- Relatórios exportáveis (PDF/CSV)
-- Lixeira com restauração
-- Busca global com contagem de participantes
-
-### Multiempresas
-- Cadastro manual de empresas pelo admin via `/api/companies`
-- Geração de credenciais provisórias para o admin da empresa
-- Logo customizada por empresa
-- Configurações por empresa (`company_settings`)
-- Controle de licença: plano, status (ativa/trial/expirada), data de expiração
-- Reenvio de credenciais
-
-### Autenticação
-- Login/registro com JWT
-- Troca de senha obrigatória no primeiro acesso (`password_change_required`)
-- Confirmação de email
-- Recuperação de senha
-- CAPTCHA matemático no registro
 
 ---
 
 ## Banco de Dados
 
-**PostgreSQL** com **Prisma ORM** (21 tabelas). Queries type-safe via Prisma Client, queries analíticas complexas via raw SQL com pool `pg`.
+**PostgreSQL** gerenciado via **Prisma ORM** com 21 tabelas. Queries type-safe via Prisma Client, queries analíticas complexas via raw SQL com pool `pg`.
 
-### Tabelas principais
+### Principais Entidades
 
-- `users`, `persons`, `properties`, `dossiers`, `certificates`
-- `dossier_participants` — vincula pessoas aos dossiês com papel (proprietario, comprador, vendedor, locador, locatario)
-- `companies`, `company_settings` — multiempresas com configurações por empresa
-- `organs`, `certificate_templates`
-- `departments`, `positions`, `justifications`, `time_records`
-- `user_permissions`, `team_activities`
-- `property_owners`, `property_timeline`, `person_relationships`
-- `activities`, `settings`, `support_tickets`, `audit_log`
+| Grupo | Tabelas |
+|---|---|
+| **Core** | `persons`, `properties`, `dossiers`, `certificates`, `dossier_participants` |
+| **Autenticação** | `users`, `user_sessions`, `user_permissions` |
+| **Multiempresas** | `companies`, `company_settings` |
+| **RH** | `departments`, `positions`, `justifications`, `time_records`, `team_activities` |
+| **Notificações** | `notifications` |
+| **Sistema** | `organs`, `certificate_templates`, `settings`, `support_tickets`, `audit_log`, `activities` |
+| **Relacionamentos** | `property_owners`, `property_timeline`, `person_relationships` |
+
+### Relacionamentos Principais
+
+```
+companies ──< users
+users ──< user_permissions
+users ──< time_records
+users ──< justifications
+
+dossiers ──< certificates
+dossiers ──< dossier_participants >── persons
+dossiers ── properties
+persons ──< property_owners >── properties
+```
 
 ---
 
-## Como Rodar
+## Como Executar
+
+### Pré-requisitos
+
+- Node.js 22+
+- PostgreSQL 16+
+- npm 10+
+
+### Instalação
 
 ```bash
-# Instalar dependências
-cd A.CERT
+# Clone o repositório
+git clone https://github.com/Milenaalvez/A.cert.git
+cd A.cert
+
+# Instale as dependências
 npm install
+cd frontend && npm install && cd ..
 
-# Configurar o banco (precisa de PostgreSQL rodando)
-# Editar DATABASE_URL no .env
-npx prisma migrate dev    # Cria as tabelas
-npm run prisma:seed        # Popula dados de exemplo
+# Configure o banco de dados
+# 1. Crie um banco PostgreSQL
+# 2. Configure DATABASE_URL no arquivo .env (veja abaixo)
+# 3. Execute as migrations
+npx prisma migrate dev
 
-# Modo desenvolvimento (backend + frontend em paralelo)
-npm run dev
-
-# Backend standalone
-npm run dev:server
-
-# Build produção
-npm run build
+# Popule dados iniciais (opcional)
+npm run prisma:seed
 ```
 
----
+### Variáveis de Ambiente
 
-## Variáveis de Ambiente
+Crie um arquivo `.env` na raiz com:
 
 ```env
-DATABASE_URL=postgresql://usuario:senha@host:porta/banco?schema=public
+# Banco de Dados
+DATABASE_URL=postgresql://usuario:senha@host:5432/acert?sslmode=require
+
+# Servidor
 PORT=3001
-PUPPETEER_HEADLESS=true
-CONNECTOR_TIMEOUT_MS=60000
-JWT_SECRET=sua-chave-secreta-aqui
 FRONTEND_URL=http://localhost:3000
+
+# Segurança
+JWT_SECRET=uma-chave-secreta-longa-e-aleatoria
+PUPPETEER_HEADLESS=true
+
+# SMTP (opcional — para emails transacionais)
+SMTP_HOST=smtp.exemplo.com
+SMTP_PORT=587
+SMTP_USER=seu-email@exemplo.com
+SMTP_PASS=sua-senha-smtp
+SMTP_FROM_EMAIL=noreply@exemplo.com
+SMTP_FROM_NAME=A.CERT
+
+# Cloudflare Turnstile (opcional — para proteção anti-bot)
+TURNSTILE_SITE_KEY=seu-site-key
+TURNSTILE_SECRET_KEY=seu-secret-key
 ```
 
+### Desenvolvimento
+
+```bash
+# Backend + Frontend em paralelo
+npm run dev:all
+
+# Apenas backend
+npm run dev
+
+# Apenas frontend
+npm run dev:frontend
+```
+
+### Build de Produção
+
+```bash
+npm run build
+npm start
+```
+
+O build compila TypeScript (`tsc`), gera o Prisma Client, e cria o export estático do Next.js em `frontend/out/`. O servidor Express serve tanto a API quanto os arquivos estáticos.
+
 ---
 
-## Endpoints Principais (v1.1)
+## API REST
 
+### Autenticação
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/login` | Login (retorna `precisaTrocarSenha` se 1º acesso) |
-| POST | `/api/auth/trocar-senha` | Trocar senha (obrigatório no 1º login) |
-| POST | `/api/dossiers` | Criar dossiê com participantes e propriedade |
-| GET | `/api/dossiers/:id` | Detalhes do dossiê com participantes |
-| POST | `/api/dossiers/:id/generate` | Gerar PDF do dossiê |
-| POST | `/api/consultar` | Iniciar consulta de certidões (aceita `personId` e `dossierId`) |
-| POST | `/api/companies` | Criar empresa (admin) |
-| GET | `/api/companies` | Listar empresas |
-| POST | `/api/companies/:id/resend-credentials` | Reenviar credenciais |
+| `POST` | `/api/auth/register` | Criar conta |
+| `POST` | `/api/auth/login` | Login (retorna `precisaTrocarSenha` se 1º acesso) |
+| `GET` | `/api/auth/me` | Dados do usuário logado |
+| `POST` | `/api/auth/trocar-senha` | Alterar senha |
+| `POST` | `/api/auth/esqueci-senha` | Solicitar recuperação |
+| `POST` | `/api/auth/redefinir-senha` | Redefinir com token |
+| `GET` | `/api/auth/me/sessions` | Sessões ativas |
+| `POST` | `/api/auth/me/sessions/end` | Encerrar sessões |
+
+### Dossiês
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/dossiers` | Listar dossiês (com paginação e filtros) |
+| `POST` | `/api/dossiers` | Criar dossiê com participantes e imóvel |
+| `GET` | `/api/dossiers/:id` | Detalhes do dossiê |
+| `PUT` | `/api/dossiers/:id` | Atualizar dossiê |
+| `DELETE` | `/api/dossiers/:id` | Mover para lixeira |
+| `POST` | `/api/dossiers/:id/generate` | Gerar PDF do dossiê |
+
+### Certidões
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/consultar` | Iniciar consulta (aceita `personId`, `dossierId`, `certKeys`) |
+| `GET` | `/api/consultar/:jobId` | Status da consulta (polling) |
+| `POST` | `/api/consultar/:jobId/retry` | Retentar órgãos com falha |
+| `GET` | `/api/certificates/:id/download` | Baixar PDF da certidão |
+
+### Empresas
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/companies` | Listar empresas |
+| `POST` | `/api/companies` | Criar empresa (admin) |
+| `PUT` | `/api/companies/:id` | Atualizar empresa |
+| `POST` | `/api/companies/:id/resend-credentials` | Reenviar credenciais |
+
+### Configurações
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/settings` | Listar configurações |
+| `PUT` | `/api/settings` | Atualizar configurações |
+| `GET` | `/api/settings/system-info` | Informações do sistema |
+| `GET` | `/api/settings/backup` | Listar backups |
+| `POST` | `/api/settings/backup` | Criar backup |
+| `GET` | `/api/settings/backup/:filename/download` | Baixar backup |
+
+### Suporte
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/support/ticket` | Criar ticket de suporte |
+| `GET` | `/api/support/ticket/:protocol` | Consultar ticket |
+
+### Notificações
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/notifications` | Listar notificações do usuário |
+| `GET` | `/api/notifications/count` | Contagem de não lidas |
+| `PUT` | `/api/notifications/:id/read` | Marcar como lida |
+| `POST` | `/api/notifications/mark-all-read` | Marcar todas como lidas |
 
 ---
 
-## Notas de Segurança
+## Deploy
 
-- **Credenciais do ONR estão hardcoded** no conector (`onr.connector.ts`). Extrair para `.env`.
-- `.env`, `data/`, `dist/`, `release/`, `tmp/` estão no `.gitignore`.
-- Senhas são hashadas com bcryptjs (12 rounds).
-- Tokens JWT expiram em 7 dias.
+O projeto está configurado para deploy em VPS Linux com:
+
+1. **PM2** para gerenciamento de processos
+2. **Nginx** como proxy reverso
+3. **PostgreSQL** como banco de dados
+
+### Comandos de Deploy
+
+```bash
+# Na VPS
+cd /var/www/acert/A.CERT
+git pull
+npm run build
+pm2 restart backend frontend
+```
+
+O servidor Express serve a API na porta 3001 e os arquivos estáticos do frontend através da mesma instância. O Nginx deve ser configurado para proxy reverso no domínio, encaminhando tanto as rotas `/api/*` quanto os arquivos estáticos para o Express.
+
+---
+
+## Segurança
+
+- Senhas armazenadas com hash bcrypt (12 rounds de salt)
+- Autenticação via JWT com expiração de 7 dias
+- Middleware de autorização em todas as rotas protegidas
+- Confirmação de email obrigatória para novos registros
+- Troca de senha forçada no primeiro acesso
+- Registro de auditoria para ações críticas
+- Suporte a CAPTCHA (Cloudflare Turnstile) no registro
+- `.env`, `dist/`, `tmp/` no `.gitignore`
 
 ---
 
 ## Licença
 
-Projeto privado — uso interno.
+Projeto privado. Todos os direitos reservados.

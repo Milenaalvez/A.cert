@@ -26,7 +26,7 @@ const inputBase = {
   fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)",
   padding: "0 12px", outline: "none", width: "100%", boxSizing: "border-box" as const,
   fontFamily: "inherit",
-};
+};                                                                                          
 
 export default function VinculoParentalModal({ personId, personName, onClose }: {
   personId: string; personName: string; onClose: () => void;

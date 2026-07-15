@@ -39,12 +39,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
       const r = await fetch("/api/auth/me", { headers });
+      if (r.status === 401) {
+        localStorage.removeItem("acert_token");
+        document.cookie = "acert_token=; path=/; max-age=0";
+        setLoading(false);
+        return;
+      }
       const data = await r.json();
       if (data.user) {
         setUser(data.user);
         if (typeof window !== "undefined") (window as any).__acertUser = data.user.name;
       }
-    } catch {} finally {
+    } catch (err) {
+      console.error("[UserContext] Erro ao validar sessao:", err);
+    } finally {
       setLoading(false);
     }
   }, []);

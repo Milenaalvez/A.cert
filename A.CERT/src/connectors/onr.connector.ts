@@ -1,7 +1,9 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -9,9 +11,12 @@ import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 const LOG = (msg: string) => console.log(`[ONR] ${msg}`);
 const DEBUG = process.env.DEBUG;
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
+
 const BASE_URL = 'https://registradores.onr.org.br';
-const LOGIN_EMAIL = process.env.ONR_EMAIL || 'vendas@blocoimob.com.br';
-const LOGIN_SENHA = process.env.ONR_PASSWORD || 'Bloco100%';
+const LOGIN_EMAIL = process.env.ONR_EMAIL || '';
+const LOGIN_SENHA = process.env.ONR_PASSWORD || '';
 
 async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
   const info = await page.evaluate(() => {
@@ -195,8 +200,13 @@ export class ONRConnector implements IConnector {
         if (captchaLogin) {
           LOG(`CAPTCHA no login: ${captchaLogin}`);
           await focusPageForCaptcha(page, captchaLogin);
-          LOG('CAPTCHA detectado - resolva na janela do navegador...');
-          await esperarCaptchaInterativo(page, captchaLogin);
+          LOG('CAPTCHA detectado - enviando para resolucao remota...');
+          const captchaOk = await esperarCaptchaInterativo(page, captchaLogin);
+          if (!captchaOk) {
+            LOG('CAPTCHA do login nao resolvido no tempo limite');
+            await page.close();
+            return { status: 'error', orgao: this.nome, dataConsulta, error: `[ONR] CAPTCHA do login nao resolvido no tempo limite` };
+          }
           LOG('CAPTCHA do login resolvido');
           await wait(3000);
         }
@@ -288,17 +298,24 @@ export class ONRConnector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-        LOG('CAPTCHA detectado - resolva na janela do navegador...');
-        await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA detectado - enviando para resolucao remota...');
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
+        if (!captchaOk) {
+          LOG('CAPTCHA nao resolvido no tempo limite');
+          await page.close();
+          return { status: 'error', orgao: this.nome, dataConsulta, error: `[ONR] CAPTCHA nao resolvido no tempo limite` };
+        }
         LOG('CAPTCHA resolvido, continuando...');
         await wait(3000);
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
 
-      // Take PDF of the current state
+      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
+      LOG('CDP preparado para captura de download');
+
       const protocolo = `ONR-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+      const pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };

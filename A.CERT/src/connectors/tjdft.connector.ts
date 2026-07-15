@@ -1,13 +1,18 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const LOG = (msg: string) => console.log(`[TJDFT] ${msg}`);
 const DEBUG = process.env.DEBUG;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
 
 function normalizar(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -112,6 +117,7 @@ export class TJDFTConnector implements IConnector {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForSelector('.q-field, .q-input, input, button', { timeout: 15000 }).catch(() => {});
       await wait(2000);
+      await aceitarCookies(page);
       LOG('Pagina carregada');
 
       if (DEBUG) await diagnosticarFormulario(page);
@@ -127,38 +133,68 @@ export class TJDFTConnector implements IConnector {
         || await preencherInputPorLabel(page, 'Primeiro Nome', primeiroNome);
       LOG(`CPF: ${cpfOk}, Nome: ${nomeOk}`);
 
-      // radio "Especial" (Quasar q-radio - clicar e disparar change)
-      await page.evaluate(() => {
-        const labels = Array.from(document.querySelectorAll('.q-radio__label, .q-radio label'));
-        for (const label of labels) {
+      // radio "Cível e Criminal" (prioridade sobre "Cível" sozinho)
+      const radioOk = await page.evaluate(() => {
+        const labels = Array.from(document.querySelectorAll('.q-radio__label, .q-radio label, label'));
+
+        // Pass 1: especial (cobre civel e criminal)
+        for (let i = 0; i < labels.length; i++) {
+          const label = labels[i];
           const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
           if (txt.includes('especial')) {
-            const radio = label.closest('.q-radio');
+            const radio = label.closest('.q-radio, .q-option-group, div') || label.parentElement;
             if (radio) {
-              (radio as HTMLElement).click();
+              const clickable = radio.querySelector('.q-radio__inner, .q-radio__bg, input[type="radio"]') || radio;
+              (clickable as HTMLElement).click();
               const inp = radio.querySelector('input[type="radio"]');
-              if (inp) { (inp as HTMLInputElement).checked = true; inp.dispatchEvent(new Event('change', { bubbles: true })); }
-              return;
+              if (inp) {
+                (inp as HTMLInputElement).checked = true;
+                inp.dispatchEvent(new Event('change', { bubbles: true }));
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+              return txt;
             }
           }
         }
-        // fallback "civel"
-        for (const label of labels) {
+
+        // Pass 2: civel / especial
+        for (let i = 0; i < labels.length; i++) {
+          const label = labels[i];
           const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          if (txt.includes('civel')) {
-            const radio = label.closest('.q-radio');
+          if (txt.includes('civel') || txt.includes('especial')) {
+            const radio = label.closest('.q-radio, .q-option-group, div') || label.parentElement;
             if (radio) {
-              (radio as HTMLElement).click();
+              const clickable = radio.querySelector('.q-radio__inner, .q-radio__bg, input[type="radio"]') || radio;
+              (clickable as HTMLElement).click();
               const inp = radio.querySelector('input[type="radio"]');
-              if (inp) { (inp as HTMLInputElement).checked = true; inp.dispatchEvent(new Event('change', { bubbles: true })); }
-              return;
+              if (inp) {
+                (inp as HTMLInputElement).checked = true;
+                inp.dispatchEvent(new Event('change', { bubbles: true }));
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+              return txt;
             }
           }
         }
+
+        return null;
       });
+      LOG(`Radio: ${radioOk || 'nao encontrado'}`);
       await wait(500);
 
-      await clicarBotaoPorTexto(page, 'proximo');
+      const proximoClicado = await clicarBotaoPorTexto(page, 'proximo');
+      if (!proximoClicado) {
+        await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, .q-btn'));
+          for (const b of btns) {
+            const t = (b.textContent?.trim() || '').toLowerCase();
+            if (t.includes('proximo') || t.includes('próximo') || t.includes('avancar') || t.includes('avançar') || t.includes('continuar')) {
+              (b as HTMLElement).click();
+              return;
+            }
+          }
+        });
+      }
       LOG('Proximo clicado - aguardando wizard step 2...');
 
       try {
@@ -221,6 +257,13 @@ export class TJDFTConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
       }
 
+      // Aguarda navegação ou resultado após submit
+      try {
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
+        await wait(2000);
+        LOG(`URL apos submit: ${page.url()}`);
+      } catch {}
+
       // Aguarda resultado ou mensagem de erro
       try {
         await page.waitForFunction(
@@ -245,8 +288,13 @@ export class TJDFTConnector implements IConnector {
 
       if (captchaType) {
         await focusPageForCaptcha(page, captchaType);
-        LOG('CAPTCHA detectado - resolva na janela do navegador...');
-        await esperarCaptchaInterativo(page, captchaType);
+        LOG('CAPTCHA detectado - enviando para resolucao remota...');
+        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
+        if (!captchaOk) {
+          LOG('CAPTCHA nao resolvido no tempo limite');
+          await page.close();
+          return { status: 'error', orgao: this.nome, dataConsulta, error: `[TJDFT] CAPTCHA nao resolvido no tempo limite` };
+        }
         LOG('CAPTCHA resolvido, continuando...');
         await wait(2000);
       }
@@ -273,10 +321,65 @@ export class TJDFTConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: `[TJDFT] ${erroMsg}` };
       }
 
+      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
+      LOG('CDP preparado para captura de download');
+
+      // Aguarda mais tempo para o download iniciar
+      await wait(3000);
+
       const protocolo = `TJDFT-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+
+      let pdfBuffer: Buffer | Uint8Array | null = null;
+
+      // Tenta capturar download via CDP
+      try {
+        pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+        if (pdfBuffer && pdfBuffer.length > 1000) {
+          LOG(`PDF via CDP/download (${pdfBuffer.length} bytes)`);
+        }
+      } catch (e: any) {
+        LOG(`CDP falhou: ${e.message}`);
+      }
+
+      // Fallback 1: captura a pagina atual como PDF
       if (!pdfBuffer || pdfBuffer.length < 1000) {
-        await page.close();
+        try {
+          if (!pageClosed) {
+            pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+            if (pdfBuffer && pdfBuffer.length > 1000) {
+              LOG(`PDF via page.pdf (${pdfBuffer.length} bytes)`);
+            }
+          }
+        } catch (e: any) {
+          LOG(`page.pdf falhou: ${e.message}`);
+        }
+      }
+
+      // Fallback 2: procura botao de download na pagina e clica
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        try {
+          if (!pageClosed) {
+            await page.evaluate(() => {
+              const links = document.querySelectorAll('a[href*="pdf"], a[href*="download"], button');
+              for (const el of links) {
+                const txt = ((el as HTMLElement).textContent || '').toLowerCase();
+                if (txt.includes('baixar') || txt.includes('download') || txt.includes('pdf') || txt.includes('imprimir') || txt.includes('certidao')) {
+                  (el as HTMLElement).click();
+                  return;
+                }
+              }
+            });
+            await wait(3000);
+            pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+            if (pdfBuffer && pdfBuffer.length > 1000) {
+              LOG(`PDF via botao download (${pdfBuffer.length} bytes)`);
+            }
+          }
+        } catch {}
+      }
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close().catch(() => {});
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
       }
       LOG(`PDF capturado (${pdfBuffer.length} bytes)`);

@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocale } from './LocaleContext';
 import { locales, type Locale } from './locales';
 
-const messageCache: Record<string, Record<string, any>> = {};
+import ptBR from '../../messages/pt-BR.json';
+
+const messageCache: Record<string, Record<string, any>> = {
+  'pt-BR': ptBR as Record<string, any>,
+};
 
 async function loadMessages(locale: string): Promise<Record<string, any>> {
   if (messageCache[locale] && Object.keys(messageCache[locale]).length > 0) {
@@ -27,11 +31,12 @@ async function loadMessages(locale: string): Promise<Record<string, any>> {
 
 export function useT() {
   const { locale } = useLocale();
-  const [messages, setMessages] = useState<Record<string, any>>(
-    messageCache[locale] && Object.keys(messageCache[locale]).length > 0
-      ? messageCache[locale]
-      : {}
-  );
+  const [messages, setMessages] = useState<Record<string, any>>(() => {
+    if (messageCache[locale] && Object.keys(messageCache[locale]).length > 0) {
+      return messageCache[locale];
+    }
+    return messageCache['pt-BR'] || {};
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {

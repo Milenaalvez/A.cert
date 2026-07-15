@@ -145,13 +145,13 @@ Plataforma completa de automação de certidões imobiliárias com 2 interfaces:
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                      INTERFACES                               │
-│  Pública:     HTML5 + CSS3 + JS Vanilla (public/)             │
+│  Landing Page: Next.js 15 + React 19 + Tailwind CSS 4        │
 │  Dashboard:   Next.js 15 + React 19 + Tailwind CSS 4          │
 │  Desktop:     Electron (congelado)                             │
 │  Extensão:    Chrome Manifest V3                              │
 ├──────────────────────────────────────────────────────────────┤
 │                      BACKEND                                  │
-│  Express 5 + TypeScript + better-sqlite3 (WAL mode)           │
+│  Express 5 + TypeScript + Prisma 7 (PostgreSQL)               │
 │  JWT (jsonwebtoken) + bcryptjs                               │
 │  Nodemailer (SMTP) | svg-captcha (registro)                  │
 ├──────────────────────────────────────────────────────────────┤
@@ -221,7 +221,7 @@ POST /api/consultar { nome, cpf, ..., personId, dossierId }
   └── 4. PDF consolidado (/:id/generate) → organizado por participante com embed de certidões
 ```
 
-### 2.5 Banco de Dados (SQLite — 21 tabelas)
+### 2.5 Banco de Dados (PostgreSQL + Prisma — 25 tabelas)
 
 **Novas tabelas v1.1:** `dossier_participants`, `companies`, `company_settings`
 **Novas colunas:** `certificates.person_id`, `dossiers.transaction_type`, `users.password_change_required`
@@ -237,21 +237,19 @@ users ──┬── companies ── company_settings
         │              │               └── property_timeline
         │              └── person_relationships
         │
-        ├── positions
-        ├── departments
-        ├── time_records
-        ├── justifications
         ├── user_permissions
-        ├── team_activities
         ├── activities
-        └── organs
+        ├── organs
+        ├── notifications
+        ├── user_sessions
+        └── audit_log
 ```
 
 ### 2.6 Distribuição Multi-Plataforma
 
 | Plataforma | Entrada | Descrição |
 |---|---|---|
-| **Web (Público)** | `public/index.html` | Formulário standalone para consulta de certidões |
+| **Web (Público)** | `frontend/app/page.tsx` | Landing page Next.js com Navbar + Hero |
 | **Web (Dashboard)** | Next.js em `localhost:3000` | Gestão administrativa completa |
 | **Desktop** | Electron (`A.CERT.exe`) | App nativo Windows, frameless, com backend + frontend embutidos |
 | **Extensão Chrome** | `extension/` | Automação alternativa via navegador |
@@ -365,12 +363,11 @@ Projeto educacional simples com HTML, CSS (variáveis e temas) e JavaScript bás
 | Next.js 15 | ❌ | ✅ | ❌ | ❌ |
 | Tailwind CSS | ✅ (v3) | ✅ (v4) | ✅ (v4) | ❌ |
 | Vite 8 | ✅ | ❌ | ✅ | ❌ |
-| Prisma | ✅ | ❌ | ❌ | ❌ |
-| PostgreSQL | ✅ | ❌ | ❌ | ❌ |
+| Prisma | ✅ | ✅ | ❌ | ❌ |
+| PostgreSQL | ✅ | ✅ | ❌ | ❌ |
 | SQLite | ❌ | ❌ | ❌ | ❌ |
 | JWT Auth | ✅ | ✅ | ❌ | ❌ |
 | Puppeteer | ❌ | ✅ | ❌ | ❌ |
-| Prisma | ❌ | ✅ | ❌ | ❌ |
 | Framer Motion | ❌ | ❌ | ✅ | ❌ |
 | Chart.js | ✅ | ❌ | ❌ | ❌ |
 

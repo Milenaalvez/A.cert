@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, createContext, useContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
@@ -9,6 +9,9 @@ import PageLoadingOverlay from "./PageLoadingOverlay";
 import ElectronTitleBar from "./ElectronTitleBar";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { useT } from "@/i18n/useT";
+import { iniciarTour } from "@/components/TourGuia";
+
+export const DashboardLayoutContext = createContext(false);
 
 function pathToPage(pathname: string): string {
   if (pathname === "/dashboard") return "dashboard";
@@ -31,17 +34,24 @@ const PAGE_HREF: Record<string, string> = {
   trash: "/dashboard/trash",
 };
 
+let sidebarCollapsedCache: boolean | null = null;
+
 export default function DashboardLayoutClient({
   children,
-  initialCollapsed,
 }: {
   children: React.ReactNode;
-  initialCollapsed: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useT();
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (sidebarCollapsedCache !== null) return sidebarCollapsedCache;
+    if (typeof window !== "undefined") {
+      sidebarCollapsedCache = localStorage.getItem("acert-sidebar-collapsed") === "true";
+      return sidebarCollapsedCache;
+    }
+    return false;
+  });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNovoDossie, setShowNovoDossie] = useState(false);
@@ -50,12 +60,17 @@ export default function DashboardLayoutClient({
     if (pathname && pathname.startsWith("/dashboard")) {
       localStorage.setItem("acert_last_page", pathname);
     }
+    if (typeof window !== "undefined" && window.location.search.includes("tour=1")) {
+      const timer = setTimeout(() => iniciarTour(), 600);
+      return () => clearTimeout(timer);
+    }
   }, [pathname]);
   const [pageLoading, setPageLoading] = useState(false);
   const sidebarWidth = collapsed ? 68 : 250;
 
   const handleCollapseChange = useCallback((v: boolean) => {
     setCollapsed(v);
+    sidebarCollapsedCache = v;
     localStorage.setItem("acert-sidebar-collapsed", v ? "true" : "false");
     document.cookie = `sidebar-collapsed=${v ? "true" : "false"}; path=/; max-age=31536000; SameSite=Lax`;
   }, []);
@@ -86,25 +101,27 @@ export default function DashboardLayoutClient({
   const activePage = pathToPage(pathname);
 
   return (
-    <UserProvider>
-      <DashboardInner
-        activePage={activePage}
-        pathname={pathname}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        collapsed={collapsed}
-        handleCollapseChange={handleCollapseChange}
-        handleNavigate={handleNavigate}
-        handleNavigateWithLoading={handleNavigateWithLoading}
-        handleLogout={handleLogout}
-        showNovoDossie={showNovoDossie}
-        setShowNovoDossie={setShowNovoDossie}
-        pageLoading={pageLoading}
-        sidebarWidth={sidebarWidth}
-      >
-        {children}
-      </DashboardInner>
-    </UserProvider>
+    <DashboardLayoutContext.Provider value={true}>
+      <UserProvider>
+        <DashboardInner
+          activePage={activePage}
+          pathname={pathname}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          collapsed={collapsed}
+          handleCollapseChange={handleCollapseChange}
+          handleNavigate={handleNavigate}
+          handleNavigateWithLoading={handleNavigateWithLoading}
+          handleLogout={handleLogout}
+          showNovoDossie={showNovoDossie}
+          setShowNovoDossie={setShowNovoDossie}
+          pageLoading={pageLoading}
+          sidebarWidth={sidebarWidth}
+        >
+          {children}
+        </DashboardInner>
+      </UserProvider>
+    </DashboardLayoutContext.Provider>
   );
 }
 
@@ -142,7 +159,7 @@ function DashboardInner({
         activePage={activePage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
-        user={user ? { name: user.name || '', position: user.position, role: user.role, avatar: user.avatar } : undefined}
+        user={user ? { name: user.name || '', position: user.position, role: user.role, avatar: user.avatar, createdAt: user.created_at } : undefined}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         collapsed={collapsed}

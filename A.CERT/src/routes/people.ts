@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
 
     if (!showArchived) {
       whereParts.push('p.archived_at IS NULL');
+      whereParts.push('p.deleted_at IS NULL');
     }
     if (type === 'fisica') {
       whereParts.push('p.cpf IS NOT NULL');
@@ -55,8 +56,8 @@ router.get('/', async (req, res) => {
 
     const stats = await queryRawOne(`
       SELECT
-        (SELECT COUNT(*) FROM persons WHERE archived_at IS NULL) as total,
-        (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND EXISTS (SELECT 1 FROM dossier_participants dp WHERE dp.person_id = p.id)) as vinculadas
+        (SELECT COUNT(*) FROM persons WHERE archived_at IS NULL AND deleted_at IS NULL) as total,
+        (SELECT COUNT(*) FROM persons p WHERE p.archived_at IS NULL AND p.deleted_at IS NULL AND EXISTS (SELECT 1 FROM dossier_participants dp WHERE dp.person_id = p.id)) as vinculadas
     `);
 
     const result = await Promise.all(people.map(async p => {
@@ -208,7 +209,10 @@ router.post('/', async (req, res) => {
     if (cpf) {
       const cpfClean = cpf.replace(/\D/g, '');
       if (cpfClean.length === 11) {
-        const existingCpf = await queryRawOne('SELECT id FROM persons WHERE cpf = $1', cpfClean);
+        const existingCpf = await queryRawOne(
+          "SELECT id FROM persons WHERE REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = $1",
+          cpfClean
+        );
         if (existingCpf) {
           res.status(409).json({ error: 'Este CPF já está cadastrado' });
           return;
@@ -291,6 +295,29 @@ router.get('/:id/detail', async (req, res) => {
 
       return { ...d, certificates };
     }));
+
+    // Busca certidoes sem dossier (orphaned - emitidas direto da pagina de certidoes)
+    const orphanedCerts = await queryRaw(`
+      SELECT id, name, organ, status, protocol, obtained_at, document_path
+      FROM certificates
+      WHERE person_id = $1 AND (dossier_id IS NULL OR dossier_id = '')
+      ORDER BY created_at ASC
+    `, id);
+
+    if (orphanedCerts.length > 0) {
+      dossiersWithCerts.push({
+        id: '__orphaned__',
+        identifier: 'Certidões isoladas',
+        status: 'Pendente',
+        priority: 'Regular',
+        created_at: orphanedCerts[0].obtained_at || new Date().toISOString(),
+        updated_at: orphanedCerts[0].obtained_at || new Date().toISOString(),
+        property_identifier: null,
+        property_type: null,
+        property_address: null,
+        certificates: orphanedCerts,
+      });
+    }
 
     const totalCerts = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.length, 0);
     const obtidas = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter((c: any) => c.status === 'Obtida').length, 0);

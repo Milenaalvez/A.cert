@@ -39,7 +39,7 @@
     "reports": "Relatórios",
     "users": "Usuários",
     "settings": "Configurações",
-    "support": "Suporte",
+    "support": "Central de Ajuda",
     "trash": "Lixeira",
     "newDossier": "Novo Dossiê",
     "lightMode": "Modo claro",
@@ -472,8 +472,8 @@
     }
   },
   "support": {
-    "title": "Suporte",
-    "subtitle": "Central de ajuda, documentação e ferramentas de diagnóstico do sistema.",
+    "title": "Central de Ajuda",
+    "subtitle": "Encontre respostas rápidas, aprenda a utilizar a A.CERT e resolva dúvidas sem precisar aguardar atendimento.",
     "help": "Central de Ajuda",
     "helpDesc": "Encontre respostas rápidas e soluções para problemas comuns.",
     "cards": {

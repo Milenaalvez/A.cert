@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A.CERT - Display Remoto</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    #status-overlay {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 100;
+      background: rgba(10,10,10,0.95); color: #fff; gap: 16px;
+    }
+    #status-overlay .spinner {
+      width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #FF7A00; border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #status-overlay .label { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.6); }
+    #status-overlay .error { font-size: 13px; color: #f87171; text-align: center; padding: 0 20px; }
+    #status-overlay .btn-retry {
+      margin-top: 4px; padding: 8px 20px; background: #FF7A00; color: #fff;
+      border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+      font-weight: 600; transition: background 0.2s;
+    }
+    #status-overlay .btn-retry:hover { background: #e56e00; }
+    #screen { width: 100%; height: 100%; display: block; }
+    #noVNC_status { display: none; }
+  </style>
+  <script type="module">
+    import RFB from 'https://unpkg.com/@novnc/novnc@1.5.0/lib/rfb.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const displayId = params.get('displayId') || '';
+    const vncPort = params.get('port') || '5901';
+
+    const overlay = document.getElementById('status-overlay');
+    const label = overlay.querySelector('.label');
+    const errorEl = overlay.querySelector('.error');
+    const btn = overlay.querySelector('.btn-retry');
+
+    function showStatus(msg, isError = false, canRetry = false) {
+      overlay.style.display = 'flex';
+      label.textContent = msg;
+      errorEl.textContent = '';
+      btn.style.display = canRetry ? 'block' : 'none';
+      if (isError) {
+        overlay.querySelector('.spinner').style.display = 'none';
+      } else {
+        overlay.querySelector('.spinner').style.display = 'block';
+      }
+    }
+
+    function connect() {
+      if (!displayId) {
+        showStatus('Display ID não especificado', true, false);
+        return;
+      }
+
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/display/${displayId}`;
+
+      showStatus(`Conectando ao display remoto...`);
+
+      try {
+        const rfb = new RFB(document.getElementById('screen'), wsUrl, {
+          credentials: { password: '' },
+          wsProtocols: ['binary'],
+        });
+
+        rfb.viewportDrag = true;
+        rfb.resizeSession = true;
+        rfb.scaleViewport = true;
+
+        rfb.addEventListener('connect', () => {
+          overlay.style.display = 'none';
+        });
+
+        rfb.addEventListener('disconnect', (e) => {
+          const reason = e.detail.clean ? 'Conexão encerrada' : `Erro: ${e.detail.reason || 'conexão perdida'}`;
+          showStatus(reason, !e.detail.clean, true);
+        });
+
+        rfb.addEventListener('credentialsrequired', () => {});
+      } catch (err) {
+        showStatus(`Erro ao conectar: ${err.message}`, true, true);
+      }
+    }
+
+    btn.addEventListener('click', connect);
+    connect();
+  </script>
+</head>
+<body>
+  <div id="status-overlay">
+    <div class="spinner"></div>
+    <div class="label">Carregando...</div>
+    <div class="error"></div>
+    <button class="btn-retry" style="display:none">Tentar novamente</button>
+  </div>
+  <div id="screen"></div>
+  <div id="noVNC_status"></div>
+</body>
+</html>

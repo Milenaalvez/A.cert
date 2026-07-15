@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from '../connectors/index.js';
 import { criarConectores } from '../connectors/index.js';
 import prisma, { executeRaw } from '../lib/prisma.js';
+import { acquireDisplayForJob, releaseDisplayForJob, getCurrentDisplayId } from '../utils/browser.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
 
@@ -41,17 +42,19 @@ async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Arr
 
 async function persistirResultado(
   personId: string,
-  dossierId: string,
+  dossierId: string | null,
   resultado: ConnectorResult,
   jobId: string,
 ): Promise<void> {
   if (resultado.status !== 'success') return;
 
   try {
-    await executeRaw(
-      'INSERT INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING',
-      dossierId, personId, 'proprietario'
-    );
+    if (dossierId) {
+      await executeRaw(
+        'INSERT INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING',
+        dossierId, personId, 'proprietario'
+      );
+    }
 
     const certId = randomUUID();
     const certName = nomeCertidao(resultado.orgao);
@@ -64,10 +67,12 @@ async function persistirResultado(
 
     await executeRaw(
       'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-      certId, dossierId, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
+      certId, dossierId || null, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
     );
 
-    await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, dossierId);
+    if (dossierId) {
+      await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, dossierId);
+    }
 
     LOG(`Certificado salvo: ${certName} (${resultado.orgao}) → pessoa ${personId}`);
   } catch (err) {
@@ -75,7 +80,18 @@ async function persistirResultado(
   }
 }
 
+const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '90000', 10);
+
 const JOBS = new Map<string, ConsultaJob>();
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout (${ms}ms): ${label}`)), ms)
+    ),
+  ]);
+}
 
 export function getJob(jobId: string): ConsultaJob | undefined {
   return JOBS.get(jobId);
@@ -100,15 +116,24 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
   });
 
   (async () => {
+    const displayId = await acquireDisplayForJob(jobId, conectores[0]?.nome);
+    if (displayId) {
+      LOG(`Display ${displayId} alocado para job ${jobId}`);
+    }
+
     for (const connector of conectores) {
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
-        const resultado = await connector.consultar(dados, jobId, dados.certKeys);
+        const resultado = await withTimeout(
+          connector.consultar(dados, jobId, dados.certKeys),
+          CONNECTOR_TIMEOUT_MS,
+          connector.nome
+        );
         job.resultados.push(resultado);
         LOG(`<<< Conector finalizado: ${connector.nome} → ${resultado.status}`);
 
-        if (resultado.status === 'success' && dados.personId && dados.dossierId) {
-          await persistirResultado(dados.personId, dados.dossierId, resultado, jobId);
+        if (resultado.status === 'success' && dados.personId) {
+          await persistirResultado(dados.personId, dados.dossierId || null, resultado, jobId);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -121,6 +146,12 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
         });
       }
     }
+
+    if (displayId) {
+      await releaseDisplayForJob(jobId);
+      LOG(`Display ${displayId} liberado do job ${jobId}`);
+    }
+
     job.status = 'complete';
     job.fim = new Date().toISOString();
   })();

@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 
 export default function LoginTransition({ onComplete }: { onComplete?: () => void }) {
-  const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"entering" | "ready">("entering");
 
@@ -22,7 +20,9 @@ export default function LoginTransition({ onComplete }: { onComplete?: () => voi
       if (onComplete) {
         onComplete();
       } else {
-        router.replace("/dashboard");
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect');
+        window.location.href = redirect || "/dashboard";
       }
     }, 1800);
 
@@ -31,7 +31,7 @@ export default function LoginTransition({ onComplete }: { onComplete?: () => voi
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [router, onComplete]);
+  }, [onComplete]);
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black">

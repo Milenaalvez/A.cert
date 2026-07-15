@@ -49,6 +49,7 @@ model User {
   teamActivities TeamActivity[]
   auditLogs      AuditLog[]
   sessions       UserSession[]
+  notifications  Notification[]
 
   @@map("users")
 }
@@ -388,6 +389,23 @@ model SupportTicket {
   updatedAt String?  @map("updated_at")
 
   @@map("support_tickets")
+}
+
+model Notification {
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  title     String
+  message   String
+  type      String  @default("info")
+  isRead    Int     @default(0) @map("is_read")
+  link      String?
+  sourceRef String? @map("source_ref")
+  createdAt String  @default("") @map("created_at")
+  updatedAt String? @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
 model AuditLog {
