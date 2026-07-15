@@ -294,7 +294,7 @@ router.get('/', async (req, res) => {
     const attentionWithMotives = attentionItems.map((a) => {
       const motives: string[] = [];
       const pendentesCount = totalTemplates - (a.obtidas || 0);
-      if (pendentesCount > 0) motives.push(`${pendentesCount} certidão${pendentesCount > 1 ? 'ões' : ''} pendente${pendentesCount > 1 ? 's' : ''}`);
+      if (pendentesCount > 0) motives.push(`${pendentesCount} ${pendentesCount > 1 ? 'certidões' : 'certidão'} pendente${pendentesCount > 1 ? 's' : ''}`);
       if (!a.person_cpf) motives.push('CPF não informado');
       const dias = Math.floor((Date.now() - new Date(a.updated_at).getTime()) / 86400000);
       if (dias >= 7) motives.push('Sem atualização há mais de 7 dias');

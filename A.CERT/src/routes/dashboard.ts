@@ -186,9 +186,9 @@ router.get('/', async (_req, res) => {
         const totalTemplates = 9;
         const pendentes = totalTemplates - (p.obtidas || 0);
         const motivos: string[] = [];
-        if (pendentes > 0) motivos.push(`${pendentes} certidão${pendentes > 1 ? 'ões' : ''} pendente${pendentes > 1 ? 's' : ''}`);
+        if (pendentes > 0) motivos.push(`${pendentes} ${pendentes > 1 ? 'certidões' : 'certidão'} pendente${pendentes > 1 ? 's' : ''}`);
         if (p.missing_cpf) motivos.push('CPF não informado');
-        if (p.obtidas === 0) motivos.push('Nenhuma certidão solicitada');
+        if (p.obtidas === 0 && pendentes > 0 === false) motivos.push('Nenhuma certidão solicitada');
         const dias = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 86400000);
         return {
           id: p.id,
