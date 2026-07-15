@@ -1,304 +1,349 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
+import { tentarBaixarPDF, aceitarCookies, prepararCapturaPDFViaCDP, aguardarDownloadCDP } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { PDFDocument } from 'pdf-lib';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
 
 const LOG = (msg: string) => console.log(`[TRF1] ${msg}`);
-const DEBUG = process.env.DEBUG;
 
 const FORM_URL = 'https://sistemas.trf1.jus.br/certidao/#/solicitacao';
 
-async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
-  const info = await page.evaluate(() => {
-    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input')).map(el => ({
-      id: el.id,
-      type: el.type,
-      name: el.name,
-      placeholder: el.placeholder,
-      className: el.className.slice(0, 50),
-      role: el.getAttribute('role') || '',
-    }));
-    const labels = Array.from(document.querySelectorAll('label')).map(el => ({
-      htmlFor: el.htmlFor,
-      text: (el.textContent || '').trim().slice(0, 60),
-      class: el.className.slice(0, 30),
-    }));
-    const buttons = Array.from(document.querySelectorAll('button')).map(el => ({
-      text: (el.textContent || '').trim().slice(0, 60),
-      class: el.className.slice(0, 30),
-      type: el.type,
-    }));
-    return { inputs, labels, buttons };
-  });
-
-  LOG(`Inputs (${info.inputs.length}):`);
-  for (const i of info.inputs) LOG(`  id="${i.id}" name="${i.name}" type="${i.type}" placeholder="${i.placeholder}" class="${i.className}" role="${i.role}"`);
-  LOG(`Labels (${info.labels.length}):`);
-  for (const l of info.labels) LOG(`  for="${l.htmlFor}" text="${l.text}" class="${l.class}"`);
-  LOG(`Botoes (${info.buttons.length}):`);
-  for (const b of info.buttons) LOG(`  text="${b.text}" type="${b.type}" class="${b.class}"`);
-}
-
-async function preencherAutocomplete(
+// ============================================================
+// UTIL: clicar no mat-select pelo label e selecionar a opção
+// ============================================================
+async function selecionarMatSelect(
   page: import('puppeteer').Page,
   labelTexto: string,
-  valor: string,
+  opcaoTexto: string,
 ): Promise<boolean> {
-  const lblNormalizado = labelTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
-  const inputSel = await page.evaluate((lbl) => {
-    const lblLow = lbl.toLowerCase();
-    if (lblLow.normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'orgaos') {
-      const inp = document.querySelector('input[name="orgaos"]');
-      if (inp && inp.id) return `#${CSS.escape(inp.id)}`;
-      if (inp) return 'input[name="orgaos"]';
-      return null;
-    }
+  // Abre o mat-select clicando no label
+  const labelClicada = await page.evaluate((lbl) => {
+    const l = lbl.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const labels = Array.from(document.querySelectorAll('label'));
     for (const label of labels) {
-      const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (txt.includes(lblLow.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) {
-        const container = label.closest('.p-field, .field, .p-float-label') || label.parentElement;
-        if (!container) continue;
-        const inp = container.querySelector('input');
-        if (!inp) continue;
-        if (inp.id) return `#${CSS.escape(inp.id)}`;
-        if (inp.name) return `input[name="${inp.name}"]`;
-        return `input[role="${inp.getAttribute('role') || 'listbox'}"]`;
+      const txt = (label.textContent || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (txt.includes(l)) { (label as HTMLElement).click(); return true; }
+    }
+    return false;
+  }, labelTexto);
+
+  if (!labelClicada) {
+    // Fallback: clica no trigger do mat-select
+    await page.evaluate(() => {
+      const trigger = document.querySelector('.mat-mdc-select-trigger, .mat-mdc-select-value');
+      if (trigger) { (trigger as HTMLElement).click(); return; }
+      // Ou no primeiro elemento clicavel com "Selecionar" no texto
+      const spans = document.querySelectorAll('span');
+      for (const s of spans) {
+        if ((s.textContent || '').toLowerCase().includes('selecionar um tipo')) {
+          (s as HTMLElement).click(); return;
+        }
+      }
+    });
+  }
+
+  await wait(800);
+
+  // Loga todas as opções visíveis pra debug
+  const opcoes = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll(
+      '.mat-mdc-select-panel mat-option, .mat-mdc-option, [role="listbox"] [role="option"], .mat-mdc-autocomplete-panel mat-option'
+    )).map(el => (el.textContent || '').trim()).filter(t => t.length > 0);
+  });
+  LOG(`Opções do mat-select "${labelTexto}": [${opcoes.join(' | ')}]`);
+
+  // Clica na opção certa
+  const opcao = opcaoTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const clicou = await page.evaluate((opt) => {
+    const options = document.querySelectorAll(
+      'mat-option, .mat-mdc-option, [role="option"], .mat-option'
+    );
+    for (const el of options) {
+      const t = (el.textContent || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (t.includes(opt)) {
+        (el as HTMLElement).click();
+        return t;
       }
     }
     return null;
-  }, labelTexto);
+  }, opcao);
 
-  if (!inputSel) {
-    LOG(`Label "${labelTexto}" nao encontrado`);
-    return false;
-  }
-
-  LOG(`Autocomplete "${labelTexto}" encontrado: ${inputSel}`);
-
-  // Foca o input via evaluate para evitar __name do esbuild
-  const focused = await page.evaluate((sel) => {
-    const el = document.querySelector(sel);
-    if (!el) return false;
-    (el as HTMLInputElement).value = '';
-    (el as HTMLInputElement).focus();
-    el.dispatchEvent(new Event('focus', { bubbles: true }));
+  if (clicou) {
+    LOG(`[mat-select] "${labelTexto}" → "${clicou}" OK`);
     return true;
-  }, inputSel);
-  if (!focused) {
-    LOG(`Falha ao focar "${inputSel}"`);
-    return false;
   }
-  await wait(200);
-  await page.keyboard.type(valor, { delay: 30 });
-  return true;
+  LOG(`[mat-select] "${labelTexto}" → "${opcaoTexto}" NAO ENCONTRADO entre: ${opcoes.join(', ')}`);
+  return false;
 }
 
-async function selecionarDropdown(
+// ============================================================
+// UTIL: selecionar item no autocomplete mat-chip (Órgãos)
+// NÃO filtra digitando → precisa scrollar e clicar na opção certa
+// ============================================================
+async function selecionarOrgaoAutocomplete(
   page: import('puppeteer').Page,
-  filtro: (t: string) => boolean,
+  termo: string,
 ): Promise<string | null> {
-  const filtroStr = filtro.toString();
+  // 1. Abre o painel clicando no input
+  await page.click('#mat-mdc-chip-list-input-0');
+  await wait(600);
 
-  await wait(2000);
-  await page.keyboard.press('ArrowDown');
-  await wait(300);
-  await page.keyboard.press('Enter');
-  await wait(500);
+  // Aguarda o painel
+  await page.waitForSelector(
+    '.mat-mdc-autocomplete-panel, .mat-autocomplete-panel, .cdk-overlay-pane',
+    { visible: true, timeout: 8000 }
+  ).catch(() => LOG('[Órgão] painel nao abriu'));
 
-  const selected = await page.evaluate(() => {
-    const input = document.querySelector('.p-autocomplete input[type="text"], .p-autocomplete-token-label, p-autocomplete input');
-    if (input) return (input as HTMLInputElement).value || input.textContent?.trim() || null;
-    return null;
+  // 2. Lê TODAS as opções do painel
+  const opcoes = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll(
+      'mat-option, .mat-mdc-option, [role="option"]'
+    )).map((el, i) => ({
+      index: i,
+      text: (el.textContent || '').trim(),
+    })).filter(o => o.text.length > 1);
   });
-  if (selected && selected.length > 0) {
-    LOG(`Selecionado via ArrowDown+Enter: ${selected}`);
-    return selected;
+  LOG(`[Órgão] ${opcoes.length} opções no painel, buscando "${termo}"`);
+  for (const o of opcoes) LOG(`  [${o.index}] "${o.text}"`);
+
+  // 3. Clica na opção que contém o termo
+  const termoLower = termo.toLowerCase();
+  const encontrado = await page.evaluate((t: string) => {
+    const options = document.querySelectorAll(
+      'mat-option, .mat-mdc-option, [role="option"]'
+    );
+    for (const el of options) {
+      const text = (el.textContent || '').trim().toLowerCase();
+      if (text.length < 2) continue;
+      if (text.includes(t)) {
+        (el as HTMLElement).scrollIntoView({ block: 'center' });
+        (el as HTMLElement).click();
+        return el.textContent?.trim() || null;
+      }
+    }
+    return null;
+  }, termoLower);
+
+  if (encontrado) {
+    LOG(`[Órgão] "${termo}" → "${encontrado}"`);
+    return encontrado;
   }
 
-  // Fallback: clicar no item dentro do painel
-  await page.waitForSelector('.p-autocomplete-panel, ul.p-autocomplete-items, [role="listbox"]', { timeout: 5000 }).catch(() => {});
+  LOG(`[Órgão] "${termo}" → NÃO ENCONTRADO`);
+  return null;
+}
+
+// ============================================================
+// PREENCHE O FORMULÁRIO
+// ============================================================
+async function preencherFormulario(
+  page: import('puppeteer').Page,
+  dados: DadosProprietario,
+  tipo: string,
+): Promise<void> {
+  const cpfDigits = dados.cpf.replace(/\D/g, '');
+
+  LOG(`Navegando...`);
+  await page.goto(FORM_URL, { waitUntil: 'networkidle0', timeout: 45000 }).catch(async () => {
+    await wait(5000);
+    await page.goto(FORM_URL, { waitUntil: 'networkidle0', timeout: 45000 });
+  });
+  await wait(2000);
+  await aceitarCookies(page);
+
+  LOG('Aguardando formulario...');
+  await page.waitForSelector('#mat-mdc-chip-list-input-0, #mat-input-0', {
+    visible: true, timeout: 20000,
+  }).catch(() => LOG('timeout'));
+  await wait(2000);
+
+  // PASSO 1: TIPO DE CERTIDÃO
+  await selecionarMatSelect(page, 'Tipo de Certidão', tipo);
   await wait(500);
 
-  const clicked = await page.evaluate((filtroS: string) => {
-    const fn = new Function('t', `return ${filtroS}`) as (t: string) => boolean;
-    const panels = document.querySelectorAll('.p-autocomplete-panel, ul.p-autocomplete-items, [role="listbox"], p-autocomplete .p-autocomplete-items, .p-autocomplete-items-wrapper');
-    for (const panel of panels) {
-      const items = panel.querySelectorAll<HTMLElement>('li, [role="option"], .p-autocomplete-item, .p-element');
-      for (const item of items) {
-        const t = item.textContent?.trim().toLowerCase() || '';
-        if (fn(t)) {
-          item.click();
-          return item.textContent?.trim() || '';
+  // PASSO 2: ÓRGÃOS
+  const orgaosAlvo = ['distrito federal', 'tribunal regional federal'];
+  for (let i = 0; i < 2; i++) {
+    const sel = await selecionarOrgaoAutocomplete(page, orgaosAlvo[i]);
+    LOG(`[Órgão ${i + 1}/2]: ${sel || 'FALHOU'}`);
+    await wait(600);
+  }
+
+  // PASSO 3: CPF
+  await page.evaluate(() => {
+    const labels = Array.from(document.querySelectorAll('label'));
+    for (const l of labels) {
+      if ((l.textContent || '').trim() === 'CPF') { (l as HTMLElement).click(); return; }
+    }
+  });
+  await wait(300);
+  await page.click('#mat-input-0');
+  await wait(200);
+  await page.keyboard.type(cpfDigits, { delay: 15 });
+  LOG(`CPF: ${cpfDigits}`);
+
+  // PASSO 4: EMITIR
+  await wait(300);
+  const emitiu = await page.evaluate(() => {
+    const btns = document.querySelectorAll('button');
+    for (const b of btns) {
+      if ((b.textContent || '').trim() === 'Emitir Certidão') {
+        (b as HTMLElement).click(); return true;
+      }
+    }
+    return false;
+  });
+  LOG(`Emitir: ${emitiu ? 'clicado' : 'nao encontrado'}`);
+}
+
+// ============================================================
+// CAPTURA PDF real: Imprimir → nova aba OU CDP download → fallback page.pdf()
+// ============================================================
+async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Uint8Array | null> {
+  LOG('Aguardando pagina de resultado...');
+  try { await page.waitForNetworkIdle({ idleTime: 2000, timeout: 25000 }); } catch {}
+  await wait(2000);
+
+  if (page.isClosed()) { LOG('Pagina fechada'); return null; }
+
+  // --- camada 1: prepara CDP para capturar download ---
+  await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
+  LOG('CDP preparado para download');
+
+  // --- camada 2: listener de nova aba ANTES de clicar Imprimir ---
+  const newPagePromise = new Promise<import('puppeteer').Page | null>((resolve) => {
+    const timeout = setTimeout(() => {
+      page.browser().off('targetcreated', handler);
+      resolve(null);
+    }, 20000);
+
+    const handler = async (target: import('puppeteer').Target) => {
+      if (target.type() === 'page') {
+        clearTimeout(timeout);
+        page.browser().off('targetcreated', handler);
+        try {
+          const np = await target.page();
+          if (np && !np.isClosed()) {
+            await np.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }).catch(() => {});
+            await wait(2000);
+            resolve(np);
+          } else { resolve(null); }
+        } catch { resolve(null); }
+      }
+    };
+    page.browser().on('targetcreated', handler);
+  });
+
+  // --- Verifica se a certidao ja apareceu na pagina (sem precisar de botao Imprimir) ---
+  const temCertidaoVisivel = await page.evaluate(() => {
+    const body = (document.body?.textContent || '').toLowerCase();
+    const temKeywords = body.includes('certidão') || body.includes('certidao') || body.includes('nada consta');
+    const temTabela = document.querySelector('table') !== null;
+    const temCard = document.querySelector('.card, .resultado, .certidao-result, [class*="result"], [class*="certif"]') !== null;
+    return temKeywords || temTabela || temCard;
+  }).catch(() => false);
+
+  if (temCertidaoVisivel) {
+    LOG('Certidao detectada na pagina, capturando PDF direto...');
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm' } });
+    if (pdf.length > 1000) { LOG(`PDF via pagina resultado: ${pdf.length} bytes`); return pdf; }
+  }
+
+  // --- tenta clicar botao Imprimir / Salvar / Download / PDF ---
+  LOG('Procurando botao de emissao...');
+  const clicouBotao = await page.evaluate(() => {
+    const btns = document.querySelectorAll('button, a, span[role="button"], div[role="button"], input[type="button"], input[type="submit"]');
+    const termos = ['imprimir', 'salvar pdf', 'baixar pdf', 'download', 'visualizar', 'gerar pdf', 'emitir', 'salvar'];
+    for (const el of btns) {
+      const t = (el.textContent || '').trim().toLowerCase();
+      for (const termo of termos) {
+        if (t.includes(termo)) {
+          (el as HTMLElement).click(); return t;
         }
       }
     }
     return null;
-  }, filtroStr);
+  }).catch(() => null);
+  LOG(`Botao clicado: ${clicouBotao || 'nenhum encontrado'}`);
 
-  if (clicked) {
-    LOG(`Clicou no item do painel: ${clicked}`);
-    return clicked;
+  if (clicouBotao) {
+    await wait(2000);
+
+    // --- verifica CDP download ---
+    LOG('Verificando CDP download...');
+    const cdpPath = await aguardarDownloadCDP(DOWNLOAD_DIR, { timeoutMs: 12000, pollMs: 500 });
+    if (cdpPath) {
+      try {
+        const buf = fs.readFileSync(cdpPath);
+        if (buf.length > 1000) {
+          LOG(`PDF via CDP download: ${buf.length} bytes`);
+          return new Uint8Array(buf);
+        }
+      } catch (e: any) { LOG(`Erro lendo CDP: ${e.message}`); }
+    }
+
+    // --- verifica nova aba ---
+    LOG('Verificando nova aba...');
+    const newPage = await newPagePromise;
+    if (newPage && !newPage.isClosed()) {
+      LOG('Nova aba detectada!');
+      const pdfUrl = await newPage.evaluate(() => {
+        const embed = document.querySelector('embed[type="application/pdf"], embed[src*=".pdf"], object[data*=".pdf"], iframe[src*=".pdf"]');
+        if (embed) return (embed as any).src || (embed as any).data || null;
+        if (window.location.href.endsWith('.pdf')) return window.location.href;
+        return null;
+      }).catch(() => null);
+
+      if (pdfUrl) {
+        LOG(`PDF URL: ${pdfUrl}`);
+        try {
+          const pdfResp = await newPage.evaluate(async (url: string) => {
+            const r = await fetch(url); const buf = await r.arrayBuffer();
+            return Array.from(new Uint8Array(buf));
+          }, pdfUrl).catch(() => null);
+          if (pdfResp && pdfResp.length > 1000) {
+            await newPage.close().catch(() => {});
+            LOG(`PDF via fetch embed: ${pdfResp.length} bytes`);
+            return new Uint8Array(pdfResp);
+          }
+        } catch {}
+      }
+
+      try {
+        const pdf = await newPage.pdf({ format: 'A4', printBackground: true });
+        await newPage.close().catch(() => {});
+        if (pdf.length > 1000) { LOG(`PDF via nova aba: ${pdf.length} bytes`); return pdf; }
+      } catch (e: any) { LOG(`Erro nova aba: ${e.message}`); await newPage.close().catch(() => {}); }
+    }
   }
 
-  LOG(`Nenhum item encontrado para o filtro: ${filtroStr.slice(0, 60)}`);
+  // --- camada 3: fallback page.pdf() na pagina de resultado ---
+  if (!page.isClosed()) {
+    LOG('Fallback page.pdf()...');
+    try {
+      const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm' } });
+      if (pdf.length > 1000) { LOG(`PDF fallback: ${pdf.length} bytes`); return pdf; }
+    } catch {}
+  }
+
+  const buf = await tentarBaixarPDF(page).catch(() => null);
+  if (buf && buf.length > 1000) { LOG(`PDF tentarBaixarPDF: ${buf.length} bytes`); return buf; }
+
   return null;
 }
 
-async function preencherInputKeyboard(
-  page: import('puppeteer').Page,
-  selector: string,
-  valor: string,
-): Promise<boolean> {
-  const el = await page.$(selector);
-  if (!el) return false;
-  await page.evaluate((s) => {
-    const e = document.querySelector<HTMLInputElement>(s);
-    if (e) { e.value = ''; e.focus(); }
-  }, selector);
-  await wait(100);
-  await page.keyboard.type(valor, { delay: 6 });
-  return true;
-}
-
-async function preencherEEnviar(
-  page: import('puppeteer').Page,
-  dados: DadosProprietario,
-  tipo: string,
-  orgao: string,
-  filtroTipo: (t: string) => boolean,
-  filtroOrgao: (t: string) => boolean,
-): Promise<void> {
-  const cpfDigits = dados.cpf.replace(/\D/g, '');
-  const emailReal = dados.email;
-
-  LOG(`Navegando para formulario (${tipo} + ${orgao})...`);
-  await page.goto(FORM_URL, { waitUntil: 'networkidle2', timeout: 30000 }).catch(async () => {
-    await wait(2000);
-    await page.goto(FORM_URL, { waitUntil: 'networkidle2', timeout: 30000 });
-  });
-  await wait(3000);
-
-  if (DEBUG) await diagnosticarFormulario(page);
-  await injectFillHelper(page);
-
-  await preencherAutocomplete(page, 'Tipo de certidão', tipo);
-  const tipoSel = await selecionarDropdown(page, filtroTipo);
-  LOG(`[${tipo}] Tipo: ${tipoSel}`);
-
-  await preencherAutocomplete(page, 'Órgãos', orgao);
-  const orgaoSel = await selecionarDropdown(page, filtroOrgao);
-  LOG(`[${orgao}] Orgao: ${orgaoSel}`);
-
-  await page.evaluate(() => {
-    const radio = document.querySelector<HTMLElement>('#cpf');
-    if (radio) radio.click();
-  });
-
-  const cpfOk = await preencherInputKeyboard(page, 'input[name="cpfCnpj"]', cpfDigits);
-  LOG(`CPF: ${cpfOk}`);
-
-  const emailOk = await preencherInputKeyboard(page, '#email', emailReal);
-  LOG(`Email: ${emailOk}`);
-
-  const emailConfOk = await preencherInputKeyboard(page, '#emailConfirmacao', emailReal);
-  LOG(`Email Confirmacao: ${emailConfOk}`);
-
-  await wait(500);
-
-  const submitOk = await page.evaluate(() => {
-    const btns = document.querySelectorAll('button');
-    for (const b of btns) {
-      const t = b.textContent?.trim() || '';
-      if (t.includes('Solicitar certidão') || t.includes('Solicitar') || t.includes('Emitir') || t.includes('solicitar')) {
-        b.click();
-        return t.slice(0, 40);
-      }
-    }
-    return null;
-  });
-  LOG(`Submit: ${submitOk || 'nenhum'}`);
-}
-
-async function preencherEEnviarMulti(
-  page: import('puppeteer').Page,
-  dados: DadosProprietario,
-  tipo: string,
-  orgaos: string[],
-  filtroTipo: (t: string) => boolean,
-  filtrosOrgao: ((t: string) => boolean)[],
-): Promise<void> {
-  const cpfDigits = dados.cpf.replace(/\D/g, '');
-  const emailReal = dados.email;
-
-  LOG(`Navegando para formulario (${tipo} + ${orgaos.join('/')})...`);
-  await page.goto(FORM_URL, { waitUntil: 'networkidle2', timeout: 30000 }).catch(async () => {
-    await wait(2000);
-    await page.goto(FORM_URL, { waitUntil: 'networkidle2', timeout: 30000 });
-  });
-  await wait(3000);
-  await aceitarCookies(page);
-
-  if (DEBUG) await diagnosticarFormulario(page);
-  await injectFillHelper(page);
-
-  // Seleciona Tipo de certidão
-  await preencherAutocomplete(page, 'Tipo de certidão', tipo);
-  const tipoSel = await selecionarDropdown(page, filtroTipo);
-  LOG(`[${tipo}] Tipo: ${tipoSel}`);
-
-  // Seleciona múltiplos Órgãos (multi-select PrimeNG)
-  for (let i = 0; i < orgaos.length; i++) {
-    await preencherAutocomplete(page, 'Órgãos', orgaos[i]);
-    const orgaoSel = await selecionarDropdown(page, filtrosOrgao[i]);
-    LOG(`[${orgaos[i]}] Orgao ${i + 1}/${orgaos.length}: ${orgaoSel}`);
-  }
-
-  await page.evaluate(() => {
-    const radio = document.querySelector<HTMLElement>('#cpf');
-    if (radio) radio.click();
-  });
-
-  const cpfOk = await preencherInputKeyboard(page, 'input[name="cpfCnpj"]', cpfDigits);
-  LOG(`CPF: ${cpfOk}`);
-
-  const emailOk = await preencherInputKeyboard(page, '#email', emailReal);
-  LOG(`Email: ${emailOk}`);
-
-  const emailConfOk = await preencherInputKeyboard(page, '#emailConfirmacao', emailReal);
-  LOG(`Email Confirmacao: ${emailConfOk}`);
-
-  await wait(500);
-
-  const submitOk = await page.evaluate(() => {
-    const btns = document.querySelectorAll('button');
-    for (const b of btns) {
-      const t = b.textContent?.trim() || '';
-      if (t.includes('Solicitar certidão') || t.includes('Solicitar') || t.includes('Emitir') || t.includes('solicitar')) {
-        b.click();
-        return t.slice(0, 40);
-      }
-    }
-    return null;
-  });
-  LOG(`Submit: ${submitOk || 'nenhum'}`);
-}
-
-async function capturarPDF(page: import('puppeteer').Page): Promise<Uint8Array | null> {
-  await wait(3000);
-  if (page.isClosed()) return null;
-  const buf = await tentarBaixarPDF(page);
-  if (buf) LOG(`PDF capturado (${buf.length} bytes)`);
-  return buf;
-}
-
+// ============================================================
+// CONNECTOR
+// ============================================================
 export class TRF1Connector implements IConnector {
   readonly nome = 'TRF1';
 
@@ -308,115 +353,116 @@ export class TRF1Connector implements IConnector {
     certKeys?: string[],
   ): Promise<ConnectorResult> {
     const dataConsulta = new Date().toISOString();
-    LOG('Iniciando consulta');
+    LOG('Iniciando TRF1');
 
-  const runs = [
-    {
-      tipo: 'Cível',
-      chave: 'TRF1_CIVEL',
-      orgaos: ['SJDF', 'TRF1'],
-      filtroTipo: (t: string) => t.includes('cível'),
-      filtrosOrgao: [
-        (t: string) => {
-          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          return norm.includes('secao judiciaria') && (norm.includes('df') || norm.includes('distrito federal'));
-        },
-        (t: string) => {
-          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          return norm.includes('tribunal regional federal') && norm.includes('1');
-        },
-      ],
-    },
-    {
-      tipo: 'Criminal',
-      chave: 'TRF1_CRIMINAL',
-      orgaos: ['SJDF', 'TRF1'],
-      filtroTipo: (t: string) => t.includes('criminal'),
-      filtrosOrgao: [
-        (t: string) => {
-          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          return norm.includes('secao judiciaria') && (norm.includes('df') || norm.includes('distrito federal'));
-        },
-        (t: string) => {
-          const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          return norm.includes('tribunal regional federal') && norm.includes('1');
-        },
-      ],
-    },
-  ].filter(r => !certKeys || certKeys.length === 0 || certKeys.includes(r.chave));
+    const tipos: string[] = [];
+    const temCivil = !certKeys || certKeys.length === 0 || certKeys.includes('TRF1_CIVEL');
+    const temCriminal = !certKeys || certKeys.length === 0 || certKeys.includes('TRF1_CRIMINAL');
+    if (temCivil) tipos.push('Cível');
+    if (temCriminal) tipos.push('Criminal');
 
-  const pdfs: Uint8Array[] = [];
-  const errors: string[] = [];
-  const throttle = criarRateLimit(4000);
+    LOG(`Tipos: ${tipos.join(', ')}`);
 
-  for (let i = 0; i < runs.length; i++) {
-    const run = runs[i];
-    if (i > 0) {
-      LOG(`Aguardando 5s antes do proximo orgao...`);
-      await wait(5000);
-    }
+    const pdfs: Uint8Array[] = [];
+    const errors: string[] = [];
+    const throttle = criarRateLimit(4000);
 
-    const page = await createPage().catch(e => { errors.push(`${run.tipo}: ${e.message}`); return null; });
-    if (!page) continue;
-
-    try {
-      await throttle();
-
-      LOG(`--- ${run.tipo} (${run.orgaos.join(' + ')}) ---`);
-      await preencherEEnviarMulti(page, dados, run.tipo, run.orgaos, run.filtroTipo, run.filtrosOrgao);
-
-      let captchaType = null;
-      for (let tentativa = 0; tentativa < 30; tentativa++) {
-        if (page.isClosed()) break;
-        captchaType = await detectarCaptcha(page);
-        if (captchaType) break;
-        await wait(500);
-      }
-      LOG(`CAPTCHA: ${captchaType}`);
-
-      if (captchaType) {
-        await focusPageForCaptcha(page, captchaType);
-        LOG('CAPTCHA detectado - enviando para resolucao remota...');
-        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
-        if (!captchaOk) {
-          LOG('CAPTCHA nao resolvido no tempo limite');
-          await page.close();
-          return { status: 'error', orgao: this.nome, dataConsulta, error: `[TRF1] CAPTCHA nao resolvido no tempo limite` };
-        }
-        LOG('CAPTCHA resolvido, continuando...');
-        await wait(2000);
+    for (let i = 0; i < tipos.length; i++) {
+      const tipo = tipos[i];
+      if (i > 0) {
+        LOG('Aguardando 8s (browser recovery)...');
+        await wait(8000);
       }
 
-      const pdf = await capturarPDF(page);
-      if (pdf && pdf.length > 100 && !page.isClosed()) {
-        pdfs.push(pdf);
-        LOG(`PDF adicionado (${pdf.length} bytes)`);
-      } else {
-        errors.push(`${run.tipo}/${run.orgaos.join('+')}: PDF vazio`);
-      }
-    } catch (err: unknown) {
-      const m = err instanceof Error ? err.message : 'Erro';
-      errors.push(`${run.tipo}/${run.orgaos.join('+')}: ${m}`);
-      LOG(`ERRO: ${m}`);
-    }
-    await page.close().catch(() => {});
-  }
-
-      if (pdfs.length === 0) {
-        return { status: 'error', orgao: this.nome, dataConsulta, error: `Nenhuma certidao. ${errors.join('; ')}` };
-      }
-
-      LOG(`Mesclando ${pdfs.length} PDF(s)...`);
-      const mergedPdf = await PDFDocument.create();
-      for (const pdfBytes of pdfs) {
+      let page: import('puppeteer').Page | null = null;
+      // Retry createPage ate 3x
+      for (let retry = 0; retry < 3 && !page; retry++) {
         try {
-          const doc = await PDFDocument.load(pdfBytes);
-          const pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
-          for (const p of pages) mergedPdf.addPage(p);
-        } catch (e) { LOG(`Erro merge: ${e}`); }
+          page = await createPage();
+        } catch (e: any) {
+          if (retry < 2) { LOG(`createPage tentativa ${retry + 1} falhou: ${e.message}`); await wait(3000); }
+          else { errors.push(`${tipo}: criar pagina: ${e.message}`); }
+        }
       }
-      const mergedBytes = await mergedPdf.save();
 
-      return { status: 'success', orgao: this.nome, dataConsulta, protocolo: `TRF1-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`, documento: mergedBytes };
+      if (!page) {
+        errors.push(`${tipo}: nao conseguiu criar pagina`);
+        continue;
+      }
+
+      try {
+        await throttle();
+        LOG(`--- [${i + 1}/${tipos.length}] ${tipo} ---`);
+        await preencherFormulario(page, dados, tipo);
+
+        // Verifica se a página ainda está viva após o submit
+        if (page.isClosed()) {
+          errors.push(`${tipo}: pagina fechada apos submit`);
+          continue;
+        }
+
+        let captchaType = null;
+        for (let t = 0; t < 30; t++) {
+          if (page.isClosed()) break;
+          captchaType = await detectarCaptcha(page).catch(() => null);
+          if (captchaType) break;
+          await wait(500);
+        }
+        LOG(`CAPTCHA: ${captchaType || 'nenhum'}`);
+
+        if (captchaType) {
+          await focusPageForCaptcha(page, captchaType).catch(() => {});
+          const ok = await esperarCaptchaInterativo(page, captchaType).catch(() => false);
+          if (!ok || page.isClosed()) {
+            await page.close().catch(() => {});
+            errors.push(`${tipo}: CAPTCHA nao resolvido`);
+            continue;
+          }
+          LOG('CAPTCHA resolvido');
+          await wait(2000);
+        }
+
+        const pdf = await capturarPDFAposEmitir(page);
+        if (pdf && pdf.length > 100) {
+          pdfs.push(pdf);
+          LOG(`PDF ${tipo}: ${pdf.length} bytes`);
+        } else {
+          errors.push(`${tipo}: PDF vazio`);
+        }
+      } catch (err: unknown) {
+        const m = err instanceof Error ? err.message : 'Erro';
+        // "detached Frame" ou "Target closed" = browser crash, pulamos pra próxima run
+        if (m.includes('detached Frame') || m.includes('Target closed') || m.includes('Target.closed')) {
+          LOG(`[${tipo}] Browser crash, pulando run: ${m}`);
+        } else {
+          errors.push(`${tipo}: ${m}`);
+        }
+        LOG(`ERRO ${tipo}: ${m}`);
+      }
+      await page.close().catch(() => {});
+      page = null;
+    }
+
+    if (pdfs.length === 0) {
+      return { status: 'error', orgao: this.nome, dataConsulta, error: `Nenhuma certidao. ${errors.join('; ')}` };
+    }
+
+    LOG(`Merge ${pdfs.length} PDF(s)...`);
+    const mergedPdf = await PDFDocument.create();
+    for (const pdfBytes of pdfs) {
+      try {
+        const doc = await PDFDocument.load(pdfBytes);
+        const pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
+        for (const p of pages) mergedPdf.addPage(p);
+      } catch {}
+    }
+    const mergedBytes = await mergedPdf.save();
+    return {
+      status: 'success',
+      orgao: this.nome,
+      dataConsulta,
+      protocolo: `TRF1-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+      documento: mergedBytes,
+    };
   }
 }
