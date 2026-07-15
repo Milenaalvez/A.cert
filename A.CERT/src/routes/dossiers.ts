@@ -278,30 +278,34 @@ router.get('/', async (req, res) => {
 
     const attentionItems = await queryRaw(`
       SELECT d.id, d.identifier, d.created_by as responsible, d.updated_at,
-             (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Pendente') as pendencias
+             (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') as obtidas,
+             p.cpf as person_cpf, p.name as person_name
       FROM dossiers d
       LEFT JOIN persons p ON p.id = d.person_id
       WHERE (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') < 9
          OR p.cpf IS NULL OR p.cpf = ''
-      ORDER BY pendencias DESC, d.updated_at ASC
+      ORDER BY d.updated_at ASC
       LIMIT 5
     `);
 
     const deadlineDays = parseInt((await getSetting('dossier_deadline', '30')) || '30', 10);
+    const totalTemplates = 9;
 
     const attentionWithMotives = attentionItems.map((a) => {
       const motives: string[] = [];
-      if (a.pendencias > 0) motives.push(`${a.pendencias} pendência${a.pendencias > 1 ? 's' : ''}`);
+      const pendentesCount = totalTemplates - (a.obtidas || 0);
+      if (pendentesCount > 0) motives.push(`${pendentesCount} certidão${pendentesCount > 1 ? 'ões' : ''} pendente${pendentesCount > 1 ? 's' : ''}`);
+      if (!a.person_cpf) motives.push('CPF não informado');
       const dias = Math.floor((Date.now() - new Date(a.updated_at).getTime()) / 86400000);
-      if (dias > 1) motives.push(`Prazo em ${Math.max(1, deadlineDays - dias)} dias`);
-      if (a.pendencias > 0) motives.push('Aguardando documentos');
+      if (dias >= 7) motives.push('Sem atualização há mais de 7 dias');
+      if (motives.length === 0) motives.push('Nenhuma certidão solicitada');
       return {
         id: a.id,
         identifier: a.identifier,
         responsible: a.responsible || 'Não atribuído',
         status: 'Pendente',
         motives,
-        mainMotive: motives[0] || 'Requer atenção',
+        mainMotive: motives[0],
       };
     });
 

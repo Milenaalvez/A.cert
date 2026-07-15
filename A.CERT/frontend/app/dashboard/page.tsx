@@ -737,7 +737,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                           <span className="text-[11px] text-[#DC2626] font-medium">{p.motivo}</span>
                         </div>
                         <span className="text-[12px] text-secondary block mt-0.5">
-                          Há {p.diasSemAtualizar}d sem atualização
+                          {p.diasSemAtualizar > 0 ? `Há ${p.diasSemAtualizar}d sem atualização` : 'Atualizado hoje'}
                         </span>
                       </div>
                       <button

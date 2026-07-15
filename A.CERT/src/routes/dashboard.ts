@@ -131,17 +131,16 @@ router.get('/', async (_req, res) => {
 
     const priorities = await queryRaw(`
       SELECT d.id, d.identifier, d.updated_at,
-        (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Pendente')::int as pendencias,
-        (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id)::int as total_certs,
+        (SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida')::int as obtidas,
         CASE WHEN p.cpf IS NULL OR p.cpf = '' THEN true ELSE false END as missing_cpf
       FROM dossiers d
       LEFT JOIN persons p ON p.id = d.person_id
       WHERE ((SELECT COUNT(*) FROM certificates WHERE dossier_id = d.id AND status = 'Obtida') < 9
         OR p.cpf IS NULL OR p.cpf = '')
         AND (d.deleted_at IS NULL OR d.deleted_at = '')
-      ORDER BY pendencias DESC, d.updated_at ASC
+      ORDER BY d.updated_at ASC
       LIMIT 8
-    `) as { id: string; identifier: string; updated_at: string; pendencias: number; total_certs: number; missing_cpf: boolean }[];
+    `) as { id: string; identifier: string; updated_at: string; obtidas: number; missing_cpf: boolean }[];
 
     const organs = await queryRaw(
       'SELECT name, status FROM organs ORDER BY name'
@@ -184,18 +183,19 @@ router.get('/', async (_req, res) => {
         taxaSucesso: Math.round(taxaSucesso * 10) / 10,
       },
       priorities: priorities.map(p => {
+        const totalTemplates = 9;
+        const pendentes = totalTemplates - (p.obtidas || 0);
         const motivos: string[] = [];
-        if (p.pendencias > 0) motivos.push(`${p.pendencias} certidão${p.pendencias > 1 ? 'ões' : ''} pendente${p.pendencias > 1 ? 's' : ''}`);
+        if (pendentes > 0) motivos.push(`${pendentes} certidão${pendentes > 1 ? 'ões' : ''} pendente${pendentes > 1 ? 's' : ''}`);
         if (p.missing_cpf) motivos.push('CPF não informado');
-        if (p.total_certs === 0) motivos.push('Nenhuma certidão solicitada');
+        if (p.obtidas === 0) motivos.push('Nenhuma certidão solicitada');
+        const dias = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 86400000);
         return {
           id: p.id,
           identifier: p.identifier,
           motivo: motivos.join(' · ') || 'Requer atenção',
-          pendencias: p.pendencias,
-          diasSemAtualizar: Math.floor(
-            (Date.now() - new Date(p.updated_at).getTime()) / 86400000
-          ),
+          pendencias: pendentes,
+          diasSemAtualizar: dias,
         };
       }),
       organs,
