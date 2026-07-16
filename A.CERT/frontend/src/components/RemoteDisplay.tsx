@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Monitor, X, Maximize2, Minimize2, Loader2, ExternalLink } from "lucide-react";
 
 interface Props {
@@ -12,6 +12,19 @@ interface Props {
 export default function RemoteDisplay({ displayId, displayPort, jobStatus }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [show, setShow] = useState(false);
+  const prevDisplayId = useRef<string | null>(null);
+
+  // Auto-abre o painel VNC quando uma consulta inicia (displayId aparece)
+  useEffect(() => {
+    if (displayId && displayId !== prevDisplayId.current) {
+      setShow(true);
+      prevDisplayId.current = displayId;
+    }
+    // Reseta o tracking quando displayId some (job finalizou)
+    if (!displayId) {
+      prevDisplayId.current = null;
+    }
+  }, [displayId]);
 
   if (!displayId) return null;
 

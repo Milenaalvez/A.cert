@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ScrollText, Search, User, Building2, X, Check, ChevronDown,
@@ -56,7 +56,7 @@ const CERT_CARDS = [
     subs: [{ key: "ONR", label: "Certidão de Ônus", desc: "Login automático → DF → Cartório → Matrícula → Crédito." }] },
 ];
 
-export default function CertidoesPage() {
+function CertidoesContent() {
   const { t } = useT();
   const searchParams = useSearchParams();
   const dossierIdFromUrl = searchParams.get("dossierId") || undefined;
@@ -813,5 +813,13 @@ export default function CertidoesPage() {
         }
       `}</style>
     </DashboardLayout>
+  );
+}
+
+export default function CertidoesPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, color: "#fff" }}>Carregando...</div>}>
+      <CertidoesContent />
+    </Suspense>
   );
 }
