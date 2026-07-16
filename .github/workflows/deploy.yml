@@ -21,6 +21,13 @@ jobs:
             cd /var/www/acert/A.CERT
             echo "=== npm install ==="
             npm install
+            echo "=== VNC setup (first run only) ==="
+            if ! command -v x11vnc &>/dev/null; then
+              echo "x11vnc nao encontrado, executando setup-vnc.sh..."
+              bash scripts/setup-vnc.sh
+            else
+              echo "x11vnc ja instalado, pulando setup."
+            fi
             echo "=== prisma ==="
             npx prisma generate
             npx prisma migrate deploy
@@ -37,3 +44,12 @@ jobs:
             echo "=== pm2 restart ==="
             pm2 restart all
             pm2 status
+            echo "=== VNC displays ==="
+            for svc in xvfb x11vnc-99 x11vnc-100 x11vnc-101; do
+              if systemctl is-active --quiet $svc; then
+                echo "  $svc ✓"
+              else
+                echo "  $svc ✗ (iniciando...)"
+                systemctl start $svc || echo "    Falha ao iniciar $svc"
+              fi
+            done
