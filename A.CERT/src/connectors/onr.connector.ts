@@ -53,11 +53,20 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
 async function clicarLinkPorTexto(page: import('puppeteer').Page, texto: string): Promise<boolean> {
   const result = await page.evaluate((txt) => {
     const txtNorm = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const links = document.querySelectorAll('a, button, span, div[role="button"], [onclick]');
+    const links = document.querySelectorAll<HTMLElement>('a, button, span, div[role="button"], [onclick]');
     for (const el of links) {
-      const content = (el as HTMLElement).textContent?.trim() || '';
+      const content = (el.textContent?.trim() || '');
       const norm = content.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (norm.includes(txtNorm)) { (el as HTMLElement).click(); return content; }
+      if (norm.includes(txtNorm)) {
+        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        for (const evtType of ['mousedown', 'mouseup', 'click']) {
+          el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+        }
+        return content;
+      }
     }
     return null;
   }, texto);

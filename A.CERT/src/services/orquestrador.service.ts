@@ -28,11 +28,22 @@ function nomeCertidao(orgao: string): string {
 
 async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Array): Promise<string | null> {
   try {
+    // Valida header PDF antes de salvar
+    if (documento.length < 500) {
+      LOG(`Documento ${orgao} invalido: apenas ${documento.length} bytes`);
+      return null;
+    }
+    const header = String.fromCharCode(...documento.slice(0, 5));
+    if (header !== '%PDF-') {
+      LOG(`Documento ${orgao} invalido: header "${header}" nao eh PDF (${documento.length} bytes)`);
+      return null;
+    }
+
     await fs.mkdir(DOCUMENTS_DIR, { recursive: true });
     const nomeArquivo = `${jobId}-${orgao.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
     const caminho = path.join(DOCUMENTS_DIR, nomeArquivo);
     await fs.writeFile(caminho, Buffer.from(documento));
-    LOG(`Documento salvo: ${caminho}`);
+    LOG(`Documento salvo: ${caminho} (${documento.length} bytes)`);
     return caminho;
   } catch (err) {
     LOG(`Erro ao salvar documento: ${err}`);

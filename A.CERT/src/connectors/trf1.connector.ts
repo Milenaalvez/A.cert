@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { tentarBaixarPDF, aceitarCookies, prepararCapturaPDFViaCDP, aguardarDownloadCDP } from '../utils/dom-helper.js';
+import { tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { PDFDocument } from 'pdf-lib';
@@ -191,13 +191,20 @@ async function preencherFormulario(
   await page.keyboard.type(cpfDigits, { delay: 15 });
   LOG(`CPF: ${cpfDigits}`);
 
-  // PASSO 4: EMITIR
+  // PASSO 4: EMITIR (MouseEvent real para Angular Material)
   await wait(300);
   const emitiu = await page.evaluate(() => {
-    const btns = document.querySelectorAll('button');
+    const btns = document.querySelectorAll<HTMLElement>('button');
     for (const b of btns) {
       if ((b.textContent || '').trim() === 'Emitir Certidão') {
-        (b as HTMLElement).click(); return true;
+        b.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const rect = b.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        for (const evtType of ['mousedown', 'mouseup', 'click']) {
+          b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+        }
+        return true;
       }
     }
     return false;
@@ -206,124 +213,179 @@ async function preencherFormulario(
 }
 
 // ============================================================
-// CAPTURA PDF real: Imprimir → nova aba OU CDP download → fallback page.pdf()
+// UTIL: clique real via MouseEvent (necessario para Angular/Zone.js)
 // ============================================================
-async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Uint8Array | null> {
-  LOG('Aguardando pagina de resultado...');
-  try { await page.waitForNetworkIdle({ idleTime: 2000, timeout: 25000 }); } catch {}
-  await wait(2000);
+async function clicarComMouseEvent(page: import('puppeteer').Page, selector: string): Promise<boolean> {
+  return page.evaluate((sel) => {
+    const el = document.querySelector<HTMLElement>(sel);
+    if (!el) return false;
+    el.scrollIntoView({ block: 'center', behavior: 'instant' });
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    for (const evtType of ['mousedown', 'mouseup', 'click']) {
+      el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+    }
+    return true;
+  }, selector);
+}
 
-  if (page.isClosed()) { LOG('Pagina fechada'); return null; }
-
-  // --- camada 1: prepara CDP para capturar download ---
-  await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
-  LOG('CDP preparado para download');
-
-  // --- camada 2: listener de nova aba ANTES de clicar Imprimir ---
-  const newPagePromise = new Promise<import('puppeteer').Page | null>((resolve) => {
-    const timeout = setTimeout(() => {
-      page.browser().off('targetcreated', handler);
-      resolve(null);
-    }, 20000);
-
-    const handler = async (target: import('puppeteer').Target) => {
-      if (target.type() === 'page') {
-        clearTimeout(timeout);
-        page.browser().off('targetcreated', handler);
-        try {
-          const np = await target.page();
-          if (np && !np.isClosed()) {
-            await np.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }).catch(() => {});
-            await wait(2000);
-            resolve(np);
-          } else { resolve(null); }
-        } catch { resolve(null); }
-      }
-    };
-    page.browser().on('targetcreated', handler);
-  });
-
-  // --- clica Imprimir ---
-  LOG('Procurando botao Imprimir...');
-  const imprimiu = await page.evaluate(() => {
-    const elementos = document.querySelectorAll('button, a, span[role="button"], div[role="button"]');
-    for (const el of elementos) {
-      const t = (el.textContent || '').trim().toLowerCase();
-      if (t === 'imprimir' || t.includes('imprimir')) {
-        (el as HTMLElement).click(); return true;
+// ============================================================
+// UTIL: procurar e clicar botao por texto usando MouseEvent real
+// ============================================================
+async function clicarBotaoPorTextoReal(page: import('puppeteer').Page, termos: string[]): Promise<string | null> {
+  return page.evaluate((termosEval) => {
+    const normTermos = termosEval.map(t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+    const btns = document.querySelectorAll<HTMLElement>(
+      'button, a, span[role="button"], div[role="button"], input[type="button"], input[type="submit"], .mat-mdc-raised-button, .mat-mdc-button, .mat-mdc-outlined-button, .mat-mdc-unelevated-button, [mat-raised-button], [mat-button], .p-button, .ui-button, .btn'
+    );
+    for (const el of btns) {
+      const t = (el.textContent || (el as HTMLInputElement).value || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      for (const termo of normTermos) {
+        if (t.includes(termo)) {
+          el.scrollIntoView({ block: 'center', behavior: 'instant' });
+          const rect = el.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          for (const evtType of ['mousedown', 'mouseup', 'click']) {
+            el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+          }
+          return el.textContent?.trim() || t;
+        }
       }
     }
-    return false;
-  }).catch(() => false);
+    return null;
+  }, termos);
+}
 
-  // --- verifica CDP download (Imprimir pode ter disparado download direto) ---
-  LOG('Verificando CDP download...');
-  const cdpPath = await aguardarDownloadCDP(DOWNLOAD_DIR, { timeoutMs: 12000, pollMs: 500 });
-  if (cdpPath) {
-    try {
-      const buf = fs.readFileSync(cdpPath);
-      if (buf.length > 1000) {
-        LOG(`PDF via CDP download: ${buf.length} bytes`);
-        return new Uint8Array(buf);
+// ============================================================
+// UTIL: tentar capturar PDF de embed/iframe na pagina atual
+// ============================================================
+async function capturarPDFEmbedNaPagina(page: import('puppeteer').Page): Promise<Uint8Array | null> {
+  try {
+    const pdfData = await page.evaluate(async () => {
+      const candidates: string[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>('embed[src], object[data], iframe[src], a[href]')) {
+        const src = (el as any).src || (el as any).data || (el as any).href || '';
+        if (src.includes('.pdf') || (el.tagName === 'EMBED' && (el as HTMLEmbedElement).type?.includes('pdf'))) {
+          candidates.push(src);
+        }
       }
-    } catch (e: any) { LOG(`Erro lendo CDP: ${e.message}`); }
-  }
-
-  // --- verifica nova aba ---
-  if (imprimiu) {
-    LOG('Imprimir clicado, aguardando nova aba...');
-    const newPage = await newPagePromise;
-    if (newPage && !newPage.isClosed()) {
-      LOG('Nova aba detectada!');
-
-      // Verifica se a aba tem PDF embed direto
-      const pdfUrl = await newPage.evaluate(() => {
-        const embed = document.querySelector('embed[type="application/pdf"], embed[src*=".pdf"], object[data*=".pdf"], iframe[src*=".pdf"]');
-        if (embed) return (embed as any).src || (embed as any).data || null;
-        if (window.location.href.endsWith('.pdf')) return window.location.href;
-        return null;
-      }).catch(() => null);
-
-      if (pdfUrl) {
-        LOG(`PDF URL: ${pdfUrl}`);
+      for (const url of candidates) {
         try {
-          const pdfResp = await newPage.evaluate(async (url: string) => {
-            const r = await fetch(url); const buf = await r.arrayBuffer();
-            return Array.from(new Uint8Array(buf));
-          }, pdfUrl).catch(() => null);
-          if (pdfResp && pdfResp.length > 1000) {
-            await newPage.close().catch(() => {});
-            LOG(`PDF via fetch embed: ${pdfResp.length} bytes`);
-            return new Uint8Array(pdfResp);
+          const r = await fetch(url);
+          const buf = await r.arrayBuffer();
+          if (buf.byteLength > 500) {
+            const arr = new Uint8Array(buf);
+            const header = String.fromCharCode(...arr.slice(0, 5));
+            if (header === '%PDF-') return Array.from(arr);
           }
         } catch {}
       }
-
-      // Captura como page.pdf()
-      try {
-        const pdf = await newPage.pdf({ format: 'A4', printBackground: true });
-        await newPage.close().catch(() => {});
-        if (pdf.length > 1000) { LOG(`PDF via nova aba: ${pdf.length} bytes`); return pdf; }
-      } catch (e: any) { LOG(`Erro nova aba: ${e.message}`); await newPage.close().catch(() => {}); }
-    } else {
-      LOG('Nenhuma nova aba (CDP pode ter capturado)');
+      return null;
+    });
+    if (pdfData && pdfData.length > 0) {
+      const buf = new Uint8Array(pdfData);
+      if (buf.length > 500) return buf;
     }
-  } else {
-    LOG('Botao Imprimir nao encontrado');
-  }
+  } catch {}
+  return null;
+}
 
-  // --- camada 3: fallback page.pdf() na pagina de resultado ---
-  if (!page.isClosed()) {
-    LOG('Fallback page.pdf()...');
+// ============================================================
+// CAPTURA PDF REAL via API do TRF1 (extrai ID/codigo da certidao)
+// ============================================================
+async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Uint8Array | null> {
+  LOG('Verificando pagina de resultado...');
+
+  try { await page.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 }); } catch {}
+  await wait(1500);
+  if (page.isClosed()) { LOG('Pagina fechada'); return null; }
+
+  // PDF embutido
+  const pdfEmbed = await capturarPDFEmbedNaPagina(page);
+  if (pdfEmbed && pdfEmbed.length > 500) { LOG(`PDF embed: ${pdfEmbed.length} bytes`); return pdfEmbed; }
+
+  // Extrai ID e codigo do DOM
+  const { certId, certCodigo } = await page.evaluate(() => {
+    let id = '', codigo = '';
+    document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(a => {
+      const h = a.href || '';
+      const m = h.match(/[?&]id=(\d+)/); if (m) id = m[1];
+      const c = h.match(/[?&]codigo=([A-Fa-f0-9]+)/); if (c) codigo = c[1];
+    });
+    return { certId: id, certCodigo: codigo };
+  });
+
+  if (!certId || !certCodigo) {
+    LOG(`ID ou codigo nao encontrados no DOM`);
+    return null;
+  }
+  LOG(`Certidao ID=${certId} Codigo=${certCodigo.slice(0, 10)}...`);
+
+  // Cookies da sessao
+  const cookies = await page.cookies();
+  const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  const headers = {
+    Cookie: cookieHeader,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/134.0.0.0',
+    'Accept': 'application/pdf,*/*',
+  };
+
+  // Tenta varias APIs (GET + POST)
+  const bases = [
+    'https://sistemas.trf1.jus.br/certidao',
+    'https://certidao-unificada.cjf.jus.br',
+  ];
+
+  for (const base of bases) {
+    const urls = [
+      `${base}/api/certidao/pdf?id=${certId}&codigo=${certCodigo}`,
+      `${base}/api/certidao/${certId}/pdf?codigo=${certCodigo}`,
+      `${base}/api/pdf/${certId}?codigo=${certCodigo}`,
+      `${base}/api/certidao/imprimir/${certId}?codigo=${certCodigo}`,
+      `${base}/api/imprimir/${certId}?codigo=${certCodigo}`,
+      `${base}/certidao/api/pdf?id=${certId}&codigo=${certCodigo}`,
+      `${base}/certidao/${certId}/pdf?codigo=${certCodigo}`,
+    ];
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, { headers, redirect: 'follow' });
+        if (r.ok) {
+          const buf = new Uint8Array(await r.arrayBuffer());
+          if (buf.length > 500 && String.fromCharCode(...buf.slice(0, 5)) === '%PDF-') {
+            LOG(`PDF via API: ${url.slice(0, 80)} → ${buf.length} bytes`);
+            return buf;
+          }
+        }
+      } catch {}
+    }
+    // POST
     try {
-      const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm' } });
-      if (pdf.length > 1000) { LOG(`PDF fallback: ${pdf.length} bytes`); return pdf; }
+      const r = await fetch(`${base}/api/certidao/pdf`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: certId, codigo: certCodigo }), redirect: 'follow',
+      });
+      if (r.ok) {
+        const buf = new Uint8Array(await r.arrayBuffer());
+        if (buf.length > 500 && String.fromCharCode(...buf.slice(0, 5)) === '%PDF-') {
+          LOG(`PDF via POST: ${buf.length} bytes`);
+          return buf;
+        }
+      }
     } catch {}
   }
 
-  const buf = await tentarBaixarPDF(page).catch(() => null);
-  if (buf && buf.length > 1000) { LOG(`PDF tentarBaixarPDF: ${buf.length} bytes`); return buf; }
-
+  // Debug
+  LOG('Nenhum PDF encontrado via APIs');
+  try {
+    const debugDir = path.join(DOWNLOAD_DIR, '..', 'debug');
+    if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+    const ts = Date.now();
+    await page.screenshot({ path: path.join(debugDir, `trf1-${ts}.png`), fullPage: true }).catch(() => {});
+    const html = await page.content().catch(() => '');
+    fs.writeFileSync(path.join(debugDir, `trf1-${ts}.html`), html, 'utf-8');
+  } catch {}
   return null;
 }
 
@@ -405,11 +467,45 @@ export class TRF1Connector implements IConnector {
             continue;
           }
           LOG('CAPTCHA resolvido');
-          await wait(2000);
+          // Aguarda navegacao para pagina de resultado
+          try { await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }); } catch {}
+          await wait(1000);
+
+          // Aguarda elementos da pagina de resultado aparecerem (Angular render)
+          LOG('Aguardando render da pagina de resultado...');
+          const resultSelectors = [
+            'button',                          // botoes (Imprimir, Baixar, etc)
+            '.mat-mdc-card',                   // card do Angular Material
+            'table',                           // tabela de dados
+            '.certidao-conteudo',              // container de certidao
+            '[class*="result"]',               // qualquer div com "result" na classe
+            '.container',                      // container Bootstrap
+            'mat-card',                        // card do Angular Material (antigo)
+          ];
+          let resultRendered = false;
+          for (const sel of resultSelectors) {
+            try {
+              await page.waitForSelector(sel, { visible: true, timeout: 10000 });
+              LOG(`Elemento "${sel}" encontrado na pagina`);
+              resultRendered = true;
+              break;
+            } catch {}
+          }
+          if (!resultRendered) {
+            LOG('Nenhum elemento esperado encontrado, continuando mesmo assim...');
+            // Tira screenshot pra debug
+            const debugDir = path.join(DOWNLOAD_DIR, '..', 'debug');
+            if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+            await page.screenshot({ path: path.join(debugDir, `trf1-resultado-${Date.now()}.png`), fullPage: true }).catch(() => {});
+          }
+          await wait(1500);
         }
 
+        const url = page.url();
+        LOG(`URL atual: ${url}`);
+
         const pdf = await capturarPDFAposEmitir(page);
-        if (pdf && pdf.length > 100) {
+        if (pdf && pdf.length > 500 && new TextDecoder().decode(pdf.slice(0, 5)) === '%PDF-') {
           pdfs.push(pdf);
           LOG(`PDF ${tipo}: ${pdf.length} bytes`);
         } else {

@@ -1,9 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, preencherCampoRobusto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
-import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, preencherCampoRobusto, configurarCapturaDownloadViaCDP } from '../utils/dom-helper.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -145,155 +143,16 @@ async function marcarRadioPorLabel(page: import('puppeteer').Page, labelTexto: s
 export class SefazDFConnector implements IConnector {
   readonly nome = 'SEFAZ-DF';
 
-  readonly #throttle = criarRateLimit(3000);
-
   async consultar(
-    dados: DadosProprietario,
-    jobId?: string,
-    certKeys?: string[],
+    _dados: DadosProprietario,
+    _jobId?: string,
+    _certKeys?: string[],
   ): Promise<ConnectorResult> {
-    const dataConsulta = new Date().toISOString();
-    LOG('Iniciando consulta SEFAZ-DF');
-    const page = await createPage().catch(e => { LOG(`ERRO createPage: ${e.message}`); throw e; });
-
-    try {
-      let pageClosed = false;
-      page.once('close', () => { pageClosed = true; });
-
-      LOG('Navegando para certidao...');
-      await page.goto(CERTIDAO_URL, { waitUntil: 'networkidle2', timeout: 30000 });
-      await wait(3000);
-      await aceitarCookies(page);
-
-      if (DEBUG) await diagnosticarFormulario(page);
-      // Forca diagnostico ate descobrir os campos corretos
-      await diagnosticarFormulario(page);
-      await injectFillHelper(page);
-
-      const cpfDigits = dados.cpf.replace(/\D/g, '');
-
-      LOG('Preenchendo CPF...');
-      const cpfOk = await preencherInputPorLabel(page, 'CPF', cpfDigits)
-        || await preencherInputPorLabel(page, 'CPF/CNPJ', cpfDigits)
-        || await preencherInputPorLabel(page, 'Documento', cpfDigits)
-        || await preencherInputPorLabel(page, 'Número', cpfDigits)
-        || await preencherInputPorLabel(page, 'Numero', cpfDigits)
-        || await preencherInputPorLabel(page, 'Inscrição', cpfDigits)
-        || await preencherInputFallback(page, 'cpf', cpfDigits)
-        || await preencherInputFallback(page, 'ni', cpfDigits)
-        || await preencherInputFallback(page, 'documento', cpfDigits)
-        || await preencherInputFallback(page, 'certidao', cpfDigits);
-      LOG(`CPF: ${cpfOk || 'nao encontrado'}`);
-
-      // "Número da Certidão" — pode ser o CPF ou campo separado
-      LOG('Preenchendo Numero da Certidao...');
-      const numOk = await preencherInputPorLabel(page, 'Número da Certidão', cpfDigits)
-        || await preencherInputPorLabel(page, 'Numero da Certidao', cpfDigits)
-        || await preencherInputPorLabel(page, 'Certidão', cpfDigits)
-        || await preencherInputFallback(page, 'numero', cpfDigits);
-      LOG(`Numero Certidao: ${numOk || 'nao encontrado (usando CPF)'}`);
-
-      // Try to select "finalidade"
-      LOG('Configurando finalidade...');
-      const finalidadeOk = await selecionarSelectPorTexto(page, 'finalidade', FINALIDADE)
-        || await selecionarSelectPorTexto(page, 'motivo', FINALIDADE)
-        || await selecionarSelectPorTexto(page, 'razao', FINALIDADE)
-        || await selecionarSelectPorTexto(page, 'objetivo', FINALIDADE)
-        || await selecionarSelectPorTexto(page, 'tipo', FINALIDADE)
-        || await marcarRadioPorLabel(page, 'LAVRAR')
-        || await marcarRadioPorLabel(page, 'ESCRITURA')
-        || await marcarRadioPorLabel(page, 'PÚBLICA');
-      LOG(`Finalidade: ${finalidadeOk || 'nao configurada'}`);
-      
-      if (!finalidadeOk) {
-        // Diagnostico: mostrar selects disponiveis
-        const selects = await page.evaluate(() => {
-          return Array.from(document.querySelectorAll('select')).map(s => ({
-            id: s.id, name: s.name,
-            options: Array.from(s.options).slice(0, 5).map(o => o.text.trim())
-          }));
-        });
-        if (selects.length > 0) {
-          LOG(`Selects disponiveis: ${JSON.stringify(selects)}`);
-        }
-      }
-
-      await wait(500);
-
-      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
-      LOG('CDP preparado para captura de download');
-
-      const submitOk = await clicarBotaoPorTexto(page, 'emitir')
-        || await clicarBotaoPorTexto(page, 'consultar')
-        || await clicarBotaoPorTexto(page, 'gerar')
-        || await clicarBotaoPorTexto(page, 'solicitar')
-        || await clicarBotaoPorTexto(page, 'enviar')
-        || await clicarBotaoPorTexto(page, 'ok')
-        || await clicarBotaoPorTexto(page, 'certidão')
-        || await clicarBotaoPorTexto(page, 'certidao')
-        || await clicarBotaoPorTexto(page, 'prosseguir');
-      LOG(`Submit: ${submitOk}`);
-
-      if (!submitOk) {
-        await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
-      }
-
-      await wait(2000);
-
-      const captchaType = await detectarCaptcha(page);
-      LOG(`CAPTCHA: ${captchaType}`);
-
-      if (captchaType) {
-        await focusPageForCaptcha(page, captchaType);
-        LOG('CAPTCHA detectado - enviando para resolucao remota...');
-        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
-        if (!captchaOk) {
-          LOG('CAPTCHA nao resolvido no tempo limite');
-          await page.close();
-          return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] CAPTCHA nao resolvido no tempo limite` };
-        }
-        LOG('CAPTCHA resolvido, continuando...');
-        await wait(3000);
-      }
-
-      if (pageClosed) throw new Error('Pagina fechada');
-
-      // Check for error messages after submit
-      const erroMsg = await page.evaluate(() => {
-        const errs = document.querySelectorAll('.error, .alert, .msg-erro, [role="alert"], .mensagem, .notificacao, .toast, .erro, .text-danger');
-        for (const e of errs) {
-          const txt = e.textContent?.trim();
-          if (txt && txt.length > 5) return txt;
-        }
-        const body = document.body.textContent?.toLowerCase() || '';
-        if (body.includes('não foi possível') || body.includes('nao foi possivel') || body.includes('erro')) {
-          return body.slice(0, 300);
-        }
-        return null;
-      });
-      if (erroMsg) {
-        LOG(`Erro detectado: ${erroMsg.slice(0, 150)}`);
-        await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] ${erroMsg}` };
-      }
-
-      const protocolo = `SEFAZ-DF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
-      if (!pdfBuffer || pdfBuffer.length < 1000) {
-        await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
-      }
-      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
-
-      await this.#throttle();
-      await page.close();
-      return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-      LOG(`ERRO: ${msg}`);
-      await page.close().catch(() => {});
-      return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] ${msg}` };
-    }
+    return {
+      status: 'error',
+      orgao: this.nome,
+      dataConsulta: new Date().toISOString(),
+      error: 'SEFAZ-DF indisponível: o site utiliza Cloudflare Turnstile que impede a automação. Baixe o PDF manualmente e faça upload.',
+    };
   }
 }

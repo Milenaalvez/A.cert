@@ -32,6 +32,7 @@ const LOG = (msg: string) => console.log(`[DisplayPool] ${msg}`);
 
 function getBrowserArgs(displayNum?: number): string[] {
   const isLinux = process.platform === 'linux';
+  const userDataDir = process.env.CHROME_USER_DATA || undefined;
   const args: string[] = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
@@ -45,6 +46,13 @@ function getBrowserArgs(displayNum?: number): string[] {
     '--disable-web-security',
     '--disable-features=BlockInsecurePrivateNetworkRequests',
     '--disable-infobars',
+    '--disable-extensions',
+    '--disable-background-networking',
+    '--disable-sync',
+    '--disable-translate',
+    '--disable-default-apps',
+    '--mute-audio',
+    '--js-flags=--max-old-space-size=512',
     ...(isLinux ? ['--disable-software-rasterizer', '--disable-features=VizDisplayCompositor'] : []),
   ];
 

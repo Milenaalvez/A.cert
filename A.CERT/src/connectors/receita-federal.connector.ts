@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -221,12 +221,18 @@ export class ReceitaFederalConnector implements IConnector {
         const textos = ['Consultar Certidão', 'Emitir Certidão', 'Consultar', 'consultar', 'CONSULTAR',
           'Emitir', 'emitir', 'EMITIR', 'Prosseguir', 'prosseguir', 'Avançar', 'avançar', 'OK', 'ok',
           'Solicitar', 'solicitar'];
-        const btns = document.querySelectorAll('button, a.btn, [role="button"], input[type="submit"]');
+        const btns = document.querySelectorAll<HTMLElement>('button, a.btn, [role="button"], input[type="submit"]');
         for (const b of btns) {
           const t = (b.textContent?.trim() || (b as HTMLInputElement).value || '').toLowerCase();
           for (const txt of textos) {
             if (t.includes(txt.toLowerCase())) {
-              (b as HTMLElement).click();
+              b.scrollIntoView({ block: 'center', behavior: 'instant' });
+              const rect = b.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+              }
               return txt;
             }
           }
@@ -246,11 +252,17 @@ export class ReceitaFederalConnector implements IConnector {
         const modals = document.querySelectorAll('.modal, .dialog, .swal2-container, .p-dialog, .ui-dialog, [role="dialog"]');
         for (const m of modals) {
           if (!(m as HTMLElement).offsetParent && getComputedStyle(m).display === 'none') continue;
-          const btns = m.querySelectorAll('button, a, .btn');
+          const btns = m.querySelectorAll<HTMLElement>('button, a, .btn');
           for (const b of btns) {
             const txt = ((b.textContent?.trim() || '')).toLowerCase();
             if (txt.includes('sim') || txt.includes('emitir') || txt.includes('nova') || txt.includes('confirmar') || txt.includes('ok') || txt.includes('continuar')) {
-              (b as HTMLElement).click();
+              b.scrollIntoView({ block: 'center', behavior: 'instant' });
+              const rect = b.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+              }
               return txt;
             }
           }
@@ -309,14 +321,23 @@ export class ReceitaFederalConnector implements IConnector {
         LOG('CAPTCHA resolvido, submetendo novamente...');
         await wait(2000);
 
-        // Clica no botao de submit NOVAMENTE apos captcha resolvido
+        // Clica no botao de submit NOVAMENTE apos captcha resolvido (MouseEvent real)
         await page.evaluate(() => {
           const textos = ['consultar certidão', 'emitir certidão', 'consultar', 'emitir', 'gerar', 'prosseguir', 'avançar', 'solicitar', 'ok'];
-          const btns = document.querySelectorAll('button, a.btn, [role="button"], input[type="submit"]');
+          const btns = document.querySelectorAll<HTMLElement>('button, a.btn, [role="button"], input[type="submit"]');
           for (const b of btns) {
             const t = ((b.textContent?.trim() || (b as HTMLInputElement).value || '').toLowerCase());
             for (const txt of textos) {
-              if (t.includes(txt)) { (b as HTMLElement).click(); return; }
+              if (t.includes(txt)) {
+                b.scrollIntoView({ block: 'center', behavior: 'instant' });
+                const rect = b.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                  b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+                }
+                return;
+              }
             }
           }
         });
@@ -344,25 +365,37 @@ export class ReceitaFederalConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Erro na consulta: ' + pageText.slice(0, 200) };
       }
 
-      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
-      LOG('CDP preparado');
-
       const protocolo = `RF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
 
       let pdfBuffer: Buffer | Uint8Array | null = null;
 
       try {
         pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
-        if (pdfBuffer && pdfBuffer.length > 1000) LOG(`PDF via CDP (${pdfBuffer.length} bytes)`);
+        if (pdfBuffer && pdfBuffer.length > 1000) LOG(`PDF via CDP/download (${pdfBuffer.length} bytes)`);
       } catch (e: any) { LOG(`CDP falhou: ${e.message}`); }
 
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         try {
           if (!pageClosed) {
-            pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-            if (pdfBuffer && pdfBuffer.length > 1000) LOG(`PDF via page.pdf (${pdfBuffer.length} bytes)`);
+            const pdfLinks = await page.evaluate(async () => {
+              const links = document.querySelectorAll<HTMLAnchorElement>('a[href]');
+              for (const a of links) {
+                const href = a.href || '';
+                if (!href.includes('.pdf')) continue;
+                try {
+                  const r = await fetch(href);
+                  const buf = await r.arrayBuffer();
+                  if (buf.byteLength > 1000) return Array.from(new Uint8Array(buf));
+                } catch {}
+              }
+              return null;
+            });
+            if (pdfLinks && pdfLinks.length > 0) {
+              pdfBuffer = new Uint8Array(pdfLinks);
+              LOG(`PDF via link fetch (${pdfBuffer.length} bytes)`);
+            }
           }
-        } catch (e: any) { LOG(`page.pdf falhou: ${e.message}`); }
+        } catch (e: any) { LOG(`link fetch falhou: ${e.message}`); }
       }
 
       if (!pdfBuffer || pdfBuffer.length < 1000) {

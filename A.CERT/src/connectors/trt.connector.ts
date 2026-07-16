@@ -100,15 +100,21 @@ export class TRTConnector implements IConnector {
       ).catch(() => LOG('timeout aguardando loading'));
       await wait(3000);
 
-      // ---- PASSO 1: Clicar na aba "Emissão de Certidão" ----
+      // ---- PASSO 1: Clicar na aba "Emissão de Certidão" (MouseEvent real para JSF/PrimeFaces) ----
       LOG('Procurando aba Emissao...');
       const abaClicada = await page.evaluate(() => {
-        // Tenta clicar na aba de emissao (PrimeFaces tabView usa <a> nas abas)
-        const links = document.querySelectorAll('a, li[role="tab"], .ui-tabs-nav a, .ui-tabs-nav li');
+        const links = document.querySelectorAll<HTMLElement>('a, li[role="tab"], .ui-tabs-nav a, .ui-tabs-nav li');
         for (const el of links) {
           const t = (el.textContent || '').toLowerCase();
           if (t.includes('emissão') || t.includes('emissao') || t.includes('emitir')) {
-            (el as HTMLElement).click(); return t.trim();
+            el.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const rect = el.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            for (const evtType of ['mousedown', 'mouseup', 'click']) {
+              el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+            }
+            return t.trim();
           }
         }
         return null;
@@ -133,12 +139,21 @@ export class TRTConnector implements IConnector {
 
       const cpfDigits = dados.cpf.replace(/\D/g, '');
 
-      // PASSO 1: Clicar no radio/label CPF
+      // PASSO 1: Clicar no radio/label CPF (MouseEvent real)
       LOG('Selecionando opcao CPF...');
       await page.evaluate(() => {
-        const labels = Array.from(document.querySelectorAll('label'));
+        const labels = Array.from(document.querySelectorAll<HTMLElement>('label'));
         for (const l of labels) {
-          if ((l.textContent || '').trim() === 'CPF') { (l as HTMLElement).click(); return; }
+          if ((l.textContent || '').trim() === 'CPF') {
+            l.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const rect = l.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            for (const evtType of ['mousedown', 'mouseup', 'click']) {
+              l.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+            }
+            return;
+          }
         }
       });
       await wait(1000);
@@ -189,12 +204,21 @@ export class TRTConnector implements IConnector {
 
       await wait(500);
 
-      // PASSO 3: Emitir
+      // PASSO 3: Emitir (MouseEvent real)
       LOG('Clicando Emitir...');
       const submitOk = await page.evaluate(() => {
-        const btns = document.querySelectorAll('button');
+        const btns = document.querySelectorAll<HTMLElement>('button');
         for (const b of btns) {
-          if ((b.textContent || '').trim() === 'Emitir') { (b as HTMLElement).click(); return true; }
+          if ((b.textContent || '').trim() === 'Emitir') {
+            b.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const rect = b.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            for (const evtType of ['mousedown', 'mouseup', 'click']) {
+              b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+            }
+            return true;
+          }
         }
         return false;
       });

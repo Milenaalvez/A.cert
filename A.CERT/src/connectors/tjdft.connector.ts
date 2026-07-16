@@ -341,30 +341,22 @@ export class TJDFTConnector implements IConnector {
         LOG(`CDP falhou: ${e.message}`);
       }
 
-      // Fallback 1: captura a pagina atual como PDF
-      if (!pdfBuffer || pdfBuffer.length < 1000) {
-        try {
-          if (!pageClosed) {
-            pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-            if (pdfBuffer && pdfBuffer.length > 1000) {
-              LOG(`PDF via page.pdf (${pdfBuffer.length} bytes)`);
-            }
-          }
-        } catch (e: any) {
-          LOG(`page.pdf falhou: ${e.message}`);
-        }
-      }
-
-      // Fallback 2: procura botao de download na pagina e clica
+      // Fallback 1: procura botao de download na pagina e clica (MouseEvent real)
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         try {
           if (!pageClosed) {
             await page.evaluate(() => {
-              const links = document.querySelectorAll('a[href*="pdf"], a[href*="download"], button');
+              const links = document.querySelectorAll<HTMLElement>('a[href*="pdf"], a[href*="download"], button');
               for (const el of links) {
-                const txt = ((el as HTMLElement).textContent || '').toLowerCase();
+                const txt = (el.textContent || '').toLowerCase();
                 if (txt.includes('baixar') || txt.includes('download') || txt.includes('pdf') || txt.includes('imprimir') || txt.includes('certidao')) {
-                  (el as HTMLElement).click();
+                  el.scrollIntoView({ block: 'center', behavior: 'instant' });
+                  const rect = el.getBoundingClientRect();
+                  const cx = rect.left + rect.width / 2;
+                  const cy = rect.top + rect.height / 2;
+                  for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                    el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+                  }
                   return;
                 }
               }
@@ -373,6 +365,31 @@ export class TJDFTConnector implements IConnector {
             pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
             if (pdfBuffer && pdfBuffer.length > 1000) {
               LOG(`PDF via botao download (${pdfBuffer.length} bytes)`);
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback 2: busca links de PDF na pagina
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        try {
+          if (!pageClosed) {
+            const pdfLinkBuf = await page.evaluate(async () => {
+              const links = document.querySelectorAll<HTMLAnchorElement>('a[href]');
+              for (const a of links) {
+                const href = a.href || '';
+                if (!href.includes('.pdf')) continue;
+                try {
+                  const r = await fetch(href);
+                  const buf = await r.arrayBuffer();
+                  if (buf.byteLength > 1000) return Array.from(new Uint8Array(buf));
+                } catch {}
+              }
+              return null;
+            });
+            if (pdfLinkBuf && pdfLinkBuf.length > 0) {
+              pdfBuffer = new Uint8Array(pdfLinkBuf);
+              LOG(`PDF via link fetch (${pdfBuffer.length} bytes)`);
             }
           }
         } catch {}

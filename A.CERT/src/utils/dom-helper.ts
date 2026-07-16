@@ -2,6 +2,13 @@ import type { Page } from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
+function isPdfValido(buf: Uint8Array): boolean {
+  if (buf.length < 500) return false;
+  // Header PDF: %PDF- seguido de versao (ex: %PDF-1.4)
+  const header = String.fromCharCode(...buf.slice(0, 8));
+  return header.startsWith('%PDF-');
+}
+
 export async function injectFillHelper(page: Page): Promise<void> {
   await page.evaluate(() => {
     (window as any).__fillInput = function (el: HTMLInputElement, value: string) {
@@ -34,21 +41,25 @@ const DOWNLOAD_BUTTON_TEXTS = [
 ];
 
 export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise<Uint8Array | null> {
-  // Nível 0 — CDP (resolve download via blob/JS customizado, ex: TST)
+  // Nível 0 — CDP download events (arquivo real baixado pelo Chrome)
   if (downloadDir) {
     try {
-      const pdfPath = await aguardarDownloadCDP(downloadDir, { timeoutMs: 15000 });
-      if (pdfPath) {
-        const buf = fs.readFileSync(pdfPath);
-        if (buf.length > 1000) {
-          return new Uint8Array(buf);
-        }
-      }
+      const { promise: cdpPromise, cleanup } = await configurarCapturaDownloadViaCDP(page, downloadDir);
+      const buf = await cdpPromise;
+      cleanup();
+      if (buf && buf.length > 1000) return buf;
     } catch {}
   }
 
-  // Nível 1: clicar em botão de download e capturar nova aba/página
+  // Nível 1: clicar em botão de download e capturar PDF real da nova aba
   try {
+    await page.evaluate(() => {
+      (window as any).__printCalled = false;
+      const orig = window.print;
+      window.print = () => { (window as any).__printCalled = true; };
+      (window as any).__restorePrint = () => { window.print = orig; };
+    }).catch(() => {});
+
     const newTargetPromise = new Promise<import('puppeteer').Target | null>((resolve) => {
       const handler = (target: import('puppeteer').Target) => {
         if (target.type() === 'page') resolve(target);
@@ -57,38 +68,75 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
       setTimeout(() => {
         page.browser().off('targetcreated', handler);
         resolve(null);
-      }, 10000);
+      }, 15000);
     });
 
+    let clicked = false;
     for (const txt of DOWNLOAD_BUTTON_TEXTS) {
-      const clicked = await page.evaluate((t: string) => {
-        const norm = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const normTxt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const found = await page.evaluate((norm: string) => {
         const botoes = document.querySelectorAll<HTMLElement>(
           'button, a.btn, a[class*="button"], input[type="submit"], input[type="button"], a[download]'
         );
         for (const b of botoes) {
           const content = (b.textContent?.trim() || (b as HTMLInputElement).value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          if (content.includes(norm)) { b.click(); return true; }
-        }
-        return false;
-      }, txt);
-      if (clicked) {
-        const target = await newTargetPromise;
-        if (target) {
-          const newPage = await target.page();
-          if (newPage) {
-            await newPage.waitForNetworkIdle({ timeout: 15000 }).catch(() => {});
-            const pdfBuf = await newPage.pdf({ format: 'A4', printBackground: true });
-            await newPage.close().catch(() => {});
-            if (pdfBuf.length > 1000) return pdfBuf;
+          if (content.includes(norm)) {
+            b.scrollIntoView({ block: 'center', behavior: 'instant' });
+            const rect = b.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            for (const evtType of ['mousedown', 'mouseup', 'click']) {
+              b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+            }
+            return true;
           }
         }
-        await page.waitForNetworkIdle({ timeout: 8000 }).catch(() => {});
+        return false;
+      }, normTxt);
+
+      if (found) { clicked = true; break; }
+    }
+
+    if (clicked) {
+      await new Promise(r => setTimeout(r, 2000));
+      const target = await newTargetPromise;
+      if (target) {
+        const newPage = await target.page();
+        if (newPage) {
+          await newPage.waitForNetworkIdle({ timeout: 15000 }).catch(() => {});
+          // Tenta pegar o PDF real da nova aba via embed/iframe/url
+          const pdfData = await newPage.evaluate(async () => {
+            const candidates: string[] = [];
+            for (const el of document.querySelectorAll<HTMLElement>('embed[src], object[data], iframe[src], a[href]')) {
+              const src = (el as any).src || (el as any).data || (el as any).href || '';
+              if (src.includes('.pdf') || (el.tagName === 'EMBED' && (el as HTMLEmbedElement).type?.includes('pdf'))) {
+                candidates.push(src);
+              }
+            }
+            if (window.location.href.endsWith('.pdf') || document.contentType?.includes('pdf')) {
+              candidates.push(window.location.href);
+            }
+            for (const url of candidates) {
+              try {
+                const r = await fetch(url);
+                const buf = await r.arrayBuffer();
+                if (buf.byteLength > 1000) return Array.from(new Uint8Array(buf));
+              } catch {}
+            }
+            return null;
+          }).catch(() => null);
+          await newPage.close().catch(() => {});
+          if (pdfData && pdfData.length > 0) {
+            const buf = new Uint8Array(pdfData);
+            if (buf.length > 1000) return buf;
+          }
+        }
       }
+      await page.waitForNetworkIdle({ timeout: 8000 }).catch(() => {});
     }
   } catch {}
 
-  // Nível 2: buscar embed/object/iframe/link com PDF e fazer fetch
+  // Nível 2: buscar embed/object/iframe/link com PDF e fazer fetch (PDF real)
   try {
     const pdfData = await page.evaluate(async () => {
       const candidates: string[] = [];
@@ -100,7 +148,11 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
         try {
           const r = await fetch(url);
           const buf = await r.arrayBuffer();
-          if (buf.byteLength > 1000) return Array.from(new Uint8Array(buf));
+          if (buf.byteLength > 500) {
+            const arr = new Uint8Array(buf);
+            const header = String.fromCharCode(...arr.slice(0, 5));
+            if (header === '%PDF-') return Array.from(arr);
+          }
         } catch {}
       }
       return null;
@@ -108,11 +160,28 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
     if (pdfData) return new Uint8Array(pdfData);
   } catch {}
 
-  // Nível 3: fallback — capturar tela como PDF
+  // Nível 3: buscar links para PDF na pagina e fazer fetch
   try {
-    const buf = await page.pdf({ format: 'A4', printBackground: true });
-    if (buf.length > 1000) return buf;
+    const pdfData = await page.evaluate(async () => {
+      const links = document.querySelectorAll<HTMLAnchorElement>('a[href]');
+      for (const a of links) {
+        const href = a.href || '';
+        if (!href.includes('.pdf')) continue;
+        try {
+          const r = await fetch(href);
+          const buf = await r.arrayBuffer();
+          if (buf.byteLength > 500) {
+            const arr = new Uint8Array(buf);
+            const header = String.fromCharCode(...arr.slice(0, 5));
+            if (header === '%PDF-') return Array.from(arr);
+          }
+        } catch {}
+      }
+      return null;
+    });
+    if (pdfData) return new Uint8Array(pdfData);
   } catch {}
+
   return null;
 }
 
@@ -144,7 +213,16 @@ export async function clicarBotaoPorTexto(page: Page, texto: string): Promise<bo
     const botoes = document.querySelectorAll<HTMLElement>('button, a.btn, a[class*="button"], input[type="submit"], input[type="button"]');
     for (const b of botoes) {
       const content = (b.textContent?.trim() || (b as HTMLInputElement).value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (content.includes(txtNorm)) { b.click(); return true; }
+      if (content.includes(txtNorm)) {
+        b.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const rect = b.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        for (const evtType of ['mousedown', 'mouseup', 'click']) {
+          b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+        }
+        return true;
+      }
     }
     return false;
   }, texto);
@@ -224,6 +302,137 @@ export async function aguardarDownloadCDP(
     await new Promise((r) => setTimeout(r, pollMs));
   }
   return null;
+}
+
+// ============================================================
+// NOVA captura via CDP Browser.downloadProgress (eventos reais)
+// Muito mais confiavel que polling de arquivos
+// ============================================================
+export async function configurarCapturaDownloadViaCDP(
+  page: Page,
+  downloadDir: string,
+  timeoutMs: number = 30000
+): Promise<{ promise: Promise<Uint8Array | null>; cleanup: () => void }> {
+  if (!fs.existsSync(downloadDir)) {
+    fs.mkdirSync(downloadDir, { recursive: true });
+  }
+
+  const client = await page.target().createCDPSession();
+
+  await client.send('Browser.setDownloadBehavior', {
+    behavior: 'allowAndName',
+    downloadPath: downloadDir,
+    eventsEnabled: true,
+  });
+
+  let resolvePromise: (val: Uint8Array | null) => void;
+  const downloadPromise = new Promise<Uint8Array | null>((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  let downloadGuid = '';
+  let resolved = false;
+
+  // Timeout: se nenhum download completar, resolve null
+  const timeout = setTimeout(() => {
+    if (!resolved) { resolved = true; resolvePromise(null); }
+  }, timeoutMs);
+
+  const onProgress = (params: any) => {
+    const { guid, state, receivedBytes: rb, totalBytes } = params;
+
+    if (state === 'inProgress') {
+      downloadGuid = guid;
+    }
+
+    if (state === 'completed' && guid === downloadGuid && !resolved) {
+      resolved = true;
+      clearTimeout(timeout);
+      // Aguarda um pouco para o Chrome finalizar a escrita
+      setTimeout(() => {
+        try {
+          const arquivos = fs.readdirSync(downloadDir);
+          let maisRecente: string | null = null;
+          let maiorTimestamp = 0;
+          for (const f of arquivos) {
+            if (f.endsWith('.crdownload')) continue;
+            const stat = fs.statSync(path.join(downloadDir, f));
+            if (stat.mtimeMs > maiorTimestamp) {
+              maiorTimestamp = stat.mtimeMs;
+              maisRecente = f;
+            }
+          }
+          if (maisRecente) {
+            const filePath = path.join(downloadDir, maisRecente);
+            const buf = fs.readFileSync(filePath);
+            // Valida header PDF
+            if (buf.length > 500 && buf.slice(0, 5).toString() === '%PDF-') {
+              resolvePromise(new Uint8Array(buf));
+              return;
+            }
+          }
+        } catch {}
+        resolvePromise(null);
+      }, 1000);
+    }
+
+    if (state === 'canceled' && !resolved) {
+      resolved = true;
+      clearTimeout(timeout);
+      resolvePromise(null);
+    }
+  };
+
+  client.on('Browser.downloadProgress', onProgress);
+
+  const cleanup = () => {
+    client.off('Browser.downloadProgress', onProgress);
+    client.detach().catch(() => {});
+  };
+
+  return { promise: downloadPromise, cleanup };
+}
+
+// ============================================================
+// Intercepta respostas HTTP com Content-Type: application/pdf
+// Captura o PDF real servido pelo site, independente de ser
+// download, nova aba, iframe ou blob
+// ============================================================
+export function interceptarRespostaPDF(
+  page: Page,
+  timeoutMs: number = 30000
+): Promise<Uint8Array | null> {
+  return new Promise((resolve) => {
+    const respostas: Array<Uint8Array> = [];
+
+    const timeout = setTimeout(() => {
+      page.off('response', handler);
+      // Retorna o primeiro PDF capturado
+      resolve(respostas.length > 0 ? respostas[0] : null);
+    }, timeoutMs);
+
+    const handler = async (response: import('puppeteer').HTTPResponse) => {
+      const ct = response.headers()['content-type'] || '';
+      const cd = response.headers()['content-disposition'] || '';
+      const isPdf = ct.includes('application/pdf') || ct.includes('application/octet-stream');
+      const isAttachment = cd.includes('attachment');
+
+      if (isPdf || (isAttachment && (ct.includes('pdf') || response.url().includes('.pdf')))) {
+        try {
+          const buf = await response.buffer();
+          const arr = new Uint8Array(buf);
+          if (isPdfValido(arr)) {
+            respostas.push(arr);
+            clearTimeout(timeout);
+            page.off('response', handler);
+            resolve(arr);
+          }
+        } catch {}
+      }
+    };
+
+    page.on('response', handler);
+  });
 }
 
 export async function preencherCampoRobusto(
