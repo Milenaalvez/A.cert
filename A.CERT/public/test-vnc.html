@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>A.CERT — Teste VNC</title>
+<style>
+  body { background:#0a0a0a; color:#fff; font-family:sans-serif; padding:20px; }
+  button { padding:12px 24px; background:#FF7A00; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; margin:4px; }
+  input { padding:10px; border-radius:6px; border:1px solid #333; background:#1a1a1a; color:#fff; width:250px; margin:4px; }
+  iframe { width:800px; height:500px; border:1px solid #333; margin-top:20px; border-radius:8px; }
+  #log { background:#111; padding:10px; margin-top:10px; border-radius:8px; font-size:12px; max-height:300px; overflow:auto; }
+  .ok { color:#0f0; } .err { color:#f44; } .info { color:#88f; }
+</style>
+</head>
+<body>
+<h1>Teste VNC</h1>
+
+<p>1. Faça login:</p>
+<input id="email" placeholder="Email" value="">
+<input id="senha" type="password" placeholder="Senha">
+<button onclick="fazerLogin()">Login</button>
+
+<p>2. Faça consulta:</p>
+<button id="btnConsultar" onclick="fazerConsulta()" disabled>Emitir Consulta</button>
+<span id="tokenStatus" style="font-size:12px;color:#666;">(faça login primeiro)</span>
+
+<p>3. VNC:</p>
+<iframe id="vnc" src="" style="display:none;"></iframe>
+
+<div id="log"></div>
+
+<script>
+let token = '';
+let jobId = '';
+
+function log(msg, cls) {
+  const d = document.getElementById('log');
+  d.innerHTML += `<div class="${cls||''}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+  d.scrollTop = d.scrollHeight;
+}
+
+async function fazerLogin() {
+  const email = document.getElementById('email').value;
+  const senha = document.getElementById('senha').value;
+  log('Fazendo login...', 'info');
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: senha }),
+    });
+    const data = await r.json();
+    if (data.token) {
+      token = data.token;
+      document.getElementById('btnConsultar').disabled = false;
+      document.getElementById('tokenStatus').innerHTML = '<span class="ok">✓ Logado</span>';
+      log('Login OK, token: ' + token.slice(0,20) + '...', 'ok');
+    } else {
+      log('Login falhou: ' + JSON.stringify(data), 'err');
+    }
+  } catch(e) { log('Erro login: ' + e.message, 'err'); }
+}
+
+async function fazerConsulta() {
+  if (!token) return log('Sem token!', 'err');
+  log('Iniciando consulta...', 'info');
+  try {
+    const r = await fetch('/api/consultar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        nome: 'Teste', cpf: '09037356109', dataNascimento: '2004-11-05',
+        nomeMae: 'Maria', email: 't@t.com', organs: ['TRT'],
+      }),
+    });
+    const data = await r.json();
+    if (data.jobId) {
+      jobId = data.jobId;
+      log('Job criado: ' + jobId, 'ok');
+      pollJob();
+    } else {
+      log('Erro consulta: ' + JSON.stringify(data), 'err');
+    }
+  } catch(e) { log('Erro consulta: ' + e.message, 'err'); }
+}
+
+async function pollJob() {
+  log('Polling job ' + jobId + '...', 'info');
+  const r = await fetch('/api/consultar/' + jobId, {
+    headers: { Authorization: 'Bearer ' + token },
+  });
+  const data = await r.json();
+  log('Status: ' + data.status + ' displayId: ' + (data.displayId || 'null'), data.status==='complete'?'ok':'info');
+  
+  if (data.displayId) {
+    const vnc = document.getElementById('vnc');
+    const port = data.displayPort || 5901;
+    vnc.src = `/novnc/viewer.html?displayId=${data.displayId}&port=${port}&autoconnect=1`;
+    vnc.style.display = 'block';
+    log('VNC conectado: display=' + data.displayId + ' port=' + port, 'ok');
+  }
+  
+  if (data.status === 'complete' || data.status === 'partial' || data.status === 'error') {
+    log('Job finalizado: ' + data.status, data.status==='error'?'err':'ok');
+    log('Resultados: ' + JSON.stringify(data.resultados), 'info');
+    return;
+  }
+  setTimeout(pollJob, 2000);
+}
+</script>
+</body>
+</html>
