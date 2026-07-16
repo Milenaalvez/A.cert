@@ -295,6 +295,7 @@ function checkDocsLoop(jobId: string): void {
 
 app.post('/api/consultar', authMiddleware, (req, res) => {
   try {
+    console.log('[CONSULTAR] body recebido:', JSON.stringify(req.body).slice(0, 300));
     const { nome, cpf, dataNascimento, nomeMae, nomePai, email, personId, dossierId, organs, certKeys } = req.body;
 
     if (!nome || !cpf || !dataNascimento || !nomeMae || !email) {
