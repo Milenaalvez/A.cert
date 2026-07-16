@@ -29,7 +29,7 @@
     #noVNC_status { display: none; }
   </style>
   <script type="module">
-    import RFB from 'https://unpkg.com/@novnc/novnc@1.5.0/lib/rfb.js';
+    import { RFB } from 'https://unpkg.com/@novnc/novnc@1.5.0/lib/rfb.js';
 
     const params = new URLSearchParams(window.location.search);
     const displayId = params.get('displayId') || '';
