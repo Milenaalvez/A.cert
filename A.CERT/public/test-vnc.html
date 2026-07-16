@@ -24,7 +24,10 @@
 <button id="btnConsultar" onclick="fazerConsulta()" disabled>Emitir Consulta</button>
 <span id="tokenStatus" style="font-size:12px;color:#666;">(faça login primeiro)</span>
 
-<p>3. VNC:</p>
+<p>3. VNC (conexão direta):</p>
+<button onclick="connectToDisplay('display-99', 5901)">Conectar display-99</button>
+<button onclick="connectToDisplay('display-100', 5902)">Conectar display-100</button>
+<button onclick="connectToDisplay('display-101', 5903)">Conectar display-101</button>
 <iframe id="vnc" src="" style="display:none;"></iframe>
 
 <div id="log"></div>
@@ -37,6 +40,13 @@ function log(msg, cls) {
   const d = document.getElementById('log');
   d.innerHTML += `<div class="${cls||''}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
   d.scrollTop = d.scrollHeight;
+}
+
+function connectToDisplay(displayId, port) {
+  const vnc = document.getElementById('vnc');
+  vnc.src = `/novnc/viewer.html?displayId=${displayId}&port=${port}&autoconnect=1`;
+  vnc.style.display = 'block';
+  log('Conectando ao ' + displayId + ':' + port, 'ok');
 }
 
 async function fazerLogin() {
@@ -85,19 +95,16 @@ async function fazerConsulta() {
 }
 
 async function pollJob() {
-  log('Polling job ' + jobId + '...', 'info');
   const r = await fetch('/api/consultar/' + jobId, {
     headers: { Authorization: 'Bearer ' + token },
   });
   const data = await r.json();
-  log('Status: ' + data.status + ' displayId: ' + (data.displayId || 'null'), data.status==='complete'?'ok':'info');
+  log('Status: ' + data.status + ' displayId: ' + (data.displayId || 'null'), data.displayId ? 'ok' : 'info');
   
   if (data.displayId) {
     const vnc = document.getElementById('vnc');
     const port = data.displayPort || 5901;
-    vnc.src = `/novnc/viewer.html?displayId=${data.displayId}&port=${port}&autoconnect=1`;
-    vnc.style.display = 'block';
-    log('VNC conectado: display=' + data.displayId + ' port=' + port, 'ok');
+    connectToDisplay(data.displayId, port);
   }
   
   if (data.status === 'complete' || data.status === 'partial' || data.status === 'error') {
@@ -105,7 +112,7 @@ async function pollJob() {
     log('Resultados: ' + JSON.stringify(data.resultados), 'info');
     return;
   }
-  setTimeout(pollJob, 2000);
+  setTimeout(pollJob, 500);
 }
 </script>
 </body>
