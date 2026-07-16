@@ -247,7 +247,9 @@ app.use('/uploads', express.static(uploadsPublicPath, { maxAge: '30d' }));
 const srv = express.static(frontendOut);
 function serveHtmlFile(p: string, res: any) {
   const fp = path.join(frontendOut, p + '.html');
-  if (fs.existsSync(fp)) { res.sendFile(fp); return true; }
+  try {
+    if (fs.existsSync(fp)) { res.sendFile(fp); return true; }
+  } catch {}
   return false;
 }
 app.use((req, res, next) => {
@@ -259,10 +261,12 @@ app.use((req, res, next) => {
 
 // Dynamic routes — serve generated placeholder HTML
 app.get('/confirmar-email/:token', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html'));
+  const fp = path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html');
+  if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
 });
 app.get('/dashboard/usuarios/:id', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html'));
+  const fp = path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html');
+  if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
 });
 app.get('/dashboard/dossies/:id', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossiers', '_.html'));
