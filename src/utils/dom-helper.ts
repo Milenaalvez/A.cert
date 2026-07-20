@@ -41,7 +41,6 @@ const DOWNLOAD_BUTTON_TEXTS = [
 ];
 
 export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise<Uint8Array | null> {
-  const TIMEOUT = 28000;
   const start = Date.now();
 
   // ── 0. Prepara diretorio de download ──
@@ -49,21 +48,55 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
     fs.mkdirSync(downloadDir, { recursive: true });
   }
 
-  // ── 1. Intercepta window.print (abre dialogo "Salvar como PDF") ──
+  // ── 1. Intercepta window.print ──
   await page.evaluate(() => {
     (window as any).__origPrint = window.print;
     window.print = () => {};
   }).catch(() => {});
 
-  // ── 2. Configura CDP download behavior + listeners ──
+  // ── 2. page.pdf() como PRIMEIRA tentativa (captura o que esta na tela) ──
+  await new Promise(r => setTimeout(r, 1500));
+  try {
+    const pdf = await page.pdf({ format: 'A4', printBackground: true });
+    if (pdf.length > 500 && pdf.slice(0, 5).toString() === '%PDF-') {
+      console.log(`[PDF] Capturado via page.pdf() direto: ${pdf.length} bytes`);
+      return new Uint8Array(pdf);
+    }
+  } catch (e: any) {
+    console.log(`[PDF] page.pdf() direto falhou: ${e.message}`);
+  }
+
+  // ── 3. Se page.pdf() deu pouco conteudo, tenta recarregar embed/iframe ──
+  try {
+    const data = await page.evaluate(async () => {
+      const urls = [...document.querySelectorAll<HTMLElement>('embed[src], object[data], iframe[src], a[href]')]
+        .map(e => (e as any).src || (e as any).data || (e as any).href || '')
+        .filter(u => u.includes('.pdf'));
+      for (const url of urls) {
+        try {
+          const r = await fetch(url);
+          const buf = await r.arrayBuffer();
+          if (buf.byteLength > 500) return Array.from(new Uint8Array(buf));
+        } catch {}
+      }
+      return null;
+    });
+    if (data && data.length > 0) {
+      const buf = new Uint8Array(data);
+      if (buf.length > 500 && String.fromCharCode(...buf.slice(0, 5)) === '%PDF-') {
+        console.log(`[PDF] Capturado via embed fetch: ${buf.length} bytes`);
+        return buf;
+      }
+    }
+  } catch {}
+
+  // ── 4. Prepara CDP download behavior ──
   let cdpClient: import('puppeteer').CDPSession | null = null;
   if (downloadDir) {
     try {
       cdpClient = await page.target().createCDPSession();
       await cdpClient.send('Browser.setDownloadBehavior', {
-        behavior: 'allow',
-        downloadPath: downloadDir,
-        eventsEnabled: true,
+        behavior: 'allow', downloadPath: downloadDir, eventsEnabled: true,
       });
     } catch { cdpClient = null; }
   }
@@ -100,23 +133,19 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
     cdpClient.on('Browser.downloadProgress', handler);
   });
 
-  // ── 3. Intercepta respostas HTTP application/pdf ──
   const httpPromise = new Promise<Uint8Array | null>((resolve) => {
     const handler = async (resp: import('puppeteer').HTTPResponse) => {
       const ct = resp.headers()['content-type'] || '';
       if (ct.includes('application/pdf') || ct.includes('application/octet-stream')) {
         try {
           const buf = await resp.buffer();
-          if (buf.length > 500 && buf.slice(0, 5).toString() === '%PDF-') {
-            resolve(new Uint8Array(buf));
-          }
+          if (buf.length > 500 && buf.slice(0, 5).toString() === '%PDF-') resolve(new Uint8Array(buf));
         } catch {}
       }
     };
     page.on('response', handler);
   });
 
-  // ── 4. Detecta nova aba ──
   const tabPromise = new Promise<import('puppeteer').Page | null>((resolve) => {
     const handler = (target: import('puppeteer').Target) => {
       if (target.type() === 'page') {
@@ -151,9 +180,7 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
     if (clicou) break;
   }
 
-  const tempoRestante = () => Math.max(1000, TIMEOUT - (Date.now() - start));
-
-  // ── 6. Race: CDP event || HTTP response || nova aba (com timeout) ──
+  // ── 6. Race: CDP || HTTP || nova aba (timeout 15s) ──
   const qualquer = await timeoutRace(
     Promise.race([
       cdpPromise,
@@ -161,38 +188,15 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
       tabPromise.then(async (newPage) => {
         if (!newPage) return null;
         try {
-          await newPage.waitForNetworkIdle({ timeout: 10000 }).catch(() => {});
-          await new Promise(r => setTimeout(r, 1500));
-
+          await newPage.waitForNetworkIdle({ timeout: 8000 }).catch(() => {});
+          await new Promise(r => setTimeout(r, 1000));
           const pdf = await newPage.pdf({ format: 'A4', printBackground: true }).catch(() => null);
-          if (pdf && pdf.length > 500 && pdf.slice(0, 5).toString() === '%PDF-') {
-            return new Uint8Array(pdf);
-          }
-
-          const data = await newPage.evaluate(async () => {
-            const links = [...document.querySelectorAll<HTMLElement>('embed[src], object[data], iframe[src], a[href]')]
-              .map(e => (e as any).src || (e as any).data || (e as any).href || '')
-              .filter(u => u.includes('.pdf'));
-            if (links.length === 0 && (document.contentType?.includes('pdf') || window.location.href.endsWith('.pdf'))) {
-              links.push(window.location.href);
-            }
-            for (const url of links) {
-              try {
-                const r = await fetch(url);
-                const buf = await r.arrayBuffer();
-                if (buf.byteLength > 500) return Array.from(new Uint8Array(buf));
-              } catch {}
-            }
-            return null;
-          }).catch(() => null);
-          if (data && data.length > 0) return new Uint8Array(data);
-        } finally {
-          newPage.close().catch(() => {});
-        }
+          if (pdf && pdf.length > 500 && pdf.slice(0, 5).toString() === '%PDF-') return new Uint8Array(pdf);
+        } finally { newPage.close().catch(() => {}); }
         return null;
       }),
     ]),
-    tempoRestante()
+    15000
   );
 
   if (qualquer && qualquer.length > 500) {
@@ -200,36 +204,17 @@ export async function tentarBaixarPDF(page: Page, downloadDir?: string): Promise
     if (header === '%PDF-') return qualquer;
   }
 
-  // ── 7. Aguarda render e tenta embed/iframe na pagina atual ──
+  // ── 7. page.pdf() tentativa final apos clique ──
   await new Promise(r => setTimeout(r, 2000));
-  try {
-    const data = await page.evaluate(async () => {
-      const urls = [...document.querySelectorAll<HTMLElement>('embed[src], object[data], iframe[src], a[href]')]
-        .map(e => (e as any).src || (e as any).data || (e as any).href || '')
-        .filter(u => u.includes('.pdf'));
-      for (const url of urls) {
-        try {
-          const r = await fetch(url);
-          const buf = await r.arrayBuffer();
-          if (buf.byteLength > 500) return Array.from(new Uint8Array(buf));
-        } catch {}
-      }
-      return null;
-    });
-    if (data && data.length > 0) {
-      const buf = new Uint8Array(data);
-      if (buf.length > 500 && String.fromCharCode(...buf.slice(0, 5)) === '%PDF-') return buf;
-    }
-  } catch {}
-
-  // ── 8. FALLBACK UNIVERSAL: page.pdf() ──
   try {
     const pdf = await page.pdf({ format: 'A4', printBackground: true });
     if (pdf.length > 500 && pdf.slice(0, 5).toString() === '%PDF-') {
-      console.log(`[PDF] Capturado via page.pdf(): ${pdf.length} bytes`);
+      console.log(`[PDF] Capturado via page.pdf() final: ${pdf.length} bytes`);
       return new Uint8Array(pdf);
     }
-  } catch {}
+  } catch (e: any) {
+    console.log(`[PDF] page.pdf() final falhou: ${e.message}`);
+  }
 
   return null;
 }
@@ -440,6 +425,119 @@ export async function configurarCapturaDownloadViaCDP(
   };
 
   return { promise: downloadPromise, cleanup };
+}
+
+// ============================================================
+// Setup de captura de download ANTES do clique disparador
+// Deve ser chamado antes de qualquer acao que dispare download
+// Retorna promise + cleanup - a promise resolve com o primeiro
+// PDF capturado via CDP, HTTP intercept ou nova aba
+// ============================================================
+export function setupDownloadCapture(
+  page: Page,
+  downloadDir: string,
+  timeoutMs: number = 45000
+): { promise: Promise<Uint8Array | null>; cleanup: () => void } {
+  if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+
+  let resolvePromise: (val: Uint8Array | null) => void;
+  let resolved = false;
+  const promise = new Promise<Uint8Array | null>((resolve) => { resolvePromise = resolve; });
+
+  const cleanups: Array<() => void> = [];
+
+  const resolveOnce = (val: Uint8Array | null) => {
+    if (!resolved) { resolved = true; resolvePromise(val); }
+  };
+
+  const timeout = setTimeout(() => resolveOnce(null), timeoutMs);
+  cleanups.push(() => clearTimeout(timeout));
+
+  // ── 1. CDP: set download behavior + progress events ──
+  page.target().createCDPSession().then(async client => {
+    try {
+      await client.send('Browser.setDownloadBehavior', {
+        behavior: 'allowAndName',
+        downloadPath: downloadDir,
+        eventsEnabled: true,
+      });
+    } catch {}
+
+    let cdpGuid = '';
+    const onProgress = (params: any) => {
+      const { guid, state } = params;
+      if (state === 'inProgress') cdpGuid = guid;
+      if (state === 'completed' && guid === cdpGuid && !resolved) {
+        setTimeout(() => {
+          try {
+            const arquivos = fs.readdirSync(downloadDir);
+            let nome = '', mt = 0;
+            for (const f of arquivos) {
+              if (f.endsWith('.crdownload')) continue;
+              const st = fs.statSync(path.join(downloadDir, f));
+              if (st.mtimeMs > mt) { mt = st.mtimeMs; nome = f; }
+            }
+            if (nome) {
+              const buf = fs.readFileSync(path.join(downloadDir, nome));
+              if (buf.length > 500 && buf.slice(0, 5).toString() === '%PDF-') {
+                resolveOnce(new Uint8Array(buf)); return;
+              }
+            }
+          } catch {}
+          resolveOnce(null);
+        }, 1000);
+      }
+      if (state === 'canceled' && !resolved) resolveOnce(null);
+    };
+    client.on('Browser.downloadProgress', onProgress);
+    cleanups.push(() => {
+      client.off('Browser.downloadProgress', onProgress);
+      client.detach().catch(() => {});
+    });
+  }).catch(() => {});
+
+  // ── 2. HTTP response intercept ──
+  const httpHandler = async (resp: import('puppeteer').HTTPResponse) => {
+    if (resolved) return;
+    const ct = resp.headers()['content-type'] || '';
+    const cd = resp.headers()['content-disposition'] || '';
+    const isPdf = ct.includes('application/pdf') || ct.includes('application/octet-stream');
+    if (isPdf || (cd.includes('attachment') && (ct.includes('pdf') || resp.url().includes('.pdf')))) {
+      try {
+        const buf = await resp.buffer();
+        if (buf.length > 500 && buf.slice(0, 5).toString() === '%PDF-') {
+          resolveOnce(new Uint8Array(buf));
+        }
+      } catch {}
+    }
+  };
+  page.on('response', httpHandler);
+  cleanups.push(() => page.off('response', httpHandler));
+
+  // ── 3. New tab listener ──
+  const browser = page.browser();
+  const tabHandler = (target: import('puppeteer').Target) => {
+    if (resolved) return;
+    if (target.type() === 'page') {
+      target.page().then(async p => {
+        if (!p) return;
+        try {
+          await p.waitForNetworkIdle({ timeout: 8000 }).catch(() => {});
+          await new Promise(r => setTimeout(r, 1000));
+          const pdf = await p.pdf({ format: 'A4', printBackground: true }).catch(() => null);
+          if (pdf && pdf.length > 500 && pdf.slice(0, 5).toString() === '%PDF-') {
+            resolveOnce(new Uint8Array(pdf));
+          }
+        } finally { p.close().catch(() => {}); }
+      }).catch(() => {});
+    }
+  };
+  browser.on('targetcreated', tabHandler);
+  cleanups.push(() => browser.off('targetcreated', tabHandler));
+
+  const cleanup = () => { cleanups.forEach(fn => { try { fn(); } catch {} }); };
+
+  return { promise, cleanup };
 }
 
 // ============================================================

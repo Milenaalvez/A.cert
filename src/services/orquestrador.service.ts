@@ -46,9 +46,7 @@ async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Arr
     const caminho = path.join(pasta, nomeArquivo);
     await fs.writeFile(caminho, Buffer.from(documento));
     LOG(`Documento salvo: ${caminho} (${documento.length} bytes)`);
-    // Retorna caminho relativo ao projeto (ex: data/documents/{dossierId}/{orgao}.pdf)
-    const relPath = path.relative(path.join(DOCUMENTS_DIR, '..', '..'), caminho);
-    return relPath;
+    return caminho;
   } catch (err) {
     LOG(`Erro ao salvar documento: ${err}`);
     return null;
@@ -77,7 +75,7 @@ async function persistirResultado(
 
     let docPath: string | null = null;
     if (resultado.documento) {
-      docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento, dossierId);
+      docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento, dossierId || undefined);
     }
 
     // Upsert: se ja existe certidao do mesmo orgao para a mesma pessoa/dossie, atualiza

@@ -1,13 +1,18 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, aceitarCookies, setupDownloadCapture } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const LOG = (msg: string) => console.log(`[RF] ${msg}`);
 const DEBUG = process.env.DEBUG;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
 
 async function diagnosticarInputs(page: import('puppeteer').Page): Promise<void> {
   const inputs = await page.evaluate(() => {
@@ -50,16 +55,54 @@ export class ReceitaFederalConnector implements IConnector {
     LOG('Iniciando consulta');
     const page = await createPage().catch(e => { LOG(`ERRO createPage: ${e.message}`); throw e; });
 
+    // Desabilita bypass CSP (pode trigger deteccao de bot na RF)
+    await page.setBypassCSP(false);
+
     try {
       let pageClosed = false;
       page.once('close', () => { pageClosed = true; });
 
-      await page.goto('https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cpf', { waitUntil: 'networkidle2', timeout: 30000 });
-      await wait(4000);
+      // Tenta URL principal, fallback pra alternativa
+      await page.goto('https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cpf', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await wait(2000);
+
+      // Se a pagina redirecionou ou esta vazia, tenta URL alternativa
+      const hasInputs = await page.$('input:not([type="hidden"])').catch(() => null);
+      if (!hasInputs) {
+        LOG('Pagina sem inputs, tentando URL alternativa...');
+        await page.goto('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/certidoes', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await wait(3000);
+      }
+      
+      // Scroll pra baixo lentamente (humano)
+      await page.evaluate(() => {
+        window.scrollTo({ top: 200, behavior: 'smooth' });
+      });
+      await wait(1000);
+      await page.evaluate(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      await wait(1000);
+
       await aceitarCookies(page);
+      await wait(1000);
+
+      // Movimento de mouse aleatorio
+      await page.mouse.move(400, 300);
+      await wait(300);
+      await page.mouse.move(500, 350);
+      await wait(300);
+      await page.mouse.move(350, 280);
+      await wait(500);
 
       if (DEBUG) await diagnosticarInputs(page);
       await injectFillHelper(page);
+
+      // Aguarda Angular renderizar (a pagina pode demorar)
+      try {
+        await page.waitForSelector('input:not([type="hidden"])', { timeout: 15000 });
+      } catch {}
+      await wait(1000);
 
       const cpfDigits = dados.cpf.replace(/\D/g, '');
       const [ano, mes, dia] = dados.dataNascimento.split('-');
@@ -70,26 +113,60 @@ export class ReceitaFederalConnector implements IConnector {
           'input[placeholder*="CPF"]',
           'input[placeholder*="cpf"]',
           'input[formcontrolname="niContribuinte"]',
+          'input[formcontrolname*="cpf"]',
+          'input[formcontrolname*="Cpf"]',
           'input[inputmode="numeric"]',
+          'input[type="text"]', // ultimo fallback
         ];
         for (const sel of sels) {
           const el = document.querySelector<HTMLInputElement>(sel);
-          if (el) return sel;
+          if (el && el.offsetParent !== null) return sel;
         }
         return null;
       });
 
-      if (cpfSel) {
-        const el = await page.$(cpfSel);
-        if (el) {
-          await el.focus();
-          await page.keyboard.type(cpfDigits, { delay: 0 });
-          LOG(`CPF preenchido via: ${cpfSel}`);
-        }
-      } else {
-        LOG('ERRO: Input CPF nao encontrado');
+      if (!cpfSel) {
+        LOG('=== DIAGNOSTICO (CPF nao encontrado) ===');
+        LOG(`URL: ${page.url()}`);
+        const inputs = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll<HTMLInputElement>('input:not([type="hidden"])')).map(i => ({
+            name: i.name, id: i.id, type: i.type,
+            placeholder: (i as HTMLInputElement).placeholder || '',
+            formcontrolname: i.getAttribute('formcontrolname') || '',
+            visible: i.offsetParent !== null ? 'sim' : 'nao'
+          }));
+        }).catch(() => []);
+        LOG(`Inputs visiveis (${inputs.length}):`);
+        inputs.forEach((i: any) => LOG(`  name="${i.name}" id="${i.id}" placeholder="${i.placeholder}" formcontrolname="${i.formcontrolname}" visible="${i.visible}"`));
         await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Input CPF nao encontrado no formulario' };
+      }
+
+      // Preenche CPF via Angular + teclado
+      {
+        const el = await page.$(cpfSel);
+        if (el) {
+          await el.click();
+          await wait(400);
+
+          // Força o Angular a reconhecer o valor
+          await page.evaluate((sel, val) => {
+            const inp = document.querySelector<HTMLInputElement>(sel);
+            if (!inp) return;
+            const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+            if (nativeSetter) nativeSetter.call(inp, val);
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+            // Trigger Angular change detection
+            if (inp && (inp as any).dispatchEvent) {
+              inp.dispatchEvent(new Event('blur', { bubbles: true }));
+            }
+          }, cpfSel, cpfDigits);
+
+          // Depois digita normalmente pra parecer humano
+          await el.type(cpfDigits, { delay: 60 + Math.floor(Math.random() * 40) });
+          LOG(`CPF preenchido: ${cpfDigits}`);
+        }
       }
 
       await wait(500);
@@ -114,8 +191,22 @@ export class ReceitaFederalConnector implements IConnector {
       if (dataSel) {
         const el = await page.$(dataSel);
         if (el) {
-          await el.focus();
-          await page.keyboard.type(dataFormatada, { delay: 0 });
+          await el.click();
+          await wait(400);
+
+          // Seta valor via Angular + nativo
+          await page.evaluate((sel, val) => {
+            const inp = document.querySelector<HTMLInputElement>(sel);
+            if (!inp) return;
+            const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+            if (nativeSetter) nativeSetter.call(inp, val);
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+            inp.dispatchEvent(new Event('blur', { bubbles: true }));
+          }, dataSel, dataFormatada);
+
+          // Digita normalmente
+          await el.type(dataFormatada, { delay: 50 + Math.floor(Math.random() * 40) });
           LOG(`Data preenchida: ${dataFormatada}`);
         }
       } else {
@@ -124,18 +215,31 @@ export class ReceitaFederalConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Input data de nascimento nao encontrado' };
       }
 
-      await wait(500);
+      await wait(800); // pausa humana antes de submeter
+
+      // Configura captura ANTES do clique que dispara o download
+      LOG('Configurando captura de download...');
+      const rfCapture = setupDownloadCapture(page, DOWNLOAD_DIR);
+
+      let pdfBuffer: Buffer | Uint8Array | null = null;
+      let protocolo = '';
 
       const btnClicado = await page.evaluate(() => {
         const textos = ['Consultar Certidão', 'Emitir Certidão', 'Consultar', 'consultar', 'CONSULTAR',
           'Emitir', 'emitir', 'EMITIR', 'Prosseguir', 'prosseguir', 'Avançar', 'avançar', 'OK', 'ok',
           'Solicitar', 'solicitar'];
-        const btns = document.querySelectorAll('button, a.btn, [role="button"], input[type="submit"]');
+        const btns = document.querySelectorAll<HTMLElement>('button, a.btn, [role="button"], input[type="submit"]');
         for (const b of btns) {
           const t = (b.textContent?.trim() || (b as HTMLInputElement).value || '').toLowerCase();
           for (const txt of textos) {
             if (t.includes(txt.toLowerCase())) {
-              (b as HTMLElement).click();
+              b.scrollIntoView({ block: 'center', behavior: 'instant' });
+              const rect = b.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+              }
               return txt;
             }
           }
@@ -148,6 +252,32 @@ export class ReceitaFederalConnector implements IConnector {
         await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Botao de consulta nao encontrado' };
       }
+
+      // Aguarda modal de confirmacao ("ja tem certidao, emitir nova?")
+      await wait(2000);
+      const modalOk = await page.evaluate(() => {
+        const modals = document.querySelectorAll('.modal, .dialog, .swal2-container, .p-dialog, .ui-dialog, [role="dialog"]');
+        for (const m of modals) {
+          if (!(m as HTMLElement).offsetParent && getComputedStyle(m).display === 'none') continue;
+          const btns = m.querySelectorAll<HTMLElement>('button, a, .btn');
+          for (const b of btns) {
+            const txt = ((b.textContent?.trim() || '')).toLowerCase();
+            if (txt.includes('sim') || txt.includes('emitir') || txt.includes('nova') || txt.includes('confirmar') || txt.includes('ok') || txt.includes('continuar')) {
+              b.scrollIntoView({ block: 'center', behavior: 'instant' });
+              const rect = b.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+              }
+              return txt;
+            }
+          }
+        }
+        return null;
+      });
+      LOG(`Modal confirmacao: ${modalOk || 'nao encontrado'}`);
+      if (modalOk) await wait(2000);
 
       let erroMsg = '';
       const captchaType = await (async () => {
@@ -195,8 +325,42 @@ export class ReceitaFederalConnector implements IConnector {
           await page.close();
           return { status: 'error', orgao: this.nome, dataConsulta, error: `[RF] CAPTCHA nao resolvido no tempo limite` };
         }
-        LOG('CAPTCHA resolvido, continuando...');
-        await wait(3000);
+        LOG('CAPTCHA resolvido, submetendo novamente...');
+        await wait(2000);
+
+        // Clica no botao de submit NOVAMENTE apos captcha resolvido (MouseEvent real)
+        await page.evaluate(() => {
+          const textos = ['consultar certidão', 'emitir certidão', 'consultar', 'emitir', 'gerar', 'prosseguir', 'avançar', 'solicitar', 'ok'];
+          const btns = document.querySelectorAll<HTMLElement>('button, a.btn, [role="button"], input[type="submit"]');
+          for (const b of btns) {
+            const t = ((b.textContent?.trim() || (b as HTMLInputElement).value || '').toLowerCase());
+            for (const txt of textos) {
+              if (t.includes(txt)) {
+                b.scrollIntoView({ block: 'center', behavior: 'instant' });
+                const rect = b.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                for (const evtType of ['mousedown', 'mouseup', 'click']) {
+                  b.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+                }
+                return;
+              }
+            }
+          }
+        });
+        await wait(4000);
+
+        // Verifica resultado apos re-submit
+        try {
+          await page.waitForFunction(
+            () => {
+              const body = document.body.textContent?.toLowerCase() || '';
+              return body.includes('certidão') || body.includes('protocolo') || body.includes('resultado')
+                  || body.includes('nada consta') || body.includes('nao consta');
+            },
+            { timeout: 20000 },
+          );
+        } catch { LOG('Timeout aguardando resultado...'); }
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
@@ -208,10 +372,53 @@ export class ReceitaFederalConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: '[RF] Erro na consulta: ' + pageText.slice(0, 200) };
       }
 
-      const protocolo = `RF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+      protocolo = `RF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+
+      // Aguarda captura (setupDownloadCapture ja rodando desde antes do primeiro clique)
+      LOG('Aguardando captura de download...');
+      const capturado = await Promise.race([
+        rfCapture.promise,
+        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+      ]);
+      if (capturado && capturado.length > 500) {
+        pdfBuffer = capturado;
+        LOG(`PDF capturado via setupDownloadCapture (${pdfBuffer.length} bytes)`);
+      }
+
       if (!pdfBuffer || pdfBuffer.length < 1000) {
-        await page.close();
+        try {
+          pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+          if (pdfBuffer && pdfBuffer.length > 1000) LOG(`PDF via tentarBaixarPDF (${pdfBuffer.length} bytes)`);
+        } catch (e: any) { LOG(`tentarBaixarPDF falhou: ${e.message}`); }
+      }
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        try {
+          if (!pageClosed) {
+            const pdfLinks = await page.evaluate(async () => {
+              const links = document.querySelectorAll<HTMLAnchorElement>('a[href]');
+              for (const a of links) {
+                const href = a.href || '';
+                if (!href.includes('.pdf')) continue;
+                try {
+                  const r = await fetch(href);
+                  const buf = await r.arrayBuffer();
+                  if (buf.byteLength > 1000) return Array.from(new Uint8Array(buf));
+                } catch {}
+              }
+              return null;
+            });
+            if (pdfLinks && pdfLinks.length > 0) {
+              pdfBuffer = new Uint8Array(pdfLinks);
+              LOG(`PDF via link fetch (${pdfBuffer.length} bytes)`);
+            }
+          }
+        } catch (e: any) { LOG(`link fetch falhou: ${e.message}`); }
+      }
+      rfCapture.cleanup();
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        await page.close().catch(() => {});
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
       }
       LOG(`PDF capturado (${pdfBuffer.length} bytes)`);

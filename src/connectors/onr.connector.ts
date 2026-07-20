@@ -1,7 +1,9 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, prepararCapturaPDFViaCDP, setupDownloadCapture } from '../utils/dom-helper.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -9,9 +11,12 @@ import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 const LOG = (msg: string) => console.log(`[ONR] ${msg}`);
 const DEBUG = process.env.DEBUG;
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
+
 const BASE_URL = 'https://registradores.onr.org.br';
-const LOGIN_EMAIL = process.env.ONR_EMAIL || 'vendas@blocoimob.com.br';
-const LOGIN_SENHA = process.env.ONR_PASSWORD || 'Bloco100%';
+const LOGIN_EMAIL = process.env.ONR_EMAIL || '';
+const LOGIN_SENHA = process.env.ONR_PASSWORD || '';
 
 async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<void> {
   const info = await page.evaluate(() => {
@@ -48,11 +53,20 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
 async function clicarLinkPorTexto(page: import('puppeteer').Page, texto: string): Promise<boolean> {
   const result = await page.evaluate((txt) => {
     const txtNorm = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    const links = document.querySelectorAll('a, button, span, div[role="button"], [onclick]');
+    const links = document.querySelectorAll<HTMLElement>('a, button, span, div[role="button"], [onclick]');
     for (const el of links) {
-      const content = (el as HTMLElement).textContent?.trim() || '';
+      const content = (el.textContent?.trim() || '');
       const norm = content.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      if (norm.includes(txtNorm)) { (el as HTMLElement).click(); return content; }
+      if (norm.includes(txtNorm)) {
+        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        for (const evtType of ['mousedown', 'mouseup', 'click']) {
+          el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
+        }
+        return content;
+      }
     }
     return null;
   }, texto);
@@ -306,9 +320,28 @@ export class ONRConnector implements IConnector {
 
       if (pageClosed) throw new Error('Pagina fechada');
 
-      // Take PDF of the current state
+      LOG('Configurando captura de download...');
+      const onrCapture = setupDownloadCapture(page, DOWNLOAD_DIR);
+      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
+
       const protocolo = `ONR-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+      let pdfBuffer: Uint8Array | null = null;
+
+      const capturado = await Promise.race([
+        onrCapture.promise,
+        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+      ]);
+      if (capturado && capturado.length > 500) {
+        pdfBuffer = capturado;
+        LOG(`PDF via setupDownloadCapture (${pdfBuffer.length} bytes)`);
+      }
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+        if (pdfBuffer && pdfBuffer.length > 500) LOG(`PDF via tentarBaixarPDF (${pdfBuffer.length} bytes)`);
+      }
+      onrCapture.cleanup();
+
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };

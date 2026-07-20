@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, setupDownloadCapture } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -228,6 +228,10 @@ export class TJDFTConnector implements IConnector {
 
       await wait(1000);
 
+      // Configura captura ANTES do submit que dispara o download
+      LOG('Configurando captura de download...');
+      const tjdftCapture = setupDownloadCapture(page, DOWNLOAD_DIR);
+
       // STEP 2 submit - procura botoes Quasar q-btn com texto de submit
       const btnClicado = await page.evaluate(() => {
         const botoes = Array.from(document.querySelectorAll('button.q-btn, button, .q-btn'));
@@ -324,14 +328,29 @@ export class TJDFTConnector implements IConnector {
       const protocolo = `TJDFT-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
 
       let pdfBuffer: Buffer | Uint8Array | null = null;
-      try {
-        pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
-        if (pdfBuffer && pdfBuffer.length > 1000) {
-          LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
-        }
-      } catch (e: any) {
-        LOG(`PDF capture falhou: ${e.message}`);
+
+      // Aguarda captura (setupDownloadCapture ja rodando desde antes do submit)
+      LOG('Aguardando captura de download...');
+      const capturado = await Promise.race([
+        tjdftCapture.promise,
+        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+      ]);
+      if (capturado && capturado.length > 500) {
+        pdfBuffer = capturado;
+        LOG(`PDF capturado via setupDownloadCapture (${pdfBuffer.length} bytes)`);
       }
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        try {
+          pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+          if (pdfBuffer && pdfBuffer.length > 1000) {
+            LOG(`PDF via tentarBaixarPDF (${pdfBuffer.length} bytes)`);
+          }
+        } catch (e: any) {
+          LOG(`tentarBaixarPDF falhou: ${e.message}`);
+        }
+      }
+      tjdftCapture.cleanup();
 
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close().catch(() => {});
