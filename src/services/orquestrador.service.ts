@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from '../connectors/index.js';
 import { criarConectores } from '../connectors/index.js';
-import prisma, { executeRaw } from '../lib/prisma.js';
+import prisma, { executeRaw, queryRawOne } from '../lib/prisma.js';
 import { acquireDisplayForJob, releaseDisplayForJob, getCurrentDisplayId } from '../utils/browser.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
@@ -26,13 +26,28 @@ function nomeCertidao(orgao: string): string {
   return CERT_NAME_MAP[orgao] || `Certidão - ${orgao}`;
 }
 
-async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Array): Promise<string | null> {
+async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Array, dossierId?: string): Promise<string | null> {
   try {
-    await fs.mkdir(DOCUMENTS_DIR, { recursive: true });
-    const nomeArquivo = `${jobId}-${orgao.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-    const caminho = path.join(DOCUMENTS_DIR, nomeArquivo);
+    if (documento.length < 500) {
+      LOG(`Documento ${orgao} invalido: apenas ${documento.length} bytes`);
+      return null;
+    }
+    const header = String.fromCharCode(...documento.slice(0, 5));
+    if (header !== '%PDF-') {
+      LOG(`Documento ${orgao} invalido: header "${header}" nao eh PDF (${documento.length} bytes)`);
+      return null;
+    }
+
+    const pasta = dossierId
+      ? path.join(DOCUMENTS_DIR, dossierId)
+      : DOCUMENTS_DIR;
+    await fs.mkdir(pasta, { recursive: true });
+    const nomeArquivo = dossierId
+      ? `${orgao.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+      : `${jobId}-${orgao.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    const caminho = path.join(pasta, nomeArquivo);
     await fs.writeFile(caminho, Buffer.from(documento));
-    LOG(`Documento salvo: ${caminho}`);
+    LOG(`Documento salvo: ${caminho} (${documento.length} bytes)`);
     return caminho;
   } catch (err) {
     LOG(`Erro ao salvar documento: ${err}`);
@@ -62,13 +77,25 @@ async function persistirResultado(
 
     let docPath: string | null = null;
     if (resultado.documento) {
-      docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento);
+      docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento, dossierId);
     }
 
-    await executeRaw(
-      'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-      certId, dossierId || null, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
+    // Upsert: se ja existe certidao do mesmo orgao para a mesma pessoa/dossie, atualiza
+    const existing = await queryRawOne(
+      'SELECT id FROM certificates WHERE person_id = $1 AND organ = $2 AND name = $3 AND ($4::uuid IS NULL OR dossier_id = $4)',
+      personId, resultado.orgao, certName, dossierId || null
     );
+    if (existing) {
+      await executeRaw(
+        'UPDATE certificates SET status = $1, protocol = $2, obtained_at = $3, document_path = $4, updated_at = $5 WHERE id = $6',
+        'Obtida', resultado.protocolo || null, now, docPath, now, (existing as any).id
+      );
+    } else {
+      await executeRaw(
+        'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+        certId, dossierId || null, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
+      );
+    }
 
     if (dossierId) {
       await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, dossierId);
@@ -80,7 +107,7 @@ async function persistirResultado(
   }
 }
 
-const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '90000', 10);
+const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '70000', 10);
 
 const JOBS = new Map<string, ConsultaJob>();
 

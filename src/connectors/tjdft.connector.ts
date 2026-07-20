@@ -5,9 +5,14 @@ import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPor
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const LOG = (msg: string) => console.log(`[TJDFT] ${msg}`);
 const DEBUG = process.env.DEBUG;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DOWNLOAD_DIR = path.join(__dirname, '..', '..', 'tmp', 'downloads');
 
 function normalizar(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -128,12 +133,15 @@ export class TJDFTConnector implements IConnector {
         || await preencherInputPorLabel(page, 'Primeiro Nome', primeiroNome);
       LOG(`CPF: ${cpfOk}, Nome: ${nomeOk}`);
 
-      // radio "Especial" (Quasar q-radio - clicar e disparar change)
+      // radio "Cível e Criminal" (prioridade sobre "Cível" sozinho)
       const radioOk = await page.evaluate(() => {
         const labels = Array.from(document.querySelectorAll('.q-radio__label, .q-radio label, label'));
-        for (const label of labels) {
+
+        // Pass 1: especial (cobre civel e criminal)
+        for (let i = 0; i < labels.length; i++) {
+          const label = labels[i];
           const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          if (txt.includes('especial') || txt.includes('civel') || txt.includes('cível')) {
+          if (txt.includes('especial')) {
             const radio = label.closest('.q-radio, .q-option-group, div') || label.parentElement;
             if (radio) {
               const clickable = radio.querySelector('.q-radio__inner, .q-radio__bg, input[type="radio"]') || radio;
@@ -148,6 +156,27 @@ export class TJDFTConnector implements IConnector {
             }
           }
         }
+
+        // Pass 2: civel / especial
+        for (let i = 0; i < labels.length; i++) {
+          const label = labels[i];
+          const txt = (label.textContent?.trim() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          if (txt.includes('civel') || txt.includes('especial')) {
+            const radio = label.closest('.q-radio, .q-option-group, div') || label.parentElement;
+            if (radio) {
+              const clickable = radio.querySelector('.q-radio__inner, .q-radio__bg, input[type="radio"]') || radio;
+              (clickable as HTMLElement).click();
+              const inp = radio.querySelector('input[type="radio"]');
+              if (inp) {
+                (inp as HTMLInputElement).checked = true;
+                inp.dispatchEvent(new Event('change', { bubbles: true }));
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+              return txt;
+            }
+          }
+        }
+
         return null;
       });
       LOG(`Radio: ${radioOk || 'nao encontrado'}`);
@@ -228,6 +257,13 @@ export class TJDFTConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
       }
 
+      // Aguarda navegação ou resultado após submit
+      try {
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
+        await wait(2000);
+        LOG(`URL apos submit: ${page.url()}`);
+      } catch {}
+
       // Aguarda resultado ou mensagem de erro
       try {
         await page.waitForFunction(
@@ -286,12 +322,21 @@ export class TJDFTConnector implements IConnector {
       }
 
       const protocolo = `TJDFT-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page);
+
+      let pdfBuffer: Buffer | Uint8Array | null = null;
+      try {
+        pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+        if (pdfBuffer && pdfBuffer.length > 1000) {
+          LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
+        }
+      } catch (e: any) {
+        LOG(`PDF capture falhou: ${e.message}`);
+      }
+
       if (!pdfBuffer || pdfBuffer.length < 1000) {
-        await page.close();
+        await page.close().catch(() => {});
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
       }
-      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
 
       await this.#throttle();
       await page.close();

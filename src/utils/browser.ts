@@ -49,6 +49,9 @@ export async function getBrowser(): Promise<Browser> {
     const isLinux = process.platform === 'linux';
     const hasDisplay = !!process.env.DISPLAY;
 
+    const proxy = process.env.PROXY || '';
+    const proxyArgs = proxy ? [`--proxy-server=${proxy}`] : [];
+
     browser = await puppeteerExtra.launch({
       headless,
       args: [
@@ -56,13 +59,18 @@ export async function getBrowser(): Promise<Browser> {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--window-size=1366,900',
+        '--window-size=1920,1080',
         '--no-first-run',
         '--no-default-browser-check',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-web-security',
-        '--disable-features=BlockInsecurePrivateNetworkRequests',
+        '--disable-features=IsolateOrigins,site-per-process,BlockInsecurePrivateNetworkRequests',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--disable-translate',
+        '--disable-default-apps',
+        '--mute-audio',
+        '--js-flags=--max-old-space-size=512',
+        ...proxyArgs,
         ...(isLinux ? ['--disable-software-rasterizer', '--disable-features=VizDisplayCompositor'] : []),
       ],
       ignoreDefaultArgs: ['--enable-automation'],
@@ -74,11 +82,18 @@ export async function getBrowser(): Promise<Browser> {
 async function configurePage(page: Page): Promise<void> {
   page.on('pageerror', (err) => console.log(`[PAGE CRASH] ${String(err)}`));
 
-  await page.setViewport({ width: 1366, height: 768 });
+  // Extra stealth: impede deteccao de bot
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    (navigator as any).languages = ['pt-BR', 'pt', 'en-US', 'en'];
+  });
+
+  await page.setViewport({ width: 1920, height: 900 });
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
   );
-  await page.setBypassCSP(true);
+  await page.setExtraHTTPHeaders({ 'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7' });
+  await page.setBypassCSP(false);
 }
 
 export async function createPage(): Promise<Page> {
