@@ -277,7 +277,8 @@ app.get('/dashboard/usuarios/:id', (_req, res) => {
   if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
 });
 app.get('/dashboard/dossies/:id', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossiers', '_.html'));
+  const dossierFp = path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html');
+  if (fs.existsSync(dossierFp)) res.sendFile(dossierFp); else res.status(404).send('Not found');
 });
 
 app.get('*', (req, res, next) => {
