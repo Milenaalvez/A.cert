@@ -44,6 +44,14 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 
+app.get('/novnc/view', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.sendFile(path.join(__dirname, '..', 'public', 'novnc', 'viewer.html'));
+});
+app.get('/novnc/viewer.html', (req, res) => {
+  res.redirect(302, req.originalUrl.replace('/novnc/viewer.html', '/novnc/view'));
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/people', peopleRoutes);
@@ -151,6 +159,89 @@ app.post('/api/upload/company-logo', async (req, res) => {
   });
 });
 
+// Upload de documentos para dossiês
+const docsDir = path.join(__dirname, '..', 'uploads', 'documents');
+if (!fs.existsSync(docsDir)) { fs.mkdirSync(docsDir, { recursive: true }); }
+
+const docStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, docsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.pdf';
+    cb(null, `doc-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+app.post('/api/dossiers/:id/documents', authMiddleware, async (req, res) => {
+  const fileSize = await getUploadLimitBytes();
+  const upload = multer({
+    storage: docStorage,
+    limits: { fileSize },
+  });
+  upload.single('file')(req as any, res as any, async (err) => {
+    if (err) { res.status(400).json({ error: err.message }); return; }
+    const file = (req as any).file;
+    const { personId, name, description } = (req as any).body;
+    const dossierId = req.params.id;
+
+    if (!file) { res.status(400).json({ error: 'Arquivo é obrigatório' }); return; }
+    if (!name) { res.status(400).json({ error: 'Nome do documento é obrigatório' }); return; }
+
+    try {
+      const userRow = await queryRawOne(`SELECT name FROM users WHERE id = $1`, req.user!.userId);
+      const userName = userRow?.name || req.user!.email;
+
+      const maxOrder = await queryRawOne(
+        `SELECT COALESCE(MAX(sort_order), 0) as max_order FROM dossier_documents WHERE dossier_id = $1`,
+        dossierId
+      );
+      const sortOrder = ((maxOrder as any)?.max_order || 0) + 1;
+
+      const docId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const filePath = `uploads/documents/${file.filename}`;
+      await executeRaw(
+        `INSERT INTO dossier_documents (id, dossier_id, person_id, name, label, file_path, file_type, file_size, description, sort_order, uploaded_by, uploaded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+        docId, dossierId, personId || null, name.trim(), file.originalname, filePath, file.mimetype, file.size,
+        description?.trim() || null, sortOrder, userName
+      );
+      await executeRaw(
+        `INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())`,
+        `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        userName, `Anexou o documento "${name.trim()}"`, name.trim(), dossierId
+      );
+      res.json({
+        id: docId, name: name.trim(), label: file.originalname,
+        file_path: `uploads/documents/${file.filename}`, person_id: personId || null,
+        file_type: file.mimetype, file_size: file.size,
+        description: description?.trim() || null, sort_order: sortOrder,
+        uploaded_by: userName, uploaded_at: new Date().toISOString()
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+});
+
+app.get('/api/documents/:docId/download', async (req, res) => {
+  try {
+    const doc = await queryRawOne(
+      `SELECT file_path, label FROM dossier_documents WHERE id = $1`,
+      req.params.docId
+    );
+    if (!doc || !doc.file_path) { res.status(404).json({ error: 'Documento não encontrado' }); return; }
+
+    const absPath = path.join(__dirname, '..', doc.file_path);
+    if (!fs.existsSync(absPath)) { res.status(404).json({ error: 'Arquivo não encontrado' }); return; }
+
+    const safeName = (doc.label || 'documento').replace(/[^a-zA-Z0-9._-]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.sendFile(absPath);
+  } catch (error) {
+    console.error('[Docs Download] Erro:', error);
+    res.status(500).json({ error: 'Erro ao baixar documento' });
+  }
+});
+
 // Serve frontend (Next.js static export)
 const frontendOut = path.join(__dirname, '..', 'frontend', 'out');
 
@@ -164,7 +255,9 @@ app.use('/uploads', express.static(uploadsPublicPath, { maxAge: '30d' }));
 const srv = express.static(frontendOut);
 function serveHtmlFile(p: string, res: any) {
   const fp = path.join(frontendOut, p + '.html');
-  if (fs.existsSync(fp)) { res.sendFile(fp); return true; }
+  try {
+    if (fs.existsSync(fp)) { res.sendFile(fp); return true; }
+  } catch {}
   return false;
 }
 app.use((req, res, next) => {
@@ -176,16 +269,19 @@ app.use((req, res, next) => {
 
 // Dynamic routes — serve generated placeholder HTML
 app.get('/confirmar-email/:token', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html'));
+  const fp = path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html');
+  if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
 });
 app.get('/dashboard/usuarios/:id', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html'));
+  const fp = path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html');
+  if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
 });
 app.get('/dashboard/dossies/:id', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossiers', '_.html'));
 });
 
-app.get('*', (_req, res) => {
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) return next();
   res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'index.html'));
 });
 
@@ -212,6 +308,7 @@ function checkDocsLoop(jobId: string): void {
 
 app.post('/api/consultar', authMiddleware, (req, res) => {
   try {
+    console.log('[CONSULTAR] body recebido:', JSON.stringify(req.body).slice(0, 300));
     const { nome, cpf, dataNascimento, nomeMae, nomePai, email, personId, dossierId, organs, certKeys } = req.body;
 
     if (!nome || !cpf || !dataNascimento || !nomeMae || !email) {
@@ -378,11 +475,15 @@ app.get('/api/certificates/:id/download', async (req, res) => {
       res.status(404).json({ error: 'Certidão não encontrada ou sem documento' });
       return;
     }
-    if (!fs.existsSync(cert.document_path)) {
+    // document_path já é absoluto (ex: /var/www/acert/data/documents/abc.pdf)
+    const absPath = path.isAbsolute(cert.document_path)
+      ? cert.document_path
+      : path.join(__dirname, '..', cert.document_path);
+    if (!fs.existsSync(absPath)) {
       res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
       return;
     }
-    const pdfBuffer = fs.readFileSync(cert.document_path);
+    const pdfBuffer = fs.readFileSync(absPath);
     const safeName = (cert.name || 'certidao').replace(/[^a-zA-Z0-9]/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
@@ -391,6 +492,70 @@ app.get('/api/certificates/:id/download', async (req, res) => {
     console.error('[CertDownload] Erro:', error);
     res.status(500).json({ error: 'Erro ao baixar certidão' });
   }
+});
+
+// POST /api/certificates/:id/upload — upload manual de PDF para certidão
+const certUploadDir = path.join(__dirname, '..', 'uploads', 'certificates');
+if (!fs.existsSync(certUploadDir)) { fs.mkdirSync(certUploadDir, { recursive: true }); }
+
+const certStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, certUploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.pdf';
+    cb(null, `cert-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+app.post('/api/certificates/:id/upload', authMiddleware, async (req, res) => {
+  const upload = multer({
+    storage: certStorage,
+    limits: { fileSize: await getUploadLimitBytes() },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype === 'application/pdf' || file.originalname.endsWith('.pdf')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Apenas arquivos PDF são aceitos'));
+      }
+    },
+  });
+  upload.single('file')(req as any, res as any, async (err) => {
+    if (err) { res.status(400).json({ error: err.message }); return; }
+    const file = (req as any).file;
+    if (!file) { res.status(400).json({ error: 'Arquivo é obrigatório' }); return; }
+
+    try {
+      const cert = await queryRawOne(
+        'SELECT id, dossier_id, name FROM certificates WHERE id = $1',
+        req.params.id
+      );
+      if (!cert) { res.status(404).json({ error: 'Certidão não encontrada' }); return; }
+
+      const now = new Date().toISOString();
+      const filePath = `uploads/certificates/${file.filename}`;
+      await executeRaw(
+        'UPDATE certificates SET status = $1, document_path = $2, obtained_at = $3, updated_at = $4 WHERE id = $5',
+        'Obtida', filePath, now, now, req.params.id
+      );
+
+      if (cert.dossier_id) {
+        await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, cert.dossier_id);
+        const userRow = await queryRawOne('SELECT name FROM users WHERE id = $1', req.user!.userId);
+        const userName = userRow?.name || req.user!.email;
+        await executeRaw(
+          'INSERT INTO activities (id, user_name, action, reference, dossier_ref, created_at) VALUES ($1, $2, $3, $4, $5, NOW())',
+          `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          userName,
+          `Fez upload manual da certidão ${cert.name}`,
+          cert.name,
+          cert.dossier_id
+        );
+      }
+
+      res.json({ success: true, status: 'Obtida', obtained_at: now, document_path: filePath });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
 
 app.get('/api/dossie/:jobId', async (req, res) => {
@@ -440,13 +605,8 @@ app.get('/api/displays/novnc-url/:displayId', authMiddleware, (req, res) => {
   }
   res.json({
     displayId: info.id,
-    novncUrl: `/novnc/viewer.html?displayId=${info.id}&port=${info.port}`,
+    novncUrl: `/novnc/view?displayId=${info.id}&port=${info.port}`,
   });
-});
-
-// Serve noVNC standalone viewer page
-app.get('/novnc/viewer.html', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'novnc', 'viewer.html'));
 });
 
 const httpServer = http.createServer(app);

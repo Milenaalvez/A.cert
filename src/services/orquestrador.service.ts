@@ -38,9 +38,7 @@ async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Arr
       return null;
     }
 
-    const pasta = dossierId
-      ? path.join(DOCUMENTS_DIR, dossierId)
-      : DOCUMENTS_DIR;
+    const pasta = path.join(DOCUMENTS_DIR, dossierId || '');
     await fs.mkdir(pasta, { recursive: true });
     const nomeArquivo = dossierId
       ? `${orgao.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
@@ -48,7 +46,9 @@ async function salvarDocumento(jobId: string, orgao: string, documento: Uint8Arr
     const caminho = path.join(pasta, nomeArquivo);
     await fs.writeFile(caminho, Buffer.from(documento));
     LOG(`Documento salvo: ${caminho} (${documento.length} bytes)`);
-    return caminho;
+    // Retorna caminho relativo ao projeto (ex: data/documents/{dossierId}/{orgao}.pdf)
+    const relPath = path.relative(path.join(DOCUMENTS_DIR, '..', '..'), caminho);
+    return relPath;
   } catch (err) {
     LOG(`Erro ao salvar documento: ${err}`);
     return null;
