@@ -20,14 +20,7 @@ export default function LoginPage() {
   const [checkingToken, setCheckingToken] = useState(true);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('acert_token') : null;
-    if (token && window.location.pathname === '/login') {
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect');
-      window.location.href = redirect || '/dashboard';
-    } else {
-      setCheckingToken(false);
-    }
+    setCheckingToken(false);
   }, []);
 
   if (transition) {

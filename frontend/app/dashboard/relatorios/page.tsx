@@ -36,7 +36,13 @@ interface ReportData {
 
 const apiBase = "";
 function getInitials(n: string) { return n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(); }
-function diffPct(curr: number, prev: number): string { if (prev === 0) return curr > 0 ? "+100%" : "0%"; const d = Math.round((curr - prev) / prev * 100); return (d >= 0 ? "+" : "") + d + "%"; }
+function diffPct(curr: number, prev: number): string {
+  const c = curr || 0;
+  const p = prev || 0;
+  if (p === 0) return c > 0 ? "+100%" : "0%";
+  const d = Math.round((c - p) / p * 100);
+  return (d >= 0 ? "+" : "") + d + "%";
+}
 
 const STATUS_COLORS: Record<string, string> = {
   "Concluído": "#059669", "Em andamento": "#FF7A00", "Pendente": "#D97706",
@@ -347,12 +353,11 @@ export default function RelatoriosPage() {
                   { p: "Esta semana", v: d.clientGrowth.week, prev: d.clientGrowth.lastWeek },
                   { p: "Este mês", v: d.clientGrowth.month, prev: d.clientGrowth.lastMonth },
                   { p: "Este ano", v: d.clientGrowth.year, prev: 0 },
-                  { p: "Ano anterior", v: 0, prev: 0, ph: true },
                 ].map((r, i) => (
                   <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
                     <td className="py-2.5 pl-2 text-[13px] font-medium text-primary">{r.p}</td>
-                    <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{r.ph ? "—" : r.v}</td>
-                    <td className="py-2.5 text-center">{!r.ph && r.v > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]"><TrendingUp size={12} />{diffPct(r.v, r.prev)}</span> : !r.ph ? <span className="text-[12px] text-muted">—</span> : null}</td>
+                    <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{r.v}</td>
+                    <td className="py-2.5 text-center">{r.v > 0 ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#059669]"><TrendingUp size={12} />{diffPct(r.v, r.prev)}</span> : <span className="text-[12px] text-muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -425,32 +430,6 @@ export default function RelatoriosPage() {
                     </span>
                   </td>
                   <td className="py-2.5 text-[12px] text-muted text-center">{c.avgMinutes > 0 ? `${c.avgMinutes}min` : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Movimentação Imobiliária */}
-        <div style={{ background: "var(--bg-surface)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-light)" }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}><Building2 size={14} strokeWidth={1.5} color="#FF7A00" /> Movimentação Imobiliária</div>
-          <table className="w-full">
-            <thead><tr>{["Tipo de imóvel", "Quantidade", "Dossiês gerados", "Certidões emitidas", "Taxa de conclusão"].map(h => <th key={h} className={`text-[10px] font-semibold text-muted uppercase pb-2 ${h === "Tipo de imóvel" ? "text-left" : "text-center"}`}>{h}</th>)}</tr></thead>
-            <tbody>
-              {d.propertiesByType.map((p, i) => (
-                <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-subtle)" }}>
-                  <td className="py-2.5 pl-2 text-[13px] font-medium text-primary">{p.type}</td>
-                  <td className="py-2.5 text-[13px] font-semibold text-primary text-center">{p.total}</td>
-                  <td className="py-2.5 text-[13px] text-secondary text-center">{p.dossiers_generated || "—"}</td>
-                  <td className="py-2.5 text-[13px] text-secondary text-center">{p.certs_emitted || "—"}</td>
-                  <td className="py-2.5 text-center">
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span className="text-[12px] font-semibold" style={{ color: p.completion_rate >= 70 ? "#059669" : p.completion_rate >= 30 ? "#D97706" : "#DC2626" }}>{p.completion_rate}%</span>
-                      <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border-light)", overflow: "hidden" }}>
-                        <div style={{ height: "100%", borderRadius: 2, background: p.completion_rate >= 70 ? "#059669" : p.completion_rate >= 30 ? "#D97706" : "#DC2626", width: `${Math.min(p.completion_rate, 100)}%` }} />
-                      </div>
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>

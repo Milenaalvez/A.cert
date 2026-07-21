@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Play, Search, LayoutGrid, List, ChevronRight, Rocket, FolderOpen, Users, ScrollText, Building2, FileText, BarChart3, UserCog, Settings, Trash2, BookOpen } from "lucide-react";
 import { categorias, Guia } from "@/data/ajuda";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -35,17 +35,23 @@ const NIVEL: Record<string, { cor: string; label: string }> = {
 export default function AjudaDetailClient() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
-  const [busca, setBusca] = useState("");
+  const searchParams = useSearchParams();
+  const [busca, setBusca] = useState(searchParams.get("busca") || "");
   const [ordem, setOrdem] = useState("recentes");
   const [viewGrid, setViewGrid] = useState(false);
 
-  const categoriasFiltradas = busca.trim()
-    ? categorias.filter(c =>
-        c.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-        c.descricao.toLowerCase().includes(busca.toLowerCase()) ||
-        c.artigos.some(a => a.titulo.toLowerCase().includes(busca.toLowerCase()))
-      )
-    : categorias;
+  const categoriasFiltradas = useMemo(() => {
+    let lista = slug ? categorias.filter(c => c.slug === slug) : categorias;
+    if (busca.trim()) {
+      const q = busca.toLowerCase();
+      lista = lista.filter(c =>
+        c.titulo.toLowerCase().includes(q) ||
+        c.descricao.toLowerCase().includes(q) ||
+        c.artigos.some(a => a.titulo.toLowerCase().includes(q))
+      );
+    }
+    return lista;
+  }, [slug, busca]);
 
   return (
     <DashboardLayout>

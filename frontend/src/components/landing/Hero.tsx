@@ -13,7 +13,7 @@ export default function Hero() {
         paddingBottom: "120px",
         display: "flex",
         alignItems: "center",
-        background: "linear-gradient(180deg, #0D1425 0%, #0F1729 50%, #0D1425 100%)",
+        background: "linear-gradient(180deg, #07101F 0%, #0B1220 50%, #07101F 100%)",
         overflow: "hidden",
       }}
     >

@@ -28,6 +28,7 @@ function CentralAjudaContent() {
   const router = useRouter();
 
   const [showTicketModal, setShowTicketModal] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   return (
     <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
@@ -48,6 +49,9 @@ function CentralAjudaContent() {
           <Search size={18} strokeWidth={1.5} className="text-muted shrink-0" />
           <input
             type="text"
+            value={searchValue}
+            onChange={e => setSearchValue(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && searchValue.trim()) router.push(`/dashboard/ajuda/primeiros-passos?busca=${encodeURIComponent(searchValue.trim())}`); }}
             placeholder="Buscar tópicos, funcionalidades, dúvidas frequentes"
             className="flex-1 h-full bg-transparent text-[14px] text-primary outline-none placeholder:text-muted"
           />
@@ -93,7 +97,7 @@ function CentralAjudaContent() {
             ))}
           </div>
           <button
-            onClick={() => router.push("/dashboard/ajuda/conhecendo-plataforma")}
+            onClick={() => router.push("/dashboard/ajuda/primeiros-passos")}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}
           >
             Acessar documentação <ChevronRight size={14} strokeWidth={2.5} />

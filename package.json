@@ -7,13 +7,15 @@
     "dev": "tsx watch src/server.ts",
     "dev:frontend": "cd frontend && npx next dev --port 3000",
     "dev:all": "concurrently -n backend,frontend -c cyan,magenta \"npm run dev\" \"npm run dev:frontend\"",
-    "build": "npx prisma generate && tsc && cd frontend && rm -rf .next out node_modules && npm install && NEXT_EXPORT=1 npx next build",
+    "build": "npx prisma generate && tsc && cd frontend && rm -rf .next out && NEXT_EXPORT=1 npx next build",
+    "deploy": "bash scripts/deploy.sh",
     "start": "node dist/server.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@novnc/novnc": "^1.5.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@types/archiver": "^8.0.0",

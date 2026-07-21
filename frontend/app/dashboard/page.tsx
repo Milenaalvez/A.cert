@@ -213,8 +213,10 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [dossierPeriod, setDossierPeriod] = useState("");
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [editDossier, setEditDossier] = useState<Dossier | null>(null);
   const [confirmPriority, setConfirmPriority] = useState<Dossier | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "archive" | "trash"; dossier: Dossier } | null>(null);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -233,6 +235,30 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
   const isDark = theme === "dark";
 
   const priorityStar = (p: string) => p === "Preferencial" || p === "Urgente";
+
+  const handleArchive = async (dossier: Dossier) => {
+    const token = localStorage.getItem("acert_token");
+    try {
+      const r = await fetch(`/api/dossiers/${dossier.id}/archive`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) throw new Error();
+      setDossiers((prev) => prev.filter((d) => d.id !== dossier.id));
+    } catch {}
+  };
+
+  const handleDeleteDossier = async (dossier: Dossier) => {
+    const token = localStorage.getItem("acert_token");
+    try {
+      const r = await fetch(`/api/dossiers/${dossier.id}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) throw new Error();
+      setDossiers((prev) => prev.filter((d) => d.id !== dossier.id));
+    } catch {}
+  };
 
   const togglePriority = async (dossier: Dossier) => {
     const newPriority = priorityStar(dossier.priority) ? "Regular" : "Preferencial";
@@ -291,6 +317,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
     const apiStatus = TAB_TO_API_STATUS[dossierActiveTab];
     if (apiStatus) params.set("status", apiStatus);
     if (dossierPeriod) params.set("period", dossierPeriod);
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
     params.set("page", String(dossierPage));
     params.set("limit", dossiersLimit);
     try {
@@ -306,7 +333,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
     } finally {
       setDossiersLoading(false);
     }
-  }, [dossierActiveTab, dossierPage, dossierPeriod]);
+  }, [dossierActiveTab, dossierPage, dossierPeriod, searchQuery]);
 
   useEffect(() => {
     fetchDossiers();
@@ -404,6 +431,8 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                   <Search size={15} strokeWidth={2} className="text-muted shrink-0" />
                   <input
                     type="text"
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setDossierPage(1); }}
                     placeholder="Buscar dossiê, pessoa ou imóvel..."
                     className="flex-1 h-full bg-transparent text-[13px] text-primary outline-none placeholder:text-muted"
                   />
@@ -606,7 +635,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                                     <span>Edição rápida</span>
                                   </button>
                                   <button
-                                    onClick={() => { setOpenMenuId(null); }}
+                                    onClick={() => { router.push(`/dashboard/dossies/${dossier.id}`); setOpenMenuId(null); }}
                                     className="flex items-center gap-3 w-full h-9 text-[13px] text-body hover-bg-subtle transition-colors"
                                     style={{ paddingLeft: "20px", paddingRight: "20px" }}
                                   >
@@ -614,7 +643,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                                     <span>Abrir dossiê</span>
                                   </button>
                                   <button
-                                    onClick={() => { setOpenMenuId(null); }}
+                                    onClick={() => { router.push(`/dashboard/certidoes?dossier=${dossier.id}`); setOpenMenuId(null); }}
                                     className="flex items-center gap-3 w-full h-9 text-[13px] text-body hover-bg-subtle transition-colors"
                                     style={{ paddingLeft: "20px", paddingRight: "20px" }}
                                   >
@@ -631,7 +660,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                                   </button>
                                   <div className="h-px bg-light my-1.5" style={{ marginLeft: "20px", marginRight: "20px" }} />
                                   <button
-                                    onClick={() => { setOpenMenuId(null); }}
+                                    onClick={() => { setOpenMenuId(null); setConfirmAction({ type: "archive", dossier }); }}
                                     className="flex items-center gap-3 w-full h-9 text-[13px] text-[#DC2626] hover:bg-[rgba(220,38,38,0.1)] transition-colors"
                                     style={{ paddingLeft: "20px", paddingRight: "20px" }}
                                   >
@@ -639,7 +668,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                                     <span>Arquivar</span>
                                   </button>
                                   <button
-                                    onClick={() => { setOpenMenuId(null); }}
+                                    onClick={() => { setOpenMenuId(null); setConfirmAction({ type: "trash", dossier }); }}
                                     className="flex items-center gap-3 w-full h-9 text-[13px] text-[#DC2626] hover:bg-[rgba(220,38,38,0.1)] transition-colors"
                                     style={{ paddingLeft: "20px", paddingRight: "20px" }}
                                   >
@@ -737,7 +766,7 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
                           <span className="text-[11px] text-[#DC2626] font-medium">{p.motivo}</span>
                         </div>
                         <span className="text-[12px] text-secondary block mt-0.5">
-                          Há {p.diasSemAtualizar}d sem atualização
+                          {p.diasSemAtualizar > 0 ? `Há ${p.diasSemAtualizar}d sem atualização` : 'Atualizado hoje'}
                         </span>
                       </div>
                       <button
@@ -806,6 +835,24 @@ function DashboardContent({ dossiersLimit, settings }: { dossiersLimit: string; 
         onConfirm={() => { if (confirmPriority) { togglePriority(confirmPriority); setConfirmPriority(null); } }}
         onCancel={() => setConfirmPriority(null)}
         onClose={() => setConfirmPriority(null)}
+      />
+
+      <ConfirmModal
+        open={!!confirmAction}
+        title={confirmAction?.type === "archive" ? "Arquivar dossiê" : "Mover para lixeira"}
+        message={confirmAction ? `Tem certeza que deseja ${confirmAction.type === "archive" ? "arquivar" : "mover para a lixeira"} o dossiê ${confirmAction.dossier.identifier}?` : ""}
+        icon={<AlertTriangle size={24} strokeWidth={2.5} />}
+        confirmLabel={confirmAction?.type === "archive" ? "Sim, arquivar" : "Sim, mover para lixeira"}
+        cancelLabel="Não, voltar"
+        variant="warning"
+        onConfirm={() => {
+          if (!confirmAction) return;
+          if (confirmAction.type === "archive") handleArchive(confirmAction.dossier);
+          else handleDeleteDossier(confirmAction.dossier);
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
+        onClose={() => setConfirmAction(null)}
       />
 
       {showOnboarding && <OnboardingModal onClose={closeOnboarding} />}

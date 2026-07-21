@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ScrollText, Search, User, Building2, X, Check, ChevronDown,
   AlertTriangle, Download, Plus, FileText, ExternalLink, RefreshCw,
@@ -39,7 +40,7 @@ const CERT_CARDS = [
     subs: [{ key: "TRF1_CIVEL", label: "Certidão Cível", desc: "Seção Judiciária do DF — automático" }, { key: "TRF1_CRIMINAL", label: "Certidão Criminal", desc: "TRF 1ª Região 2º Grau — automático" }],
     note: "Aguardar alguns segundos entre a emissão da civil para a criminal." },
   { key: "TRT", label: "TRT 10ª Região", icon: ScrollText, color: "#DC2626", url: "https://www.trt10.jus.br/certidao_online/jsf/publico/certidaoOnline.jsf",
-    subs: [{ key: "TRT", label: "Certidão Trabalhista", desc: "Preenche CPF ou nome automaticamente." }], note: "Captcha será preenchido pelo usuário." },
+    subs: [{ key: "TRT", label: "Certidão Trabalhista", desc: "Preenche CPF ou nome automaticamente." }], note: "Captcha será preenchido pelo usuário. Ao abrir, clique em 'Emissão de Certidão Trabalhista'." },
   { key: "TST", label: "TST", icon: ScrollText, color: "#7C3AED", url: "https://www.tst.jus.br/certidao1",
     subs: [{ key: "TST", label: "Certidão Trabalhista Superior", desc: "Aceita cookies + preenche CPF/CNPJ." }], note: "Captcha será preenchido pelo usuário." },
   { key: "TJDFT", label: "TJDFT", icon: ScrollText, color: "#059669", url: "https://cnc.tjdft.jus.br/solicitacao-externa",
@@ -55,8 +56,10 @@ const CERT_CARDS = [
     subs: [{ key: "ONR", label: "Certidão de Ônus", desc: "Login automático → DF → Cartório → Matrícula → Crédito." }] },
 ];
 
-export default function CertidoesPage() {
+function CertidoesContent() {
   const { t } = useT();
+  const searchParams = useSearchParams();
+  const dossierIdFromUrl = searchParams.get("dossierId") || undefined;
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -223,6 +226,7 @@ export default function CertidoesPage() {
         nomePai: profile.father_name || "",
         email: profile.email || "email@nao.informado",
         personId: profile.id,
+        dossierId: dossierIdFromUrl || profile.dossierId || null,
         organs,
         certKeys: selectedCerts,
       };
@@ -272,6 +276,21 @@ export default function CertidoesPage() {
             jobStatus: data,
           };
           setProfiles(updated);
+
+          // Recarrega certidoes do banco (as novas foram persistidas)
+          if (selectedEntity?.id) {
+            fetch(`${apiBase}/api/people/${selectedEntity.id}/detail`, { headers: authHeaders })
+              .then(r => r.json())
+              .then(detail => {
+                if (detail.person) {
+                  const refreshed = loadProfileCertificates({
+                    dossiers: detail.dossiers || [],
+                  });
+                  setEntityCertificates(refreshed);
+                }
+              }).catch(() => {});
+          }
+
           const nextIdx = activeProfileIdx + 1;
           const hasNext = nextIdx < updated.length;
           const pendingNext = hasNext && updated[nextIdx].status === "pending";
@@ -357,6 +376,30 @@ export default function CertidoesPage() {
   const allProfilesDone = profiles.length > 0 && profiles.every((p: any) => p.status === "completed");
   const hasMoreProfiles = activeProfileIdx < profiles.length - 1;
   const certCount = entityCertificates.length + (jobStatus?.resultados?.filter((r: any) => r.status === "success").length || 0);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  async function downloadCert(certId: string, certName: string) {
+    setDownloadError(null);
+    try {
+      const res = await fetch(`${apiBase}/api/certificates/${certId}/download`, { headers: authHeaders });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setDownloadError(errData.error || `Erro ${res.status} ao baixar certidão`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${certName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setDownloadError('Erro de conexão ao baixar certidão');
+    }
+  }
 
   const handleCreateJointDossier = async () => {
     setMergingDossiers(true);
@@ -635,15 +678,21 @@ export default function CertidoesPage() {
             </div>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{certCount} documento{certCount !== 1 ? "s" : ""}</span>
           </div>
+          {downloadError && (
+            <div style={{ marginBottom: 12, padding: "8px 14px", borderRadius: 6, background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", fontSize: 12, color: "#DC2626", fontWeight: 500 }}>
+              {downloadError}
+              <button onClick={() => setDownloadError(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "#DC2626", cursor: "pointer", fontWeight: 700 }}>✕</button>
+            </div>
+          )}
           {certCount === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)", fontSize: 13 }}>Nenhuma certidão encontrada. Selecione os órgãos acima e clique em Emitir.</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr style={{ borderBottom: "1px solid var(--border-default)" }}><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}></th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Nome</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Órgão</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Data</th></tr></thead>
+                <thead><tr style={{ borderBottom: "1px solid var(--border-default)" }}><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}></th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Nome</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Órgão</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Data</th><th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}></th></tr></thead>
                 <tbody>
                   {entityCertificates.map((cert, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid var(--border-light)" }}><td style={{ padding: "10px" }}><div style={{ width: 14, height: 14, borderRadius: 3, border: "1px solid var(--border-default)", background: "var(--bg-subtle)" }}></div></td><td style={{ padding: "10px", fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{cert.name}</td><td style={{ padding: "10px", fontSize: 11, color: "var(--text-muted)" }}>{cert.organ || "—"}</td><td style={{ padding: "10px" }}><span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: cert.status === "Obtida" ? "rgba(5,150,105,0.12)" : "rgba(220,38,38,0.1)", color: cert.status === "Obtida" ? "#059669" : "#DC2626" }}>{cert.status === "Obtida" ? "Válida" : "Pendente"}</span></td><td style={{ padding: "10px", fontSize: 11, color: "var(--text-muted)" }}>{cert.obtained_at ? formatDate(cert.obtained_at) : "—"}</td></tr>
+                    <tr key={i} style={{ borderBottom: "1px solid var(--border-light)" }}><td style={{ padding: "10px" }}><div style={{ width: 14, height: 14, borderRadius: 3, border: "1px solid var(--border-default)", background: "var(--bg-subtle)" }}></div></td><td style={{ padding: "10px", fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{cert.name}</td><td style={{ padding: "10px", fontSize: 11, color: "var(--text-muted)" }}>{cert.organ || "—"}</td><td style={{ padding: "10px" }}><span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: cert.status === "Obtida" ? "rgba(5,150,105,0.12)" : "rgba(220,38,38,0.1)", color: cert.status === "Obtida" ? "#059669" : "#DC2626" }}>{cert.status === "Obtida" ? "Válida" : "Pendente"}</span></td><td style={{ padding: "10px", fontSize: 11, color: "var(--text-muted)" }}>{cert.obtained_at ? formatDate(cert.obtained_at) : "—"}</td><td style={{ padding: "10px" }}>{cert.status === "Obtida" && cert.id ? <button onClick={() => downloadCert(cert.id, cert.name)} style={{ background: "none", border: "none", cursor: "pointer", color: "#FF7A00", padding: 2 }} title="Baixar PDF"><Download size={14} strokeWidth={2} /></button> : null}</td></tr>
                   ))}
                   {jobStatus?.resultados?.filter((r: any) => r.status === "success").map((r: any, i: number) => (
                     <tr key={`res-${i}`} style={{ borderBottom: "1px solid var(--border-light)" }}><td style={{ padding: "10px" }}><div style={{ width: 14, height: 14, borderRadius: 3, border: "1px solid var(--border-default)", background: "var(--bg-subtle)" }}></div></td><td style={{ padding: "10px", fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{r.orgao}</td><td style={{ padding: "10px", fontSize: 11, color: "var(--text-muted)" }}>{r.orgao}</td><td style={{ padding: "10px" }}><span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: "rgba(5,150,105,0.12)", color: "#059669" }}>Obtida</span></td><td style={{ padding: "10px", fontSize: 11, color: "var(--text-muted)" }}>{r.dataConsulta ? formatDate(r.dataConsulta) : "—"}</td></tr>
@@ -764,5 +813,13 @@ export default function CertidoesPage() {
         }
       `}</style>
     </DashboardLayout>
+  );
+}
+
+export default function CertidoesPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, color: "#fff" }}>Carregando...</div>}>
+      <CertidoesContent />
+    </Suspense>
   );
 }

@@ -1,9 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, preencherCampoRobusto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
-import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
-import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, preencherCampoRobusto, configurarCapturaDownloadViaCDP } from '../utils/dom-helper.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -54,7 +52,7 @@ async function diagnosticarFormulario(page: import('puppeteer').Page): Promise<v
   LOG(`Textos: ${info.allText.join(' | ')}`);
 }
 
-const CERTIDAO_URL = 'https://ww1.receita.fazenda.df.gov.br/ciadadao/certidoes/Certidao';
+const CERTIDAO_URL = 'https://ww1.receita.fazenda.df.gov.br/cidadao/certidoes/Certidao';
 const FINALIDADE = 'LAVRAR ESCRITURA PÚBLICA';
 
 async function preencherInputPorLabel(page: import('puppeteer').Page, labelTexto: string, valor: string): Promise<boolean> {
@@ -108,7 +106,7 @@ async function selecionarSelectPorTexto(page: import('puppeteer').Page, busca: s
       if (!id.includes(lbl) && !name.includes(lbl)) continue;
       for (let i = 0; i < sel.options.length; i++) {
         const optNorm = sel.options[i].text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        if (optNorm.includes(vn) || vn.includes(optNorm)) {
+        if (optNorm.includes(vn)) {
           sel.selectedIndex = i;
           sel.dispatchEvent(new Event('change', { bubbles: true }));
           return sel.options[i].text;
@@ -145,126 +143,16 @@ async function marcarRadioPorLabel(page: import('puppeteer').Page, labelTexto: s
 export class SefazDFConnector implements IConnector {
   readonly nome = 'SEFAZ-DF';
 
-  readonly #throttle = criarRateLimit(3000);
-
   async consultar(
-    dados: DadosProprietario,
-    jobId?: string,
-    certKeys?: string[],
+    _dados: DadosProprietario,
+    _jobId?: string,
+    _certKeys?: string[],
   ): Promise<ConnectorResult> {
-    const dataConsulta = new Date().toISOString();
-    LOG('Iniciando consulta SEFAZ-DF');
-    const page = await createPage().catch(e => { LOG(`ERRO createPage: ${e.message}`); throw e; });
-
-    try {
-      let pageClosed = false;
-      page.once('close', () => { pageClosed = true; });
-
-      LOG('Navegando para certidao...');
-      await page.goto(CERTIDAO_URL, { waitUntil: 'networkidle2', timeout: 30000 });
-      await wait(3000);
-      await aceitarCookies(page);
-
-      if (DEBUG) await diagnosticarFormulario(page);
-      await injectFillHelper(page);
-
-      const cpfDigits = dados.cpf.replace(/\D/g, '');
-
-      LOG('Preenchendo CPF...');
-      const cpfOk = await preencherInputPorLabel(page, 'CPF', cpfDigits)
-        || await preencherInputPorLabel(page, 'CPF/CNPJ', cpfDigits)
-        || await preencherInputPorLabel(page, 'Documento', cpfDigits)
-        || await preencherInputPorLabel(page, 'Número', cpfDigits)
-        || await preencherInputFallback(page, 'cpf', cpfDigits)
-        || await preencherInputFallback(page, 'ni', cpfDigits)
-        || await preencherInputFallback(page, 'documento', cpfDigits);
-      LOG(`CPF: ${cpfOk || 'nao encontrado'}`);
-
-      // Try to select or fill "finalidade"
-      LOG('Configurando finalidade...');
-      const finalidadeOk = await selecionarSelectPorTexto(page, 'finalidade', FINALIDADE)
-        || await selecionarSelectPorTexto(page, 'motivo', FINALIDADE)
-        || await selecionarSelectPorTexto(page, 'razao', FINALIDADE)
-        || await marcarRadioPorLabel(page, 'LAVRAR')
-        || await marcarRadioPorLabel(page, 'ESCRITURA');
-      LOG(`Finalidade: ${finalidadeOk || 'nao configurada'}`);
-
-      await wait(500);
-
-      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
-      LOG('CDP preparado para captura de download');
-
-      const submitOk = await clicarBotaoPorTexto(page, 'emitir')
-        || await clicarBotaoPorTexto(page, 'consultar')
-        || await clicarBotaoPorTexto(page, 'gerar')
-        || await clicarBotaoPorTexto(page, 'solicitar')
-        || await clicarBotaoPorTexto(page, 'enviar')
-        || await clicarBotaoPorTexto(page, 'ok')
-        || await clicarBotaoPorTexto(page, 'certidão')
-        || await clicarBotaoPorTexto(page, 'certidao')
-        || await clicarBotaoPorTexto(page, 'prosseguir');
-      LOG(`Submit: ${submitOk}`);
-
-      if (!submitOk) {
-        await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'Nenhum botao de submit encontrado' };
-      }
-
-      await wait(2000);
-
-      const captchaType = await detectarCaptcha(page);
-      LOG(`CAPTCHA: ${captchaType}`);
-
-      if (captchaType) {
-        await focusPageForCaptcha(page, captchaType);
-        LOG('CAPTCHA detectado - enviando para resolucao remota...');
-        const captchaOk = await esperarCaptchaInterativo(page, captchaType);
-        if (!captchaOk) {
-          LOG('CAPTCHA nao resolvido no tempo limite');
-          await page.close();
-          return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] CAPTCHA nao resolvido no tempo limite` };
-        }
-        LOG('CAPTCHA resolvido, continuando...');
-        await wait(3000);
-      }
-
-      if (pageClosed) throw new Error('Pagina fechada');
-
-      // Check for error messages after submit
-      const erroMsg = await page.evaluate(() => {
-        const errs = document.querySelectorAll('.error, .alert, .msg-erro, [role="alert"], .mensagem, .notificacao, .toast, .erro, .text-danger');
-        for (const e of errs) {
-          const txt = e.textContent?.trim();
-          if (txt && txt.length > 5) return txt;
-        }
-        const body = document.body.textContent?.toLowerCase() || '';
-        if (body.includes('cpf inválido') || body.includes('cpf invalido') || body.includes('não foi possivel') || body.includes('erro')) {
-          return body.slice(0, 300);
-        }
-        return null;
-      });
-      if (erroMsg) {
-        LOG(`Erro detectado: ${erroMsg.slice(0, 150)}`);
-        await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] ${erroMsg}` };
-      }
-
-      const protocolo = `SEFAZ-DF-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
-      if (!pdfBuffer || pdfBuffer.length < 1000) {
-        await page.close();
-        return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
-      }
-      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
-
-      await this.#throttle();
-      await page.close();
-      return { status: 'success', orgao: this.nome, dataConsulta, protocolo, documento: pdfBuffer };
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-      LOG(`ERRO: ${msg}`);
-      await page.close().catch(() => {});
-      return { status: 'error', orgao: this.nome, dataConsulta, error: `[SEFAZ-DF] ${msg}` };
-    }
+    return {
+      status: 'error',
+      orgao: this.nome,
+      dataConsulta: new Date().toISOString(),
+      error: 'SEFAZ-DF indisponível: o site utiliza Cloudflare Turnstile que impede a automação. Baixe o PDF manualmente e faça upload.',
+    };
   }
 }

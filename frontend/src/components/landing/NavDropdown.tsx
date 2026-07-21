@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export interface DropdownItem {
-  icon?: React.ElementType;
   label: string;
   desc?: string;
   href: string;
@@ -31,26 +30,19 @@ export default function NavDropdown({ label, items }: Props) {
   };
 
   const hide = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 200);
+    timeoutRef.current = setTimeout(() => setOpen(false), 150);
   };
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={show}
-      onMouseLeave={hide}
-    >
+    <div className="relative" onMouseEnter={show} onMouseLeave={hide}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative flex items-center gap-1 text-[14px] text-[#6B7280] hover:text-[#111827] transition-colors duration-300 font-medium py-1 group"
+        className="relative flex items-center gap-1 text-[14px] text-[#8899B0] hover:text-white transition-colors duration-300 font-medium py-1 group"
       >
         {label}
         <svg
           className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -59,53 +51,65 @@ export default function NavDropdown({ label, items }: Props) {
 
       {open && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 pt-2"
+          className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
           onMouseEnter={show}
           onMouseLeave={hide}
         >
           <div
-            className="rounded-[14px] overflow-hidden"
             style={{
-              background: "#FFFFFF",
-              border: "1px solid rgba(0,0,0,0.06)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)",
+              background: "#0F1729",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 16,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset",
+              padding: 8,
               animation: "dropdownIn 0.2s ease-out",
-              minWidth: items[0]?.desc ? 320 : 220,
+              minWidth: items[0]?.desc ? 280 : 200,
             }}
           >
-            {items.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={i}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-start gap-3 px-4 py-3 hover:bg-[#F8F9FA] transition-colors duration-150 ${
-                    i < items.length - 1 ? "border-b border-gray-50" : ""
-                  }`}
-                  style={{ textDecoration: "none" }}
+            {items.map((item, i) => (
+              <Link
+                key={i}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  textDecoration: "none",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "rgba(255,255,255,0.85)",
+                    lineHeight: 1.4,
+                  }}
                 >
-                  {Icon && (
-                    <div
-                      className="flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,122,0,0.06)" }}
-                    >
-                      <Icon size={16} strokeWidth={1.5} style={{ color: "#FF7A00" }} />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium text-[#111827] leading-tight">
-                      {item.label}
-                    </div>
-                    {item.desc && (
-                      <div className="text-[11px] text-[#9CA3AF] mt-0.5 leading-tight">
-                        {item.desc}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
+                  {item.label}
+                </span>
+                {item.desc && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "#8899B0",
+                      marginTop: 2,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {item.desc}
+                  </span>
+                )}
+              </Link>
+            ))}
           </div>
         </div>
       )}

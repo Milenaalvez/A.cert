@@ -296,6 +296,29 @@ router.get('/:id/detail', async (req, res) => {
       return { ...d, certificates };
     }));
 
+    // Busca certidoes sem dossier (orphaned - emitidas direto da pagina de certidoes)
+    const orphanedCerts = await queryRaw(`
+      SELECT id, name, organ, status, protocol, obtained_at, document_path
+      FROM certificates
+      WHERE person_id = $1 AND (dossier_id IS NULL OR dossier_id = '')
+      ORDER BY created_at ASC
+    `, id);
+
+    if (orphanedCerts.length > 0) {
+      dossiersWithCerts.push({
+        id: '__orphaned__',
+        identifier: 'Certidões isoladas',
+        status: 'Pendente',
+        priority: 'Regular',
+        created_at: orphanedCerts[0].obtained_at || new Date().toISOString(),
+        updated_at: orphanedCerts[0].obtained_at || new Date().toISOString(),
+        property_identifier: null,
+        property_type: null,
+        property_address: null,
+        certificates: orphanedCerts,
+      });
+    }
+
     const totalCerts = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.length, 0);
     const obtidas = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter((c: any) => c.status === 'Obtida').length, 0);
     const pendentes = dossiersWithCerts.reduce((acc, d) => acc + d.certificates.filter((c: any) => c.status === 'Pendente').length, 0);

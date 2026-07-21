@@ -138,6 +138,7 @@ model Dossier {
   participants DossierParticipant[]
   certificates Certificate[]
   activities   Activity[]
+  observations DossierObservation[]
 
   @@map("dossiers")
 }
@@ -422,6 +423,19 @@ model AuditLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@map("audit_log")
+}
+
+model DossierObservation {
+  id        String  @id
+  dossierId String  @map("dossier_id")
+  userId    String  @map("user_id")
+  userName  String  @map("user_name")
+  text      String
+  createdAt String  @default("") @map("created_at")
+
+  dossier Dossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@map("dossier_observations")
 }
 
 model UserSession {

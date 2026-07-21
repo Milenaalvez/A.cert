@@ -89,7 +89,9 @@ export async function enviarEmailConfirmacao(email: string, name: string, token:
   try {
     const transporter = nodemailer.createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.port === 465,
+      requireTLS: process.env.SMTP_TLS === 'true' || smtp.port === 587,
       auth: { user: smtp.user, pass: smtp.pass },
+      tls: { rejectUnauthorized: false },
     });
 
     const info = await transporter.sendMail({
@@ -133,7 +135,9 @@ export async function enviarEmailRedefinirSenha(email: string, name: string, tok
   try {
     const transporter = nodemailer.createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.port === 465,
+      requireTLS: process.env.SMTP_TLS === 'true' || smtp.port === 587,
       auth: { user: smtp.user, pass: smtp.pass },
+      tls: { rejectUnauthorized: false },
     });
 
     const info = await transporter.sendMail({
@@ -173,7 +177,9 @@ export async function enviarEmailBoasVindas(email: string, name: string, tempPas
   try {
     const transporter = nodemailer.createTransport({
       host: smtp.host, port: smtp.port, secure: smtp.port === 465,
+      requireTLS: process.env.SMTP_TLS === 'true' || smtp.port === 587,
       auth: { user: smtp.user, pass: smtp.pass },
+      tls: { rejectUnauthorized: false },
     });
 
     const info = await transporter.sendMail({
