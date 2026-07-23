@@ -23,7 +23,7 @@ interface EnrichedMember {
   department: string | null; departmentId: string | null; position: string | null; positionId: string | null; contractType: string | null
   registrationNumber: string | null; phone: string | null; avatar: string | null; employeeCode: string | null
   weeklyHours: number; workSchedule: string; hireDate: string
-  isActive: boolean; emailVerified: boolean; lastAccessAt: string | null
+  isActive: boolean; emailVerified: boolean; lastAccessAt: string | null; lastLoginAt: string | null
   companyId: string
   todayClockIn: string | null; todayClockOut: string | null
   todayTotalMinutes: number | null; todayStatus: string | null

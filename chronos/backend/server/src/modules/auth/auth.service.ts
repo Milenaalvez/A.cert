@@ -22,6 +22,61 @@ function logActivity(userId: string, action: string, description: string, entity
   }).catch(() => {})
 }
 
+function parseUserAgent(ua: string): { device: string; browser: string; os: string } {
+  let os = ""
+  let device = "Desktop"
+  let browser = ""
+
+  if (ua.includes("Windows NT 10")) os = "Windows 10"
+  else if (ua.includes("Windows NT 11") || ua.includes("Windows NT 10.0.22")) os = "Windows 11"
+  else if (ua.includes("Windows")) os = "Windows"
+  else if (ua.includes("Mac OS X")) os = "macOS"
+  else if (ua.includes("Linux")) os = "Linux"
+  else if (ua.includes("Android")) os = "Android"
+  else if (ua.includes("iPhone")) { os = "iOS"; device = "iPhone" }
+  else if (ua.includes("iPad")) { os = "iPadOS"; device = "iPad" }
+
+  if (ua.includes("Edg/")) browser = "Edge"
+  else if (ua.includes("Chrome/") && !ua.includes("Edg/")) browser = "Chrome"
+  else if (ua.includes("Firefox/")) browser = "Firefox"
+  else if (ua.includes("Safari/") && !ua.includes("Chrome/")) browser = "Safari"
+
+  if (device === "Desktop" && (os.includes("iPhone") || os.includes("Android"))) device = os.includes("iPhone") ? "iPhone" : "Android"
+  if (os.includes("iPad")) device = "iPad"
+
+  return { device, browser, os }
+}
+
+function createLoginLog(userId: string, userAgent?: string, ip?: string): void {
+  const ua = parseUserAgent(userAgent || "")
+  prisma.loginLog.create({
+    data: {
+      userId,
+      ip: ip || null,
+      userAgent: userAgent || null,
+      device: ua.device || null,
+      browser: ua.browser || null,
+      os: ua.os || null,
+      location: null,
+    },
+  }).catch((err) => {
+    console.error('[Auth] Erro ao criar login log:', err?.message)
+  })
+}
+
+async function trackLogin(userId: string, userName: string, userAgent?: string, ip?: string): Promise<void> {
+  const now = new Date()
+  await prisma.user.update({
+    where: { id: userId },
+    data: { lastAccessAt: now, lastLoginAt: now },
+  })
+  createLoginLog(userId, userAgent, ip)
+  logActivity(userId, 'LOGIN', `Login efetuado por ${userName}`, 'User', userId, userId, {
+    loginAt: now.toISOString(),
+    ip: ip || 'desconhecido',
+  })
+}
+
 function generateTokenHex(): string {
   return crypto.randomBytes(32).toString('hex')
 }
@@ -212,9 +267,10 @@ export async function verifyEmail(token: string) {
       emailVerified: true,
       verificationCode: null,
       verificationExpiresAt: null,
-      lastAccessAt: new Date(),
     },
   })
+
+  await trackLogin(user.id, user.name)
 
   logActivity(user.id, 'EMAIL_VERIFIED', `Email ${user.email} verificado com sucesso`, 'User', user.id, user.id)
 
@@ -222,7 +278,7 @@ export async function verifyEmail(token: string) {
   return { token: tok, user: sanitizeUser(user), message: 'Email verificado com sucesso' }
 }
 
-export async function loginUser(login: string, password: string, rememberMe = false) {
+export async function loginUser(login: string, password: string, rememberMe = false, userAgent?: string, ip?: string) {
   const isEmail = login.includes('@')
   let user: any
 
@@ -248,7 +304,7 @@ export async function loginUser(login: string, password: string, rememberMe = fa
 
   migrateUserToSupabase(user.email, password, user.name).catch(() => {})
 
-  await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date() } })
+  await trackLogin(user.id, user.name, userAgent, ip)
   return loginResponse(user, rememberMe)
 }
 
@@ -269,7 +325,7 @@ async function migrateUserToSupabase(email: string, password: string, name: stri
   }
 }
 
-export async function loginWithSupabase(accessToken: string) {
+export async function loginWithSupabase(accessToken: string, userAgent?: string, ip?: string) {
   const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(accessToken)
   if (error || !authUser?.email) {
     throw Object.assign(new Error('Sessão inválida'), { statusCode: 401 })
@@ -318,7 +374,7 @@ export async function loginWithSupabase(accessToken: string) {
     throw Object.assign(new Error('Conta desativada. Entre em contato com o RH.'), { statusCode: 403 })
   }
 
-  await prisma.user.update({ where: { id: user.id }, data: { lastAccessAt: new Date() } })
+  await trackLogin(user.id, user.name, userAgent, ip)
   return loginResponse(user, false)
 }
 
@@ -428,7 +484,7 @@ export async function googleAuth(data: {
   email: string
   name: string
   avatar?: string
-}) {
+}, userAgent?: string, ip?: string) {
   const emailLower = data.email.toLowerCase().trim()
 
   let user = await prisma.user.findUnique({ where: { email: emailLower } })
@@ -437,12 +493,7 @@ export async function googleAuth(data: {
     if (!user.emailVerified) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { emailVerified: true, lastAccessAt: new Date() },
-      })
-    } else {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastAccessAt: new Date() },
+        data: { emailVerified: true },
       })
     }
   } else {
@@ -474,6 +525,7 @@ export async function googleAuth(data: {
     })
   }
 
+  await trackLogin(user.id, user.name, userAgent, ip)
   return loginResponse(user, false)
 }
 

@@ -70,7 +70,7 @@ export async function listTeam(companyId: string, actorId?: string) {
       id: true, name: true, email: true, role: true, department: true,
       position: true, contractType: true, phone: true, avatar: true,
       employeeCode: true, registrationNumber: true, weeklyHours: true, workSchedule: true,
-      hireDate: true, isActive: true, emailVerified: true, lastAccessAt: true,
+      hireDate: true, isActive: true, emailVerified: true, lastAccessAt: true, lastLoginAt: true,
       companyId: true,
     },
   })
@@ -86,7 +86,7 @@ export async function getTeamMember(id: string, companyId: string, actorId?: str
       id: true, name: true, email: true, role: true, department: true,
       position: true, contractType: true, phone: true, cpf: true, avatar: true,
       employeeCode: true, registrationNumber: true, weeklyHours: true, workSchedule: true,
-      hireDate: true, isActive: true, emailVerified: true, lastAccessAt: true,
+      hireDate: true, isActive: true, emailVerified: true, lastAccessAt: true, lastLoginAt: true,
       companyId: true,
       timeRecords: { orderBy: { date: 'desc' }, take: 10 },
     },
@@ -433,7 +433,7 @@ export async function getProfile(userId: string, companyId: string, actorId?: st
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
 
-  const [monthRecords, todayRecord, justifications, logs, userCount] = await Promise.all([
+  const [monthRecords, todayRecord, justifications, logs, loginLogs, userCount] = await Promise.all([
     prisma.timeRecord.findMany({
       where: { userId, date: { gte: monthStart, lte: monthEnd } },
       select: { date: true, clockIn: true, clockOut: true, breakStart: true, breakEnd: true, totalMinutes: true, status: true, overtimeMinutes: true },
@@ -454,6 +454,12 @@ export async function getProfile(userId: string, companyId: string, actorId?: st
         user: { select: { id: true, name: true, avatar: true, role: true } },
       },
     }),
+    prisma.loginLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, ip: true, device: true, browser: true, os: true, location: true, createdAt: true },
+    }),
     prisma.user.count({ where: { companyId, createdAt: { lt: user.createdAt } } }),
   ])
 
@@ -469,7 +475,7 @@ export async function getProfile(userId: string, companyId: string, actorId?: st
   const extraMinutes = monthRecords.reduce((s, r) => s + (r.overtimeMinutes || 0), 0)
 
   const firstAccess = user.createdAt
-  const lastAccess = user.lastAccessAt
+  const lastAccess = user.lastLoginAt || user.lastAccessAt
 
   const todayInfo = todayRecord ? {
     clockIn: todayRecord.clockIn,
@@ -515,6 +521,7 @@ export async function getProfile(userId: string, companyId: string, actorId?: st
     today: todayInfo,
     justifications,
     activityLogs: logs,
+    loginLogs,
     firstAccess,
     lastAccess,
     memberCount: userCount + 1,
@@ -537,7 +544,7 @@ export async function listTeamEnriched(companyId: string, actorId?: string) {
       id: true, name: true, email: true, role: true, department: true,
       position: true, contractType: true, phone: true, avatar: true,
       employeeCode: true, registrationNumber: true, weeklyHours: true, workSchedule: true,
-      hireDate: true, isActive: true, emailVerified: true, lastAccessAt: true,
+      hireDate: true, isActive: true, emailVerified: true, lastAccessAt: true, lastLoginAt: true,
       companyId: true,
     },
   })
@@ -572,7 +579,7 @@ export async function listTeamEnriched(companyId: string, actorId?: string) {
     monthTotals.set(r.userId, current + mins)
   }
 
-  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000)
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
 
   return users.map((u) => {
     const todayRec = todayMap.get(u.id)
@@ -583,10 +590,11 @@ export async function listTeamEnriched(companyId: string, actorId?: string) {
     const expected = Math.round(wd * dailyHours * 60)
     const balance = Math.round((monthTotal - expected) / 60 * 100) / 100
     const pending = pendingJustMap.get(u.id)
-    const isOnline = u.lastAccessAt ? new Date(u.lastAccessAt) >= fiveMinAgo : false
+    const isOnline = u.lastAccessAt ? new Date(u.lastAccessAt) >= tenMinAgo : false
 
     return {
       ...u,
+      lastLoginAt: u.lastLoginAt,
       todayClockIn: todayRec?.clockIn || null,
       todayClockOut: todayRec?.clockOut || null,
       todayTotalMinutes: todayRec?.totalMinutes || null,

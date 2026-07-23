@@ -64,7 +64,9 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
       res.status(400).json({ error: 'Email e senha são obrigatórios' })
       return
     }
-    const result = await authService.loginUser(login, password, !!rememberMe)
+    const userAgent = req.headers['user-agent'] || undefined
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || undefined
+    const result = await authService.loginUser(login, password, !!rememberMe, userAgent, ip)
     res.json(result)
   } catch (err: any) {
     if (err.statusCode) {
@@ -82,7 +84,9 @@ export async function loginSupabase(req: AuthRequest, res: Response, next: NextF
       res.status(400).json({ error: 'Token de acesso é obrigatório' })
       return
     }
-    const result = await authService.loginWithSupabase(access_token)
+    const userAgent = req.headers['user-agent'] || undefined
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || undefined
+    const result = await authService.loginWithSupabase(access_token, userAgent, ip)
     res.json(result)
   } catch (err: any) {
     if (err.statusCode) {
@@ -159,7 +163,9 @@ export async function google(req: AuthRequest, res: Response, next: NextFunction
       res.status(400).json({ error: 'Email e nome são obrigatórios' })
       return
     }
-    const result = await authService.googleAuth({ email, name, avatar })
+    const userAgent = req.headers['user-agent'] || undefined
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || undefined
+    const result = await authService.googleAuth({ email, name, avatar }, userAgent, ip)
     res.json(result)
   } catch (err: any) {
     if (err.statusCode) {

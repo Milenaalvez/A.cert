@@ -217,6 +217,8 @@ model User {
 
   refreshTokenVersion   Int      @default(0)
 
+  lastLoginAt           DateTime?
+
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
 
@@ -232,6 +234,7 @@ model User {
   notifications  Notification[]
   activityLogs        ActivityLog[]       @relation("ActivityLogActor")
   targetedActivityLogs ActivityLog[]       @relation("ActivityLogTarget")
+  loginLogs           LoginLog[]
   documents           Document[]
   uploadedDocuments   Document[]          @relation("DocumentUploader")
   pointEvents         PointEvent[]
@@ -535,4 +538,22 @@ model CompanyConfig {
   company   Company @relation(fields: [companyId], references: [id])
 
   @@map("company_configs")
+}
+
+model LoginLog {
+  id        String   @id @default(cuid())
+  userId    String
+  ip        String?
+  userAgent String?
+  device    String?
+  browser   String?
+  os        String?
+  location  String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_logs")
 }

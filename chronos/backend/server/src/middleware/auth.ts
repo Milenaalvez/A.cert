@@ -62,11 +62,13 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   try {
     const payload = jwt.verify(header.slice(7), env.jwtSecret, { algorithms: ['HS256'] }) as AuthPayload
     req.user = payload
-    // Track last activity (fire-and-forget, never block the request)
+    const now = new Date()
     prisma.user.update({
       where: { id: payload.userId },
-      data: { lastAccessAt: new Date() },
-    }).catch(() => {})
+      data: { lastAccessAt: now },
+    }).catch((err) => {
+      console.error('[Auth] Erro ao atualizar lastAccessAt:', err?.message)
+    })
     next()
   } catch {
     res.status(401).json({ error: 'Token inválido ou expirado' })

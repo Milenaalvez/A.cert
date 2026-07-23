@@ -44,6 +44,11 @@ interface ProfileData {
     user: { id: string; name: string; avatar: string | null; role: string }
   }[]
   firstAccess: string; lastAccess: string | null
+  loginLogs?: {
+    id: string; ip: string | null; device: string | null
+    browser: string | null; os: string | null; location: string | null
+    createdAt: string
+  }[]
   memberCount: number
   _documents?: any[]
 }
@@ -69,6 +74,7 @@ const ACTION_ICONS: Record<string, any> = {
   APPROVE_TIME_RECORD: CheckCircle, REJECT_TIME_RECORD: XCircle,
   DOCUMENT_CREATE: FileText, DOCUMENT_DELETE: Ban,
   ACCOUNT_CREATED: UserPlus, EMAIL_VERIFIED: ShieldCheck, PASSWORD_RESET_REQUESTED: Key,
+  LOGIN_SESSION: LogIn,
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -86,6 +92,7 @@ const ACTION_LABELS: Record<string, string> = {
   DOCUMENT_CREATE: "Documento enviado", DOCUMENT_DELETE: "Documento removido",
   ACCOUNT_CREATED: "Primeiro acesso realizado", EMAIL_VERIFIED: "E-mail verificado",
   PASSWORD_RESET_REQUESTED: "Recuperação de senha solicitada",
+  LOGIN_SESSION: "Sessão de login",
 }
 
 function safeDate(raw: unknown): Date | null {
@@ -433,6 +440,21 @@ export function PerfilPage({ memberId, user, onBack, onNavigate, embedded, onAva
       })
     }
 
+    for (const loginLog of (profile.loginLogs || [])) {
+      const deviceInfo = [loginLog.device, loginLog.browser, loginLog.os].filter(Boolean).join(" · ")
+      const ipInfo = loginLog.ip ? `IP: ${loginLog.ip}` : ""
+      const desc = [deviceInfo, ipInfo].filter(Boolean).join(" | ")
+      items.push({
+        date: loginLog.createdAt,
+        icon: LogIn,
+        label: "Login efetuado",
+        desc,
+        color: "text-[#5B9B7A]",
+        action: "LOGIN_SESSION",
+        ts: loginLog.createdAt,
+      })
+    }
+
     for (const j of profile.justifications) {
       const st = j.status === "APPROVED" ? "aprovada" : j.status === "REJECTED" ? "recusada" : "enviada"
       const Icon = j.status === "APPROVED" ? CheckCircle : j.status === "REJECTED" ? XCircle : Clock
@@ -637,10 +659,17 @@ export function PerfilPage({ memberId, user, onBack, onNavigate, embedded, onAva
 
         <div className="shrink-0 pl-8 ml-8 border-l border-default flex flex-col justify-center gap-4 min-w-[200px]">
           <div className="flex items-center gap-3">
+            <LogIn size={14} className="text-muted shrink-0" />
+            <div>
+              <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Último login</p>
+              <p className="text-[13px] font-medium text-primary">{fmtDateTime(p.lastAccess)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <Clock size={14} className="text-muted shrink-0" />
             <div>
-              <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Último acesso</p>
-              <p className="text-[13px] font-medium text-primary">{fmtDateTime(p.lastAccess)}</p>
+              <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Última atividade</p>
+              <p className="text-[13px] font-medium text-primary">{p.lastAccess ? fmtDateTime(p.lastAccess) : "Nunca"}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
