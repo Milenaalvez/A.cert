@@ -22,10 +22,6 @@ interface UserRow {
 }
 
 async function enrich(u: UserRow): Promise<Record<string, unknown>> {
-  const todayRec = await queryRawOne(`
-    SELECT clock_in, clock_out, break_start, break_end, total_minutes, review_status
-    FROM time_records WHERE user_id = $1 AND date = $2
-  `, u.id, todayStr());
   const monthTotal = await queryRawOne(`
     SELECT COALESCE(SUM(total_minutes), 0) as total
     FROM time_records WHERE user_id = $1 AND date LIKE $2 || '%' AND review_status = 'APPROVED'
@@ -46,6 +42,19 @@ async function enrich(u: UserRow): Promise<Record<string, unknown>> {
   const totalPersons = await queryRawOne(`SELECT COUNT(*) as c FROM persons`);
   const totalProperties = await queryRawOne(`SELECT COUNT(*) as c FROM properties`);
 
+  const lastSessionRow = await queryRawOne(`
+    SELECT device, browser, os, ip_address, location, created_at
+    FROM user_sessions WHERE user_id = $1 AND is_active = 1
+    ORDER BY created_at DESC LIMIT 1
+  `, u.id);
+
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const isOnline = u.last_access_at ? u.last_access_at >= tenMinAgo : false;
+
+  const lastAccessISO = u.last_access_at
+    ? new Date(u.last_access_at).toISOString()
+    : null;
+
   return {
     id: u.id, name: u.name, email: u.email, role: u.role || 'EMPLOYEE',
     department: u.department_name, departmentId: u.department_id,
@@ -54,16 +63,10 @@ async function enrich(u: UserRow): Promise<Record<string, unknown>> {
     phone: u.phone, avatar: u.avatar, employeeCode: u.employee_code,
     weeklyHours: u.weekly_hours || 40, workSchedule: u.work_schedule || 'Seg-Sex',
     hireDate: u.hire_date, isActive: u.is_active === 1,
-    emailVerified: u.email_verified === 1, lastAccessAt: u.last_access_at,
+    emailVerified: u.email_verified === 1, lastAccessAt: lastAccessISO,
     birthDate: u.birth_date, city: u.city, address: u.address, uf: u.uf,
     companyId: u.company_id || 'acert-1',
-    todayClockIn: todayRec?.clock_in || null,
-    todayClockOut: todayRec?.clock_out || null,
-    todayTotalMinutes: todayRec?.total_minutes || null,
-    todayStatus: todayRec ? (todayRec.total_minutes && todayRec.total_minutes > 480 ? 'OVERTIME' : 'NORMAL') : null,
-    monthTotalMinutes: monthTotal?.total || 0,
-    balanceHours: Math.round(balance * 100) / 100,
-    isOnline: !!todayRec,
+    isOnline,
     pendingJustification: pendingJust ? { id: pendingJust.id, reason: pendingJust.reason, startDate: pendingJust.start_date, endDate: pendingJust.end_date } : null,
     stats: {
       dossiersCreated: totalDossiers?.c || 0,
@@ -72,11 +75,11 @@ async function enrich(u: UserRow): Promise<Record<string, unknown>> {
       propertiesLinked: totalProperties?.c || 0,
     },
     lastSession: {
-      date: u.last_access_at || null,
-      ip: '189.xxx.xxx.xx',
-      device: 'Desktop',
-      browser: 'Chrome 126',
-      os: 'Windows 11',
+      date: lastSessionRow?.created_at || u.last_access_at || null,
+      ip: lastSessionRow?.ip_address || '---',
+      device: lastSessionRow?.device || '---',
+      browser: lastSessionRow?.browser || '---',
+      os: lastSessionRow?.os || '---',
     },
   };
 }

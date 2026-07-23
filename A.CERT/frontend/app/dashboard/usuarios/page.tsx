@@ -79,15 +79,16 @@ function getInitials(name: string) {
 }
 
 function timeAgo(dateStr: string | undefined): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "Nunca";
   const now = Date.now();
   const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return "---";
   const diff = Math.floor((now - then) / 1000);
   if (diff < 60) return "Agora há pouco";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min atrás`;
-  if (diff < 86400) return `Hoje, ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diff < 172800) return `Ontem, ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-  return new Date(dateStr).toLocaleDateString("pt-BR");
+  if (diff < 3600) return `Há ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Hoje, ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}`;
+  if (diff < 172800) return `Ontem, ${new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}`;
+  return new Date(dateStr).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 const ACCESS_PROFILE_LABEL: Record<string, string> = {

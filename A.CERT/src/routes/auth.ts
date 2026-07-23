@@ -350,14 +350,14 @@ router.post('/login', async (req, res) => {
       return;
     }
 
-    await executeRaw("UPDATE users SET last_access_at = NOW() WHERE id = $1", user.id);
+    await executeRaw("UPDATE users SET last_access_at = $1 WHERE id = $2", new Date().toISOString(), user.id);
 
     const ua = parseUserAgent(req.headers["user-agent"] || "");
     const ip = getClientIp(req);
     await executeRaw(
       `INSERT INTO user_sessions (id, user_id, device, browser, os, ip_address, location, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW())`,
-      randomUUID(), user.id, ua.device, ua.browser, ua.os, ip, "Brasília / DF"
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)`,
+      randomUUID(), user.id, ua.device, ua.browser, ua.os, ip, "Brasil", new Date().toISOString()
     );
 
     if (user.password_change_required) {
