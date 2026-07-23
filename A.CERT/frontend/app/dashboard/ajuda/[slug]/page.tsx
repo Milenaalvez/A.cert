@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { categorias } from "@/data/ajuda";
 import AjudaDetailClient from "./AjudaDetailClient";
 
@@ -6,5 +7,9 @@ export function generateStaticParams() {
 }
 
 export default function AjudaDetailPage() {
-  return <AjudaDetailClient />;
+  return (
+    <Suspense fallback={<div style={{ padding: 40, color: "#8899B0" }}>Carregando...</div>}>
+      <AjudaDetailClient />
+    </Suspense>
+  );
 }
