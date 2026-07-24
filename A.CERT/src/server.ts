@@ -44,6 +44,14 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 
+app.get('/novnc/view', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.sendFile(path.join(__dirname, '..', 'public', 'novnc', 'viewer.html'));
+});
+app.get('/novnc/viewer.html', (req, res) => {
+  res.redirect(302, req.originalUrl.replace('/novnc/viewer.html', '/novnc/view'));
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/people', peopleRoutes);
@@ -269,10 +277,11 @@ app.get('/dashboard/usuarios/:id', (_req, res) => {
   if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
 });
 app.get('/dashboard/dossies/:id', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossiers', '_.html'));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html'));
 });
 
-app.get('*', (_req, res) => {
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) return next();
   res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'index.html'));
 });
 
@@ -313,7 +322,7 @@ app.post('/api/consultar', authMiddleware, (req, res) => {
       return;
     }
 
-    const job = iniciarJob({ nome, cpf: cpfDigits, dataNascimento, nomeMae, nomePai: nomePai || undefined, email, personId, dossierId, certKeys }, organs);
+    const job = iniciarJob({ nome, cpf: cpfDigits, dataNascimento, nomeMae, nomePai: nomePai || undefined, email, userId: req.user!.userId, personId, dossierId, certKeys }, organs);
     checkDocsLoop(job.id);
     res.json({ jobId: job.id });
   } catch (error) {
@@ -466,7 +475,10 @@ app.get('/api/certificates/:id/download', async (req, res) => {
       res.status(404).json({ error: 'Certidão não encontrada ou sem documento' });
       return;
     }
-    const absPath = path.join(__dirname, '..', cert.document_path);
+    // document_path já é absoluto (ex: /var/www/acert/data/documents/abc.pdf)
+    const absPath = path.isAbsolute(cert.document_path)
+      ? cert.document_path
+      : path.join(__dirname, '..', cert.document_path);
     if (!fs.existsSync(absPath)) {
       res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
       return;
@@ -593,13 +605,8 @@ app.get('/api/displays/novnc-url/:displayId', authMiddleware, (req, res) => {
   }
   res.json({
     displayId: info.id,
-    novncUrl: `/novnc/viewer.html?displayId=${info.id}&port=${info.port}`,
+    novncUrl: `/novnc/view?displayId=${info.id}&port=${info.port}`,
   });
-});
-
-// Serve noVNC standalone viewer page
-app.get('/novnc/viewer.html', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'novnc', 'viewer.html'));
 });
 
 const httpServer = http.createServer(app);
