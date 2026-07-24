@@ -274,6 +274,25 @@ export default function ArtigoDetailClient() {
                   </button>
                 )}
               </div>
+
+              <div className="mt-10 p-8 rounded-[16px] bg-surface border border-default" style={{ background: "linear-gradient(135deg, rgba(255,122,0,0.05) 0%, rgba(255,122,0,0.02) 100%)", border: "1px solid rgba(255,122,0,0.15)" }}>
+                <div className="flex items-start gap-5">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
+                    <MessageSquare size={22} strokeWidth={1.5} color="#FF7A00" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[16px] font-bold text-primary mb-2">Ainda precisa de ajuda?</h3>
+                    <p className="text-[13px] text-secondary leading-relaxed mb-5">Nossa equipe de suporte está pronta para ajudar. Abra um chamado e responderemos o mais rápido possível.</p>
+                    <button
+                      onClick={() => setShowTicket(true)}
+                      className="inline-flex items-center justify-center gap-2 h-11 px-6 text-[13px] font-semibold bg-[#FF7A00] text-white hover:bg-[#E06900] rounded-lg cursor-pointer transition-all duration-150 border-0"
+                    >
+                      <MessageSquare size={15} strokeWidth={2} />
+                      Abrir chamado de suporte
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
