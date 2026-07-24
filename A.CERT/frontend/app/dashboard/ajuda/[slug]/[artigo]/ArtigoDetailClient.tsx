@@ -45,7 +45,7 @@ function Ico({ code, size = 32, className = "" }: { code: string; size?: number;
 export default function ArtigoDetailClient() {
   const { slug, artigo: artigoSlug } = useParams<{ slug: string; artigo: string }>();
   const router = useRouter();
-  const key = `${slug}/${artigoSlug}`;
+  const key = artigoSlug || "";
   const artigo = artigosDetalhes[key];
   const categoria = categorias.find(c => c.slug === slug);
 
