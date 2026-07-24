@@ -135,7 +135,7 @@ function CentralAjudaContent() {
             ))}
           </div>
           <button
-            onClick={() => iniciarTour(router)}
+            onClick={() => iniciarTour()}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 24 }}
           >
             Iniciar tour guiado <ChevronRight size={14} strokeWidth={2.5} />
