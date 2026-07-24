@@ -28,69 +28,6 @@
     #screen { width: 100%; height: 100%; display: block; }
     #noVNC_status { display: none; }
   </style>
-  <script type="module">
-    import { RFB } from 'https://unpkg.com/@novnc/novnc@1.5.0/lib/rfb.js';
-
-    const params = new URLSearchParams(window.location.search);
-    const displayId = params.get('displayId') || '';
-    const vncPort = params.get('port') || '5901';
-
-    const overlay = document.getElementById('status-overlay');
-    const label = overlay.querySelector('.label');
-    const errorEl = overlay.querySelector('.error');
-    const btn = overlay.querySelector('.btn-retry');
-
-    function showStatus(msg, isError = false, canRetry = false) {
-      overlay.style.display = 'flex';
-      label.textContent = msg;
-      errorEl.textContent = '';
-      btn.style.display = canRetry ? 'block' : 'none';
-      if (isError) {
-        overlay.querySelector('.spinner').style.display = 'none';
-      } else {
-        overlay.querySelector('.spinner').style.display = 'block';
-      }
-    }
-
-    function connect() {
-      if (!displayId) {
-        showStatus('Display ID não especificado', true, false);
-        return;
-      }
-
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/display/${displayId}`;
-
-      showStatus(`Conectando ao display remoto...`);
-
-      try {
-        const rfb = new RFB(document.getElementById('screen'), wsUrl, {
-          credentials: { password: '' },
-          wsProtocols: ['binary'],
-        });
-
-        rfb.viewportDrag = true;
-        rfb.resizeSession = true;
-        rfb.scaleViewport = true;
-
-        rfb.addEventListener('connect', () => {
-          overlay.style.display = 'none';
-        });
-
-        rfb.addEventListener('disconnect', (e) => {
-          const reason = e.detail.clean ? 'Conexão encerrada' : `Erro: ${e.detail.reason || 'conexão perdida'}`;
-          showStatus(reason, !e.detail.clean, true);
-        });
-
-        rfb.addEventListener('credentialsrequired', () => {});
-      } catch (err) {
-        showStatus(`Erro ao conectar: ${err.message}`, true, true);
-      }
-    }
-
-    btn.addEventListener('click', connect);
-    connect();
-  </script>
 </head>
 <body>
   <div id="status-overlay">
@@ -101,5 +38,66 @@
   </div>
   <div id="screen"></div>
   <div id="noVNC_status"></div>
+  <script src="/novnc/rfb-bundle.js"></script>
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var displayId = params.get('displayId') || '';
+      var vncPort = params.get('port') || '5901';
+      var autoConnect = params.get('autoconnect') === '1';
+
+      var overlay = document.getElementById('status-overlay');
+      var label = overlay.querySelector('.label');
+      var errorEl = overlay.querySelector('.error');
+      var btn = overlay.querySelector('.btn-retry');
+
+      function showStatus(msg, isError, canRetry) {
+        overlay.style.display = 'flex';
+        label.textContent = msg;
+        errorEl.textContent = '';
+        btn.style.display = canRetry ? 'block' : 'none';
+        overlay.querySelector('.spinner').style.display = isError ? 'none' : 'block';
+      }
+
+      function connect() {
+        if (!displayId) {
+          showStatus('Display ID n\u00e3o especificado', true, false);
+          return;
+        }
+
+        var wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var wsUrl = wsProtocol + '//' + window.location.host + '/ws/display/' + displayId;
+
+        showStatus('Conectando ao display remoto...');
+
+        try {
+          var rfb = new RFB(document.getElementById('screen'), wsUrl, {
+            credentials: { password: '' },
+            wsProtocols: ['binary'],
+          });
+
+          rfb.viewportDrag = true;
+          rfb.resizeSession = true;
+          rfb.scaleViewport = true;
+
+          rfb.addEventListener('connect', function() {
+            overlay.style.display = 'none';
+          });
+
+          rfb.addEventListener('disconnect', function(e) {
+            var reason = e.detail.clean ? 'Conex\u00e3o encerrada' : 'Erro: ' + (e.detail.reason || 'conex\u00e3o perdida');
+            showStatus(reason, !e.detail.clean, true);
+          });
+
+          rfb.addEventListener('credentialsrequired', function() {});
+        } catch (err) {
+          showStatus('Erro ao conectar: ' + err.message, true, true);
+        }
+      }
+
+      btn.addEventListener('click', connect);
+      if (autoConnect) connect();
+    })();
+  </script>
 </body>
 </html>

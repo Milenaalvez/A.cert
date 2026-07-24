@@ -774,6 +774,24 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/:id/archive', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await queryRawOne(`SELECT id, archived_at FROM dossiers WHERE id = $1`, id);
+    if (!existing) {
+      res.status(404).json({ error: 'Dossiê não encontrado' });
+      return;
+    }
+    if (!existing.archived_at) {
+      await executeRaw(`UPDATE dossiers SET archived_at = $1 WHERE id = $2`, new Date().toISOString(), id);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Dossiers Archive] Erro:', error);
+    res.status(500).json({ error: 'Erro ao arquivar dossiê' });
+  }
+});
+
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;

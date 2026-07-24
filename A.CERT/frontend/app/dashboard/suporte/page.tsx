@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search, BookOpen, ChevronRight, Mail, Clock, MessageSquare, Zap, MapPin } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import TicketModal from "@/components/TicketModal";
@@ -28,6 +29,7 @@ function CentralAjudaContent() {
   const router = useRouter();
 
   const [showTicketModal, setShowTicketModal] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   return (
     <div className="flex flex-col px-4 sm:px-8 lg:px-16 pt-6 sm:pt-12 pb-24 w-full" style={{ minHeight: "100vh" }}>
@@ -48,6 +50,9 @@ function CentralAjudaContent() {
           <Search size={18} strokeWidth={1.5} className="text-muted shrink-0" />
           <input
             type="text"
+            value={searchValue}
+            onChange={e => setSearchValue(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && searchValue.trim()) router.push(`/dashboard/ajuda/primeiros-passos?busca=${encodeURIComponent(searchValue.trim())}`); }}
             placeholder="Buscar tópicos, funcionalidades, dúvidas frequentes"
             className="flex-1 h-full bg-transparent text-[14px] text-primary outline-none placeholder:text-muted"
           />
@@ -82,22 +87,22 @@ function CentralAjudaContent() {
               { t: "Configurações", slug: "configuracoes" },
               { t: "Lixeira e recuperação", slug: "lixeira-recuperacao" },
             ].map((item, i) => (
-              <div
+              <Link
                 key={i}
-                onClick={() => router.push(`/dashboard/ajuda/${item.slug}`)}
+                href={`/dashboard/ajuda/${item.slug}`}
                 className="flex items-center gap-2.5 cursor-pointer hover:bg-subtle rounded-[6px] py-1.5 px-1.5 -mx-1.5 transition-colors"
               >
                 <ChevronRight size={14} strokeWidth={2} className="text-muted shrink-0" />
                 <span className="text-[12px] font-medium text-primary">{item.t}</span>
-              </div>
+              </Link>
             ))}
           </div>
-          <button
-            onClick={() => router.push("/dashboard/ajuda/conhecendo-plataforma")}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20 }}
+          <Link
+            href="/dashboard/ajuda/primeiros-passos"
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20, textDecoration: "none" }}
           >
             Acessar documentação <ChevronRight size={14} strokeWidth={2.5} />
-          </button>
+          </Link>
         </div>
 
         {/* Tour Guiado */}
@@ -130,7 +135,7 @@ function CentralAjudaContent() {
             ))}
           </div>
           <button
-            onClick={iniciarTour}
+            onClick={() => iniciarTour(router)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 24 }}
           >
             Iniciar tour guiado <ChevronRight size={14} strokeWidth={2.5} />

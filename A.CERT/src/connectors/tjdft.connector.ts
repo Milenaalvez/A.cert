@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, aceitarCookies, setupDownloadCapture } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
 import { focusPageForCaptcha } from '../services/captcha-solver.service.js';
 import { wait, criarRateLimit } from '../utils/retry-manager.service.js';
@@ -228,6 +228,10 @@ export class TJDFTConnector implements IConnector {
 
       await wait(1000);
 
+      // Configura captura ANTES do submit que dispara o download
+      LOG('Configurando captura de download...');
+      const tjdftCapture = setupDownloadCapture(page, DOWNLOAD_DIR);
+
       // STEP 2 submit - procura botoes Quasar q-btn com texto de submit
       const btnClicado = await page.evaluate(() => {
         const botoes = Array.from(document.querySelectorAll('button.q-btn, button, .q-btn'));
@@ -321,85 +325,37 @@ export class TJDFTConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: `[TJDFT] ${erroMsg}` };
       }
 
-      await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
-      LOG('CDP preparado para captura de download');
-
-      // Aguarda mais tempo para o download iniciar
-      await wait(3000);
-
       const protocolo = `TJDFT-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
 
       let pdfBuffer: Buffer | Uint8Array | null = null;
 
-      // Tenta capturar download via CDP
-      try {
-        pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
-        if (pdfBuffer && pdfBuffer.length > 1000) {
-          LOG(`PDF via CDP/download (${pdfBuffer.length} bytes)`);
+      // Aguarda captura (setupDownloadCapture ja rodando desde antes do submit)
+      LOG('Aguardando captura de download...');
+      const capturado = await Promise.race([
+        tjdftCapture.promise,
+        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+      ]);
+      if (capturado && capturado.length > 500) {
+        pdfBuffer = capturado;
+        LOG(`PDF capturado via setupDownloadCapture (${pdfBuffer.length} bytes)`);
+      }
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        try {
+          pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+          if (pdfBuffer && pdfBuffer.length > 1000) {
+            LOG(`PDF via tentarBaixarPDF (${pdfBuffer.length} bytes)`);
+          }
+        } catch (e: any) {
+          LOG(`tentarBaixarPDF falhou: ${e.message}`);
         }
-      } catch (e: any) {
-        LOG(`CDP falhou: ${e.message}`);
       }
-
-      // Fallback 1: procura botao de download na pagina e clica (MouseEvent real)
-      if (!pdfBuffer || pdfBuffer.length < 1000) {
-        try {
-          if (!pageClosed) {
-            await page.evaluate(() => {
-              const links = document.querySelectorAll<HTMLElement>('a[href*="pdf"], a[href*="download"], button');
-              for (const el of links) {
-                const txt = (el.textContent || '').toLowerCase();
-                if (txt.includes('baixar') || txt.includes('download') || txt.includes('pdf') || txt.includes('imprimir') || txt.includes('certidao')) {
-                  el.scrollIntoView({ block: 'center', behavior: 'instant' });
-                  const rect = el.getBoundingClientRect();
-                  const cx = rect.left + rect.width / 2;
-                  const cy = rect.top + rect.height / 2;
-                  for (const evtType of ['mousedown', 'mouseup', 'click']) {
-                    el.dispatchEvent(new MouseEvent(evtType, { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 }));
-                  }
-                  return;
-                }
-              }
-            });
-            await wait(3000);
-            pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
-            if (pdfBuffer && pdfBuffer.length > 1000) {
-              LOG(`PDF via botao download (${pdfBuffer.length} bytes)`);
-            }
-          }
-        } catch {}
-      }
-
-      // Fallback 2: busca links de PDF na pagina
-      if (!pdfBuffer || pdfBuffer.length < 1000) {
-        try {
-          if (!pageClosed) {
-            const pdfLinkBuf = await page.evaluate(async () => {
-              const links = document.querySelectorAll<HTMLAnchorElement>('a[href]');
-              for (const a of links) {
-                const href = a.href || '';
-                if (!href.includes('.pdf')) continue;
-                try {
-                  const r = await fetch(href);
-                  const buf = await r.arrayBuffer();
-                  if (buf.byteLength > 1000) return Array.from(new Uint8Array(buf));
-                } catch {}
-              }
-              return null;
-            });
-            if (pdfLinkBuf && pdfLinkBuf.length > 0) {
-              pdfBuffer = new Uint8Array(pdfLinkBuf);
-              LOG(`PDF via link fetch (${pdfBuffer.length} bytes)`);
-            }
-          }
-        } catch {}
-      }
+      tjdftCapture.cleanup();
 
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close().catch(() => {});
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };
       }
-      LOG(`PDF capturado (${pdfBuffer.length} bytes)`);
 
       await this.#throttle();
       await page.close();

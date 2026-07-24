@@ -38,9 +38,9 @@ After=network.target
 Type=simple
 ExecStartPre=/bin/bash -c 'for d in 99 100 101; do pgrep -f "Xvfb :${d}" && kill $(pgrep -f "Xvfb :${d}") 2>/dev/null; done; sleep 1'
 ExecStart=/bin/bash -c '\
-  /usr/bin/Xvfb :99 -screen 0 1366x768x24 +extension RANDR -ac & \
-  /usr/bin/Xvfb :100 -screen 0 1366x768x24 +extension RANDR -ac & \
-  /usr/bin/Xvfb :101 -screen 0 1366x768x24 +extension RANDR -ac & \
+  /usr/bin/Xvfb :99 -screen 0 1920x1080x24 +extension RANDR -ac & \
+  /usr/bin/Xvfb :100 -screen 0 1920x1080x24 +extension RANDR -ac & \
+  /usr/bin/Xvfb :101 -screen 0 1920x1080x24 +extension RANDR -ac & \
   wait'
 ExecStop=/bin/bash -c 'for d in 99 100 101; do pgrep -f "Xvfb :${d}" && kill $(pgrep -f "Xvfb :${d}") 2>/dev/null; done'
 Restart=always
@@ -94,6 +94,7 @@ ExecStart=/usr/bin/x11vnc \
   -noxdamage \
   -noxfixes \
   -noshm \
+  -xrandr \
   -wait 5 \
   -defer 5
 Restart=always

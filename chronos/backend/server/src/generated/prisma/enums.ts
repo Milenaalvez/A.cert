@@ -112,11 +112,3 @@ export const IntegrationProvider = {
 } as const
 
 export type IntegrationProvider = (typeof IntegrationProvider)[keyof typeof IntegrationProvider]
-
-
-export const CertificateStatus = {
-  PENDING: 'PENDING',
-  OBTAINED: 'OBTAINED'
-} as const
-
-export type CertificateStatus = (typeof CertificateStatus)[keyof typeof CertificateStatus]

@@ -26,38 +26,60 @@ export default function RemoteDisplay({ displayId, displayPort, jobStatus }: Pro
     }
   }, [displayId]);
 
-  if (!displayId) return null;
+  const novncUrl = displayId
+    ? `/novnc/view?displayId=${displayId}&port=${displayPort || 5901}`
+    : null;
 
-  const novncUrl = `/novnc/viewer.html?displayId=${displayId}&port=${displayPort || 5901}`;
+  const isLoading = !displayId && jobStatus === "processing";
 
   return (
     <>
-      <button
-        onClick={() => setShow(!show)}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 14px",
-          background: show ? "rgba(255,122,0,0.12)" : "rgba(255,255,255,0.05)",
-          border: show ? "1px solid rgba(255,122,0,0.35)" : "1px solid rgba(255,255,255,0.12)",
-          borderRadius: "8px",
-          color: show ? "#FF7A00" : "var(--text-secondary)",
-          fontSize: "12px",
-          fontWeight: 600,
-          cursor: "pointer",
-          transition: "all 0.15s ease",
-        }}
-        title={show ? "Fechar display remoto" : "Abrir display remoto"}
-      >
-        <Monitor size={15} />
-        {show ? "Fechar Display" : "Display Remoto"}
-        {jobStatus === "processing" && (
-          <Loader2 size={10} className="animate-spin" style={{ opacity: 0.7 }} />
-        )}
-      </button>
+      {displayId ? (
+        <button
+          onClick={() => setShow(!show)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 14px",
+            background: show ? "rgba(255,122,0,0.12)" : "rgba(255,255,255,0.05)",
+            border: show ? "1px solid rgba(255,122,0,0.35)" : "1px solid rgba(255,255,255,0.12)",
+            borderRadius: "8px",
+            color: show ? "#FF7A00" : "var(--text-secondary)",
+            fontSize: "12px",
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title={show ? "Fechar display remoto" : "Abrir display remoto"}
+        >
+          <Monitor size={15} />
+          {show ? "Fechar Display" : "Display Remoto"}
+          {jobStatus === "processing" && (
+            <Loader2 size={10} className="animate-spin" style={{ opacity: 0.7 }} />
+          )}
+        </button>
+      ) : isLoading ? (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 14px",
+            borderRadius: "8px",
+            background: "rgba(255,122,0,0.08)",
+            border: "1px solid rgba(255,122,0,0.2)",
+            color: "#FF7A00",
+            fontSize: "12px",
+            fontWeight: 600,
+          }}
+        >
+          <Loader2 size={14} className="animate-spin" />
+          Preparando visualização...
+        </div>
+      ) : null}
 
-      {show ? (
+      {show && novncUrl ? (
         <div
           style={{
             position: "fixed",

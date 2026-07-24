@@ -1,0 +1,30 @@
+module.exports = {
+  apps: [
+    {
+      name: "backend",
+      script: "dist/server.js",
+      cwd: "/var/www/acert/A.CERT",
+      env: {
+        NODE_ENV: "production",
+        DISPLAY: ":99",
+        PUPPETEER_HEADLESS: "false",
+        DISPLAY_POOL_SIZE: "3",
+        SMTP_HOST: "smtp.hostinger.com",
+        SMTP_PORT: "587",
+        SMTP_USER: "no-reply@acert.tech",
+        SMTP_PASS: "A.certcert2026",
+        SMTP_FROM_EMAIL: "no-reply@acert.tech",
+        SMTP_FROM_NAME: "A.CERT",
+      },
+      min_uptime: "10s",
+      max_restarts: 10,
+      exp_backoff_restart_delay: 100,
+      watch: false,
+      autorestart: true,
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+      error_file: "pm2-error.log",
+      out_file: "pm2-out.log",
+      merge_logs: true,
+    },
+  ],
+};

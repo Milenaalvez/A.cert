@@ -97,11 +97,6 @@ export type ActivityLog = Prisma.ActivityLogModel
  */
 export type Document = Prisma.DocumentModel
 /**
- * Model CertificateTodo
- * 
- */
-export type CertificateTodo = Prisma.CertificateTodoModel
-/**
  * Model Integration
  * 
  */
@@ -141,3 +136,8 @@ export type MonthClosing = Prisma.MonthClosingModel
  * 
  */
 export type CompanyConfig = Prisma.CompanyConfigModel
+/**
+ * Model LoginLog
+ * 
+ */
+export type LoginLog = Prisma.LoginLogModel

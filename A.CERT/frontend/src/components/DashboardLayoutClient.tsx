@@ -61,7 +61,7 @@ export default function DashboardLayoutClient({
       localStorage.setItem("acert_last_page", pathname);
     }
     if (typeof window !== "undefined" && window.location.search.includes("tour=1")) {
-      const timer = setTimeout(() => iniciarTour(), 600);
+      const timer = setTimeout(() => iniciarTour(router), 600);
       return () => clearTimeout(timer);
     }
   }, [pathname]);

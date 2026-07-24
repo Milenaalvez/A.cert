@@ -62,7 +62,6 @@ export const ModelName = {
   Notification: 'Notification',
   ActivityLog: 'ActivityLog',
   Document: 'Document',
-  CertificateTodo: 'CertificateTodo',
   Integration: 'Integration',
   TermAcceptance: 'TermAcceptance',
   FaceRegistration: 'FaceRegistration',
@@ -70,7 +69,8 @@ export const ModelName = {
   TicketMessage: 'TicketMessage',
   TicketAttachment: 'TicketAttachment',
   MonthClosing: 'MonthClosing',
-  CompanyConfig: 'CompanyConfig'
+  CompanyConfig: 'CompanyConfig',
+  LoginLog: 'LoginLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -188,6 +188,7 @@ export const UserScalarFieldEnum = {
   refreshTokenHash: 'refreshTokenHash',
   refreshTokenExpiresAt: 'refreshTokenExpiresAt',
   refreshTokenVersion: 'refreshTokenVersion',
+  lastLoginAt: 'lastLoginAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   companyId: 'companyId',
@@ -312,20 +313,6 @@ export const DocumentScalarFieldEnum = {
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
 
 
-export const CertificateTodoScalarFieldEnum = {
-  id: 'id',
-  certificateKey: 'certificateKey',
-  status: 'status',
-  notes: 'notes',
-  obtainedAt: 'obtainedAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  userId: 'userId'
-} as const
-
-export type CertificateTodoScalarFieldEnum = (typeof CertificateTodoScalarFieldEnum)[keyof typeof CertificateTodoScalarFieldEnum]
-
-
 export const IntegrationScalarFieldEnum = {
   id: 'id',
   provider: 'provider',
@@ -440,6 +427,21 @@ export const CompanyConfigScalarFieldEnum = {
 } as const
 
 export type CompanyConfigScalarFieldEnum = (typeof CompanyConfigScalarFieldEnum)[keyof typeof CompanyConfigScalarFieldEnum]
+
+
+export const LoginLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ip: 'ip',
+  userAgent: 'userAgent',
+  device: 'device',
+  browser: 'browser',
+  os: 'os',
+  location: 'location',
+  createdAt: 'createdAt'
+} as const
+
+export type LoginLogScalarFieldEnum = (typeof LoginLogScalarFieldEnum)[keyof typeof LoginLogScalarFieldEnum]
 
 
 export const SortOrder = {

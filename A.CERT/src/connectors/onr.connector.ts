@@ -1,7 +1,7 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
 import { createPage } from '../utils/browser.js';
-import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, prepararCapturaPDFViaCDP } from '../utils/dom-helper.js';
+import { injectFillHelper, preencherInputRapido, tentarBaixarPDF, clicarBotaoPorTexto, prepararCapturaPDFViaCDP, setupDownloadCapture } from '../utils/dom-helper.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
@@ -320,11 +320,28 @@ export class ONRConnector implements IConnector {
 
       if (pageClosed) throw new Error('Pagina fechada');
 
+      LOG('Configurando captura de download...');
+      const onrCapture = setupDownloadCapture(page, DOWNLOAD_DIR);
       await prepararCapturaPDFViaCDP(page, DOWNLOAD_DIR);
-      LOG('CDP preparado para captura de download');
 
       const protocolo = `ONR-${new Date().getFullYear()}.${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
-      const pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+      let pdfBuffer: Uint8Array | null = null;
+
+      const capturado = await Promise.race([
+        onrCapture.promise,
+        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+      ]);
+      if (capturado && capturado.length > 500) {
+        pdfBuffer = capturado;
+        LOG(`PDF via setupDownloadCapture (${pdfBuffer.length} bytes)`);
+      }
+
+      if (!pdfBuffer || pdfBuffer.length < 1000) {
+        pdfBuffer = await tentarBaixarPDF(page, DOWNLOAD_DIR);
+        if (pdfBuffer && pdfBuffer.length > 500) LOG(`PDF via tentarBaixarPDF (${pdfBuffer.length} bytes)`);
+      }
+      onrCapture.cleanup();
+
       if (!pdfBuffer || pdfBuffer.length < 1000) {
         await page.close();
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'PDF inválido ou vazio' };

@@ -25,7 +25,7 @@ Sistema completo de controle de ponto eletrônico com verificação facial, geol
 
 ---
 
-### [A.CERT](./A.CERT/) — Central de Certidões (DONNOS Docs)
+### [A.CERT](./A.CERT/) — Central de Certidões 
 
 Plataforma de automação de certidões imobiliárias com Puppeteer, consolidando consultas a 7 órgãos públicos brasileiros em dossiê PDF. Inclui dashboard Next.js e sistema interno de gestão de equipe.
 

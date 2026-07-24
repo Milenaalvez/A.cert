@@ -72,6 +72,7 @@ export type UserMinAggregateOutputType = {
   refreshTokenHash: string | null
   refreshTokenExpiresAt: Date | null
   refreshTokenVersion: number | null
+  lastLoginAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   companyId: string | null
@@ -112,6 +113,7 @@ export type UserMaxAggregateOutputType = {
   refreshTokenHash: string | null
   refreshTokenExpiresAt: Date | null
   refreshTokenVersion: number | null
+  lastLoginAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   companyId: string | null
@@ -153,6 +155,7 @@ export type UserCountAggregateOutputType = {
   refreshTokenHash: number
   refreshTokenExpiresAt: number
   refreshTokenVersion: number
+  lastLoginAt: number
   createdAt: number
   updatedAt: number
   companyId: number
@@ -207,6 +210,7 @@ export type UserMinAggregateInputType = {
   refreshTokenHash?: true
   refreshTokenExpiresAt?: true
   refreshTokenVersion?: true
+  lastLoginAt?: true
   createdAt?: true
   updatedAt?: true
   companyId?: true
@@ -247,6 +251,7 @@ export type UserMaxAggregateInputType = {
   refreshTokenHash?: true
   refreshTokenExpiresAt?: true
   refreshTokenVersion?: true
+  lastLoginAt?: true
   createdAt?: true
   updatedAt?: true
   companyId?: true
@@ -288,6 +293,7 @@ export type UserCountAggregateInputType = {
   refreshTokenHash?: true
   refreshTokenExpiresAt?: true
   refreshTokenVersion?: true
+  lastLoginAt?: true
   createdAt?: true
   updatedAt?: true
   companyId?: true
@@ -416,6 +422,7 @@ export type UserGroupByOutputType = {
   refreshTokenHash: string | null
   refreshTokenExpiresAt: Date | null
   refreshTokenVersion: number
+  lastLoginAt: Date | null
   createdAt: Date
   updatedAt: Date
   companyId: string
@@ -480,6 +487,7 @@ export type UserWhereInput = {
   refreshTokenHash?: Prisma.StringNullableFilter<"User"> | string | null
   refreshTokenExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   refreshTokenVersion?: Prisma.IntFilter<"User"> | number
+  lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   companyId?: Prisma.StringFilter<"User"> | string
@@ -494,13 +502,13 @@ export type UserWhereInput = {
   notifications?: Prisma.NotificationListRelationFilter
   activityLogs?: Prisma.ActivityLogListRelationFilter
   targetedActivityLogs?: Prisma.ActivityLogListRelationFilter
+  loginLogs?: Prisma.LoginLogListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
   uploadedDocuments?: Prisma.DocumentListRelationFilter
   pointEvents?: Prisma.PointEventListRelationFilter
   integrations?: Prisma.IntegrationListRelationFilter
   termAcceptance?: Prisma.XOR<Prisma.TermAcceptanceNullableScalarRelationFilter, Prisma.TermAcceptanceWhereInput> | null
   faceRegistration?: Prisma.XOR<Prisma.FaceRegistrationNullableScalarRelationFilter, Prisma.FaceRegistrationWhereInput> | null
-  certificateTodos?: Prisma.CertificateTodoListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
   assignedTickets?: Prisma.TicketListRelationFilter
   ticketMessages?: Prisma.TicketMessageListRelationFilter
@@ -541,6 +549,7 @@ export type UserOrderByWithRelationInput = {
   refreshTokenHash?: Prisma.SortOrderInput | Prisma.SortOrder
   refreshTokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   refreshTokenVersion?: Prisma.SortOrder
+  lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -555,13 +564,13 @@ export type UserOrderByWithRelationInput = {
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
   activityLogs?: Prisma.ActivityLogOrderByRelationAggregateInput
   targetedActivityLogs?: Prisma.ActivityLogOrderByRelationAggregateInput
+  loginLogs?: Prisma.LoginLogOrderByRelationAggregateInput
   documents?: Prisma.DocumentOrderByRelationAggregateInput
   uploadedDocuments?: Prisma.DocumentOrderByRelationAggregateInput
   pointEvents?: Prisma.PointEventOrderByRelationAggregateInput
   integrations?: Prisma.IntegrationOrderByRelationAggregateInput
   termAcceptance?: Prisma.TermAcceptanceOrderByWithRelationInput
   faceRegistration?: Prisma.FaceRegistrationOrderByWithRelationInput
-  certificateTodos?: Prisma.CertificateTodoOrderByRelationAggregateInput
   tickets?: Prisma.TicketOrderByRelationAggregateInput
   assignedTickets?: Prisma.TicketOrderByRelationAggregateInput
   ticketMessages?: Prisma.TicketMessageOrderByRelationAggregateInput
@@ -605,6 +614,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   refreshTokenHash?: Prisma.StringNullableFilter<"User"> | string | null
   refreshTokenExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   refreshTokenVersion?: Prisma.IntFilter<"User"> | number
+  lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   companyId?: Prisma.StringFilter<"User"> | string
@@ -619,13 +629,13 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   notifications?: Prisma.NotificationListRelationFilter
   activityLogs?: Prisma.ActivityLogListRelationFilter
   targetedActivityLogs?: Prisma.ActivityLogListRelationFilter
+  loginLogs?: Prisma.LoginLogListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
   uploadedDocuments?: Prisma.DocumentListRelationFilter
   pointEvents?: Prisma.PointEventListRelationFilter
   integrations?: Prisma.IntegrationListRelationFilter
   termAcceptance?: Prisma.XOR<Prisma.TermAcceptanceNullableScalarRelationFilter, Prisma.TermAcceptanceWhereInput> | null
   faceRegistration?: Prisma.XOR<Prisma.FaceRegistrationNullableScalarRelationFilter, Prisma.FaceRegistrationWhereInput> | null
-  certificateTodos?: Prisma.CertificateTodoListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
   assignedTickets?: Prisma.TicketListRelationFilter
   ticketMessages?: Prisma.TicketMessageListRelationFilter
@@ -666,6 +676,7 @@ export type UserOrderByWithAggregationInput = {
   refreshTokenHash?: Prisma.SortOrderInput | Prisma.SortOrder
   refreshTokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   refreshTokenVersion?: Prisma.SortOrder
+  lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -715,6 +726,7 @@ export type UserScalarWhereWithAggregatesInput = {
   refreshTokenHash?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   refreshTokenExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   refreshTokenVersion?: Prisma.IntWithAggregatesFilter<"User"> | number
+  lastLoginAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   companyId?: Prisma.StringWithAggregatesFilter<"User"> | string
@@ -754,6 +766,7 @@ export type UserCreateInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -766,13 +779,13 @@ export type UserCreateInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -813,6 +826,7 @@ export type UserUncheckedCreateInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -823,13 +837,13 @@ export type UserUncheckedCreateInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -868,6 +882,7 @@ export type UserUpdateInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -880,13 +895,13 @@ export type UserUpdateInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -927,6 +942,7 @@ export type UserUncheckedUpdateInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -937,13 +953,13 @@ export type UserUncheckedUpdateInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -984,6 +1000,7 @@ export type UserCreateManyInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -1023,6 +1040,7 @@ export type UserUpdateManyMutationInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1062,6 +1080,7 @@ export type UserUncheckedUpdateManyInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1113,6 +1132,7 @@ export type UserCountOrderByAggregateInput = {
   refreshTokenHash?: Prisma.SortOrder
   refreshTokenExpiresAt?: Prisma.SortOrder
   refreshTokenVersion?: Prisma.SortOrder
+  lastLoginAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -1159,6 +1179,7 @@ export type UserMaxOrderByAggregateInput = {
   refreshTokenHash?: Prisma.SortOrder
   refreshTokenExpiresAt?: Prisma.SortOrder
   refreshTokenVersion?: Prisma.SortOrder
+  lastLoginAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -1199,6 +1220,7 @@ export type UserMinOrderByAggregateInput = {
   refreshTokenHash?: Prisma.SortOrder
   refreshTokenExpiresAt?: Prisma.SortOrder
   refreshTokenVersion?: Prisma.SortOrder
+  lastLoginAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -1527,20 +1549,6 @@ export type UserUpdateOneRequiredWithoutUploadedDocumentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutUploadedDocumentsInput, Prisma.UserUpdateWithoutUploadedDocumentsInput>, Prisma.UserUncheckedUpdateWithoutUploadedDocumentsInput>
 }
 
-export type UserCreateNestedOneWithoutCertificateTodosInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutCertificateTodosInput, Prisma.UserUncheckedCreateWithoutCertificateTodosInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCertificateTodosInput
-  connect?: Prisma.UserWhereUniqueInput
-}
-
-export type UserUpdateOneRequiredWithoutCertificateTodosNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutCertificateTodosInput, Prisma.UserUncheckedCreateWithoutCertificateTodosInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCertificateTodosInput
-  upsert?: Prisma.UserUpsertWithoutCertificateTodosInput
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCertificateTodosInput, Prisma.UserUpdateWithoutCertificateTodosInput>, Prisma.UserUncheckedUpdateWithoutCertificateTodosInput>
-}
-
 export type UserCreateNestedOneWithoutIntegrationsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutIntegrationsInput, Prisma.UserUncheckedCreateWithoutIntegrationsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutIntegrationsInput
@@ -1627,6 +1635,20 @@ export type UserUpdateOneRequiredWithoutTicketMessagesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTicketMessagesInput, Prisma.UserUpdateWithoutTicketMessagesInput>, Prisma.UserUncheckedUpdateWithoutTicketMessagesInput>
 }
 
+export type UserCreateNestedOneWithoutLoginLogsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLoginLogsInput, Prisma.UserUncheckedCreateWithoutLoginLogsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLoginLogsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutLoginLogsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLoginLogsInput, Prisma.UserUncheckedCreateWithoutLoginLogsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLoginLogsInput
+  upsert?: Prisma.UserUpsertWithoutLoginLogsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLoginLogsInput, Prisma.UserUpdateWithoutLoginLogsInput>, Prisma.UserUncheckedUpdateWithoutLoginLogsInput>
+}
+
 export type UserCreateWithoutCompanyInput = {
   id?: string
   email: string
@@ -1660,6 +1682,7 @@ export type UserCreateWithoutCompanyInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -1671,13 +1694,13 @@ export type UserCreateWithoutCompanyInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -1718,6 +1741,7 @@ export type UserUncheckedCreateWithoutCompanyInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   branchId?: string | null
@@ -1727,13 +1751,13 @@ export type UserUncheckedCreateWithoutCompanyInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -1803,6 +1827,7 @@ export type UserScalarWhereInput = {
   refreshTokenHash?: Prisma.StringNullableFilter<"User"> | string | null
   refreshTokenExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   refreshTokenVersion?: Prisma.IntFilter<"User"> | number
+  lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   companyId?: Prisma.StringFilter<"User"> | string
@@ -1842,6 +1867,7 @@ export type UserCreateWithoutBranchInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -1853,13 +1879,13 @@ export type UserCreateWithoutBranchInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -1900,6 +1926,7 @@ export type UserUncheckedCreateWithoutBranchInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -1909,13 +1936,13 @@ export type UserUncheckedCreateWithoutBranchInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -1980,6 +2007,7 @@ export type UserCreateWithoutDepartmentRelInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   positionRel?: Prisma.PositionCreateNestedOneWithoutUsersInput
@@ -1991,13 +2019,13 @@ export type UserCreateWithoutDepartmentRelInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -2037,6 +2065,7 @@ export type UserUncheckedCreateWithoutDepartmentRelInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -2047,13 +2076,13 @@ export type UserUncheckedCreateWithoutDepartmentRelInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -2118,6 +2147,7 @@ export type UserCreateWithoutPositionRelInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -2129,13 +2159,13 @@ export type UserCreateWithoutPositionRelInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -2175,6 +2205,7 @@ export type UserUncheckedCreateWithoutPositionRelInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -2185,13 +2216,13 @@ export type UserUncheckedCreateWithoutPositionRelInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -2256,6 +2287,7 @@ export type UserCreateWithoutReviewedRecordsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -2267,13 +2299,13 @@ export type UserCreateWithoutReviewedRecordsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -2314,6 +2346,7 @@ export type UserUncheckedCreateWithoutReviewedRecordsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -2323,13 +2356,13 @@ export type UserUncheckedCreateWithoutReviewedRecordsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -2373,6 +2406,7 @@ export type UserCreateWithoutTimeRecordsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -2384,13 +2418,13 @@ export type UserCreateWithoutTimeRecordsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -2431,6 +2465,7 @@ export type UserUncheckedCreateWithoutTimeRecordsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -2440,13 +2475,13 @@ export type UserUncheckedCreateWithoutTimeRecordsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -2501,6 +2536,7 @@ export type UserUpdateWithoutReviewedRecordsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -2512,13 +2548,13 @@ export type UserUpdateWithoutReviewedRecordsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -2559,6 +2595,7 @@ export type UserUncheckedUpdateWithoutReviewedRecordsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2568,13 +2605,13 @@ export type UserUncheckedUpdateWithoutReviewedRecordsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -2624,6 +2661,7 @@ export type UserUpdateWithoutTimeRecordsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -2635,13 +2673,13 @@ export type UserUpdateWithoutTimeRecordsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -2682,6 +2720,7 @@ export type UserUncheckedUpdateWithoutTimeRecordsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2691,13 +2730,13 @@ export type UserUncheckedUpdateWithoutTimeRecordsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -2736,6 +2775,7 @@ export type UserCreateWithoutPointEventsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -2748,12 +2788,12 @@ export type UserCreateWithoutPointEventsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -2794,6 +2834,7 @@ export type UserUncheckedCreateWithoutPointEventsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -2804,12 +2845,12 @@ export type UserUncheckedCreateWithoutPointEventsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -2864,6 +2905,7 @@ export type UserUpdateWithoutPointEventsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -2876,12 +2918,12 @@ export type UserUpdateWithoutPointEventsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -2922,6 +2964,7 @@ export type UserUncheckedUpdateWithoutPointEventsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2932,12 +2975,12 @@ export type UserUncheckedUpdateWithoutPointEventsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -2976,6 +3019,7 @@ export type UserCreateWithoutJustificationsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -2987,13 +3031,13 @@ export type UserCreateWithoutJustificationsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -3034,6 +3078,7 @@ export type UserUncheckedCreateWithoutJustificationsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -3043,13 +3088,13 @@ export type UserUncheckedCreateWithoutJustificationsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -3104,6 +3149,7 @@ export type UserUpdateWithoutJustificationsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -3115,13 +3161,13 @@ export type UserUpdateWithoutJustificationsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -3162,6 +3208,7 @@ export type UserUncheckedUpdateWithoutJustificationsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3171,13 +3218,13 @@ export type UserUncheckedUpdateWithoutJustificationsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -3216,6 +3263,7 @@ export type UserCreateWithoutNotificationsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -3227,13 +3275,13 @@ export type UserCreateWithoutNotificationsInput = {
   justifications?: Prisma.JustificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -3274,6 +3322,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -3283,13 +3332,13 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   justifications?: Prisma.JustificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -3344,6 +3393,7 @@ export type UserUpdateWithoutNotificationsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -3355,13 +3405,13 @@ export type UserUpdateWithoutNotificationsInput = {
   justifications?: Prisma.JustificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -3402,6 +3452,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3411,13 +3462,13 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   justifications?: Prisma.JustificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -3456,6 +3507,7 @@ export type UserCreateWithoutActivityLogsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -3467,13 +3519,13 @@ export type UserCreateWithoutActivityLogsInput = {
   justifications?: Prisma.JustificationCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -3514,6 +3566,7 @@ export type UserUncheckedCreateWithoutActivityLogsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -3523,13 +3576,13 @@ export type UserUncheckedCreateWithoutActivityLogsInput = {
   justifications?: Prisma.JustificationUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -3573,6 +3626,7 @@ export type UserCreateWithoutTargetedActivityLogsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -3584,13 +3638,13 @@ export type UserCreateWithoutTargetedActivityLogsInput = {
   justifications?: Prisma.JustificationCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -3631,6 +3685,7 @@ export type UserUncheckedCreateWithoutTargetedActivityLogsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -3640,13 +3695,13 @@ export type UserUncheckedCreateWithoutTargetedActivityLogsInput = {
   justifications?: Prisma.JustificationUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -3701,6 +3756,7 @@ export type UserUpdateWithoutActivityLogsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -3712,13 +3768,13 @@ export type UserUpdateWithoutActivityLogsInput = {
   justifications?: Prisma.JustificationUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -3759,6 +3815,7 @@ export type UserUncheckedUpdateWithoutActivityLogsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3768,13 +3825,13 @@ export type UserUncheckedUpdateWithoutActivityLogsInput = {
   justifications?: Prisma.JustificationUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -3824,6 +3881,7 @@ export type UserUpdateWithoutTargetedActivityLogsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -3835,13 +3893,13 @@ export type UserUpdateWithoutTargetedActivityLogsInput = {
   justifications?: Prisma.JustificationUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -3882,6 +3940,7 @@ export type UserUncheckedUpdateWithoutTargetedActivityLogsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3891,13 +3950,13 @@ export type UserUncheckedUpdateWithoutTargetedActivityLogsInput = {
   justifications?: Prisma.JustificationUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -3936,6 +3995,7 @@ export type UserCreateWithoutDocumentsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -3948,12 +4008,12 @@ export type UserCreateWithoutDocumentsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -3994,6 +4054,7 @@ export type UserUncheckedCreateWithoutDocumentsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -4004,12 +4065,12 @@ export type UserUncheckedCreateWithoutDocumentsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -4053,6 +4114,7 @@ export type UserCreateWithoutUploadedDocumentsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -4065,12 +4127,12 @@ export type UserCreateWithoutUploadedDocumentsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -4111,6 +4173,7 @@ export type UserUncheckedCreateWithoutUploadedDocumentsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -4121,12 +4184,12 @@ export type UserUncheckedCreateWithoutUploadedDocumentsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -4181,6 +4244,7 @@ export type UserUpdateWithoutDocumentsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -4193,12 +4257,12 @@ export type UserUpdateWithoutDocumentsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -4239,6 +4303,7 @@ export type UserUncheckedUpdateWithoutDocumentsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4249,12 +4314,12 @@ export type UserUncheckedUpdateWithoutDocumentsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -4304,6 +4369,7 @@ export type UserUpdateWithoutUploadedDocumentsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -4316,12 +4382,12 @@ export type UserUpdateWithoutUploadedDocumentsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -4362,6 +4428,7 @@ export type UserUncheckedUpdateWithoutUploadedDocumentsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4372,248 +4439,8 @@ export type UserUncheckedUpdateWithoutUploadedDocumentsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
-  pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
-  integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
-  termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
-  faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
-  tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
-  assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
-  ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
-}
-
-export type UserCreateWithoutCertificateTodosInput = {
-  id?: string
-  email: string
-  password: string
-  name: string
-  cpf?: string | null
-  phone?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  department?: string | null
-  position?: string | null
-  contractType?: $Enums.ContractType | null
-  employeeCode?: string | null
-  weeklyHours?: number
-  workSchedule?: string
-  hireDate?: Date | string
-  birthDate?: Date | string | null
-  address?: string | null
-  isActive?: boolean
-  lastAccessAt?: Date | string | null
-  registrationNumber?: string | null
-  emailVerified?: boolean
-  verificationCode?: string | null
-  verificationExpiresAt?: Date | string | null
-  reportNotificationDay?: number
-  themeMode?: string
-  themeAccent?: string
-  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  resetPasswordCode?: string | null
-  resetPasswordExpiresAt?: Date | string | null
-  refreshTokenHash?: string | null
-  refreshTokenExpiresAt?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
-  positionRel?: Prisma.PositionCreateNestedOneWithoutUsersInput
-  company: Prisma.CompanyCreateNestedOneWithoutUsersInput
-  branch?: Prisma.BranchCreateNestedOneWithoutUsersInput
-  timeRecords?: Prisma.TimeRecordCreateNestedManyWithoutUserInput
-  reviewedRecords?: Prisma.TimeRecordCreateNestedManyWithoutReviewerInput
-  justifications?: Prisma.JustificationCreateNestedManyWithoutUserInput
-  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
-  activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
-  targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
-  documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
-  uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
-  pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
-  integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
-  termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
-  faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
-  assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
-  ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
-}
-
-export type UserUncheckedCreateWithoutCertificateTodosInput = {
-  id?: string
-  email: string
-  password: string
-  name: string
-  cpf?: string | null
-  phone?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  department?: string | null
-  departmentId?: string | null
-  position?: string | null
-  positionId?: string | null
-  contractType?: $Enums.ContractType | null
-  employeeCode?: string | null
-  weeklyHours?: number
-  workSchedule?: string
-  hireDate?: Date | string
-  birthDate?: Date | string | null
-  address?: string | null
-  isActive?: boolean
-  lastAccessAt?: Date | string | null
-  registrationNumber?: string | null
-  emailVerified?: boolean
-  verificationCode?: string | null
-  verificationExpiresAt?: Date | string | null
-  reportNotificationDay?: number
-  themeMode?: string
-  themeAccent?: string
-  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  resetPasswordCode?: string | null
-  resetPasswordExpiresAt?: Date | string | null
-  refreshTokenHash?: string | null
-  refreshTokenExpiresAt?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  companyId: string
-  branchId?: string | null
-  timeRecords?: Prisma.TimeRecordUncheckedCreateNestedManyWithoutUserInput
-  reviewedRecords?: Prisma.TimeRecordUncheckedCreateNestedManyWithoutReviewerInput
-  justifications?: Prisma.JustificationUncheckedCreateNestedManyWithoutUserInput
-  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
-  activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
-  targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
-  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
-  uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
-  pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
-  integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
-  termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
-  faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
-  assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
-  ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
-}
-
-export type UserCreateOrConnectWithoutCertificateTodosInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutCertificateTodosInput, Prisma.UserUncheckedCreateWithoutCertificateTodosInput>
-}
-
-export type UserUpsertWithoutCertificateTodosInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutCertificateTodosInput, Prisma.UserUncheckedUpdateWithoutCertificateTodosInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutCertificateTodosInput, Prisma.UserUncheckedCreateWithoutCertificateTodosInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutCertificateTodosInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutCertificateTodosInput, Prisma.UserUncheckedUpdateWithoutCertificateTodosInput>
-}
-
-export type UserUpdateWithoutCertificateTodosInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  cpf?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  position?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  contractType?: Prisma.NullableEnumContractTypeFieldUpdateOperationsInput | $Enums.ContractType | null
-  employeeCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  weeklyHours?: Prisma.IntFieldUpdateOperationsInput | number
-  workSchedule?: Prisma.StringFieldUpdateOperationsInput | string
-  hireDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  lastAccessAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  registrationNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  verificationCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  reportNotificationDay?: Prisma.IntFieldUpdateOperationsInput | number
-  themeMode?: Prisma.StringFieldUpdateOperationsInput | string
-  themeAccent?: Prisma.StringFieldUpdateOperationsInput | string
-  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  resetPasswordCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
-  positionRel?: Prisma.PositionUpdateOneWithoutUsersNestedInput
-  company?: Prisma.CompanyUpdateOneRequiredWithoutUsersNestedInput
-  branch?: Prisma.BranchUpdateOneWithoutUsersNestedInput
-  timeRecords?: Prisma.TimeRecordUpdateManyWithoutUserNestedInput
-  reviewedRecords?: Prisma.TimeRecordUpdateManyWithoutReviewerNestedInput
-  justifications?: Prisma.JustificationUpdateManyWithoutUserNestedInput
-  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
-  activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
-  targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
-  documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
-  uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
-  pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
-  integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
-  termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
-  faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
-  assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
-  ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
-}
-
-export type UserUncheckedUpdateWithoutCertificateTodosInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  cpf?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  departmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  position?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  positionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  contractType?: Prisma.NullableEnumContractTypeFieldUpdateOperationsInput | $Enums.ContractType | null
-  employeeCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  weeklyHours?: Prisma.IntFieldUpdateOperationsInput | number
-  workSchedule?: Prisma.StringFieldUpdateOperationsInput | string
-  hireDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  lastAccessAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  registrationNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  verificationCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  reportNotificationDay?: Prisma.IntFieldUpdateOperationsInput | number
-  themeMode?: Prisma.StringFieldUpdateOperationsInput | string
-  themeAccent?: Prisma.StringFieldUpdateOperationsInput | string
-  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  resetPasswordCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  companyId?: Prisma.StringFieldUpdateOperationsInput | string
-  branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  timeRecords?: Prisma.TimeRecordUncheckedUpdateManyWithoutUserNestedInput
-  reviewedRecords?: Prisma.TimeRecordUncheckedUpdateManyWithoutReviewerNestedInput
-  justifications?: Prisma.JustificationUncheckedUpdateManyWithoutUserNestedInput
-  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
-  activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
-  targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
-  documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
-  uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
@@ -4656,6 +4483,7 @@ export type UserCreateWithoutIntegrationsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -4668,12 +4496,12 @@ export type UserCreateWithoutIntegrationsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -4714,6 +4542,7 @@ export type UserUncheckedCreateWithoutIntegrationsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -4724,12 +4553,12 @@ export type UserUncheckedCreateWithoutIntegrationsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -4784,6 +4613,7 @@ export type UserUpdateWithoutIntegrationsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -4796,12 +4626,12 @@ export type UserUpdateWithoutIntegrationsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -4842,6 +4672,7 @@ export type UserUncheckedUpdateWithoutIntegrationsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4852,12 +4683,12 @@ export type UserUncheckedUpdateWithoutIntegrationsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -4896,6 +4727,7 @@ export type UserCreateWithoutTermAcceptanceInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -4908,12 +4740,12 @@ export type UserCreateWithoutTermAcceptanceInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -4954,6 +4786,7 @@ export type UserUncheckedCreateWithoutTermAcceptanceInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -4964,12 +4797,12 @@ export type UserUncheckedCreateWithoutTermAcceptanceInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -5024,6 +4857,7 @@ export type UserUpdateWithoutTermAcceptanceInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -5036,12 +4870,12 @@ export type UserUpdateWithoutTermAcceptanceInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -5082,6 +4916,7 @@ export type UserUncheckedUpdateWithoutTermAcceptanceInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5092,12 +4927,12 @@ export type UserUncheckedUpdateWithoutTermAcceptanceInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -5136,6 +4971,7 @@ export type UserCreateWithoutFaceRegistrationInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -5148,12 +4984,12 @@ export type UserCreateWithoutFaceRegistrationInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
@@ -5194,6 +5030,7 @@ export type UserUncheckedCreateWithoutFaceRegistrationInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -5204,12 +5041,12 @@ export type UserUncheckedCreateWithoutFaceRegistrationInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
@@ -5264,6 +5101,7 @@ export type UserUpdateWithoutFaceRegistrationInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -5276,12 +5114,12 @@ export type UserUpdateWithoutFaceRegistrationInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -5322,6 +5160,7 @@ export type UserUncheckedUpdateWithoutFaceRegistrationInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5332,12 +5171,12 @@ export type UserUncheckedUpdateWithoutFaceRegistrationInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -5376,6 +5215,7 @@ export type UserCreateWithoutTicketsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -5388,13 +5228,13 @@ export type UserCreateWithoutTicketsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
 }
@@ -5434,6 +5274,7 @@ export type UserUncheckedCreateWithoutTicketsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -5444,13 +5285,13 @@ export type UserUncheckedCreateWithoutTicketsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
 }
@@ -5493,6 +5334,7 @@ export type UserCreateWithoutAssignedTicketsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -5505,13 +5347,13 @@ export type UserCreateWithoutAssignedTicketsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
 }
@@ -5551,6 +5393,7 @@ export type UserUncheckedCreateWithoutAssignedTicketsInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -5561,13 +5404,13 @@ export type UserUncheckedCreateWithoutAssignedTicketsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
 }
@@ -5621,6 +5464,7 @@ export type UserUpdateWithoutTicketsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -5633,13 +5477,13 @@ export type UserUpdateWithoutTicketsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
 }
@@ -5679,6 +5523,7 @@ export type UserUncheckedUpdateWithoutTicketsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5689,13 +5534,13 @@ export type UserUncheckedUpdateWithoutTicketsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -5744,6 +5589,7 @@ export type UserUpdateWithoutAssignedTicketsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -5756,13 +5602,13 @@ export type UserUpdateWithoutAssignedTicketsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
 }
@@ -5802,6 +5648,7 @@ export type UserUncheckedUpdateWithoutAssignedTicketsInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5812,13 +5659,13 @@ export type UserUncheckedUpdateWithoutAssignedTicketsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -5856,6 +5703,7 @@ export type UserCreateWithoutTicketMessagesInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
@@ -5868,13 +5716,13 @@ export type UserCreateWithoutTicketMessagesInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
 }
@@ -5914,6 +5762,7 @@ export type UserUncheckedCreateWithoutTicketMessagesInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -5924,13 +5773,13 @@ export type UserUncheckedCreateWithoutTicketMessagesInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  loginLogs?: Prisma.LoginLogUncheckedCreateNestedManyWithoutUserInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
   uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
   pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
   integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedCreateNestedManyWithoutUserInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
   assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
 }
@@ -5984,6 +5833,7 @@ export type UserUpdateWithoutTicketMessagesInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -5996,13 +5846,13 @@ export type UserUpdateWithoutTicketMessagesInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
 }
@@ -6042,6 +5892,251 @@ export type UserUncheckedUpdateWithoutTicketMessagesInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  companyId?: Prisma.StringFieldUpdateOperationsInput | string
+  branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timeRecords?: Prisma.TimeRecordUncheckedUpdateManyWithoutUserNestedInput
+  reviewedRecords?: Prisma.TimeRecordUncheckedUpdateManyWithoutReviewerNestedInput
+  justifications?: Prisma.JustificationUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
+  targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
+  uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
+  pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
+  integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
+  termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
+  faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
+  assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
+}
+
+export type UserCreateWithoutLoginLogsInput = {
+  id?: string
+  email: string
+  password: string
+  name: string
+  cpf?: string | null
+  phone?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  department?: string | null
+  position?: string | null
+  contractType?: $Enums.ContractType | null
+  employeeCode?: string | null
+  weeklyHours?: number
+  workSchedule?: string
+  hireDate?: Date | string
+  birthDate?: Date | string | null
+  address?: string | null
+  isActive?: boolean
+  lastAccessAt?: Date | string | null
+  registrationNumber?: string | null
+  emailVerified?: boolean
+  verificationCode?: string | null
+  verificationExpiresAt?: Date | string | null
+  reportNotificationDay?: number
+  themeMode?: string
+  themeAccent?: string
+  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  resetPasswordCode?: string | null
+  resetPasswordExpiresAt?: Date | string | null
+  refreshTokenHash?: string | null
+  refreshTokenExpiresAt?: Date | string | null
+  refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  departmentRel?: Prisma.DepartmentCreateNestedOneWithoutUsersInput
+  positionRel?: Prisma.PositionCreateNestedOneWithoutUsersInput
+  company: Prisma.CompanyCreateNestedOneWithoutUsersInput
+  branch?: Prisma.BranchCreateNestedOneWithoutUsersInput
+  timeRecords?: Prisma.TimeRecordCreateNestedManyWithoutUserInput
+  reviewedRecords?: Prisma.TimeRecordCreateNestedManyWithoutReviewerInput
+  justifications?: Prisma.JustificationCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
+  targetedActivityLogs?: Prisma.ActivityLogCreateNestedManyWithoutTargetUserInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutUserInput
+  uploadedDocuments?: Prisma.DocumentCreateNestedManyWithoutUploaderInput
+  pointEvents?: Prisma.PointEventCreateNestedManyWithoutUserInput
+  integrations?: Prisma.IntegrationCreateNestedManyWithoutUserInput
+  termAcceptance?: Prisma.TermAcceptanceCreateNestedOneWithoutUserInput
+  faceRegistration?: Prisma.FaceRegistrationCreateNestedOneWithoutUserInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutUserInput
+  assignedTickets?: Prisma.TicketCreateNestedManyWithoutAssigneeInput
+  ticketMessages?: Prisma.TicketMessageCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutLoginLogsInput = {
+  id?: string
+  email: string
+  password: string
+  name: string
+  cpf?: string | null
+  phone?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  department?: string | null
+  departmentId?: string | null
+  position?: string | null
+  positionId?: string | null
+  contractType?: $Enums.ContractType | null
+  employeeCode?: string | null
+  weeklyHours?: number
+  workSchedule?: string
+  hireDate?: Date | string
+  birthDate?: Date | string | null
+  address?: string | null
+  isActive?: boolean
+  lastAccessAt?: Date | string | null
+  registrationNumber?: string | null
+  emailVerified?: boolean
+  verificationCode?: string | null
+  verificationExpiresAt?: Date | string | null
+  reportNotificationDay?: number
+  themeMode?: string
+  themeAccent?: string
+  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  resetPasswordCode?: string | null
+  resetPasswordExpiresAt?: Date | string | null
+  refreshTokenHash?: string | null
+  refreshTokenExpiresAt?: Date | string | null
+  refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  companyId: string
+  branchId?: string | null
+  timeRecords?: Prisma.TimeRecordUncheckedCreateNestedManyWithoutUserInput
+  reviewedRecords?: Prisma.TimeRecordUncheckedCreateNestedManyWithoutReviewerInput
+  justifications?: Prisma.JustificationUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
+  targetedActivityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTargetUserInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutUserInput
+  uploadedDocuments?: Prisma.DocumentUncheckedCreateNestedManyWithoutUploaderInput
+  pointEvents?: Prisma.PointEventUncheckedCreateNestedManyWithoutUserInput
+  integrations?: Prisma.IntegrationUncheckedCreateNestedManyWithoutUserInput
+  termAcceptance?: Prisma.TermAcceptanceUncheckedCreateNestedOneWithoutUserInput
+  faceRegistration?: Prisma.FaceRegistrationUncheckedCreateNestedOneWithoutUserInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutUserInput
+  assignedTickets?: Prisma.TicketUncheckedCreateNestedManyWithoutAssigneeInput
+  ticketMessages?: Prisma.TicketMessageUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutLoginLogsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutLoginLogsInput, Prisma.UserUncheckedCreateWithoutLoginLogsInput>
+}
+
+export type UserUpsertWithoutLoginLogsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutLoginLogsInput, Prisma.UserUncheckedUpdateWithoutLoginLogsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutLoginLogsInput, Prisma.UserUncheckedCreateWithoutLoginLogsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutLoginLogsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutLoginLogsInput, Prisma.UserUncheckedUpdateWithoutLoginLogsInput>
+}
+
+export type UserUpdateWithoutLoginLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  cpf?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  position?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contractType?: Prisma.NullableEnumContractTypeFieldUpdateOperationsInput | $Enums.ContractType | null
+  employeeCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weeklyHours?: Prisma.IntFieldUpdateOperationsInput | number
+  workSchedule?: Prisma.StringFieldUpdateOperationsInput | string
+  hireDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastAccessAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  registrationNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  verificationCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportNotificationDay?: Prisma.IntFieldUpdateOperationsInput | number
+  themeMode?: Prisma.StringFieldUpdateOperationsInput | string
+  themeAccent?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  resetPasswordCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
+  positionRel?: Prisma.PositionUpdateOneWithoutUsersNestedInput
+  company?: Prisma.CompanyUpdateOneRequiredWithoutUsersNestedInput
+  branch?: Prisma.BranchUpdateOneWithoutUsersNestedInput
+  timeRecords?: Prisma.TimeRecordUpdateManyWithoutUserNestedInput
+  reviewedRecords?: Prisma.TimeRecordUpdateManyWithoutReviewerNestedInput
+  justifications?: Prisma.JustificationUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
+  targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
+  uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
+  pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
+  integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
+  termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
+  faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
+  assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
+  ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutLoginLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  cpf?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  departmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  position?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  positionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contractType?: Prisma.NullableEnumContractTypeFieldUpdateOperationsInput | $Enums.ContractType | null
+  employeeCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weeklyHours?: Prisma.IntFieldUpdateOperationsInput | number
+  workSchedule?: Prisma.StringFieldUpdateOperationsInput | string
+  hireDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  birthDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastAccessAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  registrationNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  verificationCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportNotificationDay?: Prisma.IntFieldUpdateOperationsInput | number
+  themeMode?: Prisma.StringFieldUpdateOperationsInput | string
+  themeAccent?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  resetPasswordCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6058,9 +6153,9 @@ export type UserUncheckedUpdateWithoutTicketMessagesInput = {
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
+  ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyCompanyInput = {
@@ -6098,6 +6193,7 @@ export type UserCreateManyCompanyInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   branchId?: string | null
@@ -6136,6 +6232,7 @@ export type UserUpdateWithoutCompanyInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -6147,13 +6244,13 @@ export type UserUpdateWithoutCompanyInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -6194,6 +6291,7 @@ export type UserUncheckedUpdateWithoutCompanyInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6203,13 +6301,13 @@ export type UserUncheckedUpdateWithoutCompanyInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -6250,6 +6348,7 @@ export type UserUncheckedUpdateManyWithoutCompanyInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6290,6 +6389,7 @@ export type UserCreateManyBranchInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -6328,6 +6428,7 @@ export type UserUpdateWithoutBranchInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -6339,13 +6440,13 @@ export type UserUpdateWithoutBranchInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -6386,6 +6487,7 @@ export type UserUncheckedUpdateWithoutBranchInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6395,13 +6497,13 @@ export type UserUncheckedUpdateWithoutBranchInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -6442,6 +6544,7 @@ export type UserUncheckedUpdateManyWithoutBranchInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6481,6 +6584,7 @@ export type UserCreateManyDepartmentRelInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -6520,6 +6624,7 @@ export type UserUpdateWithoutDepartmentRelInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   positionRel?: Prisma.PositionUpdateOneWithoutUsersNestedInput
@@ -6531,13 +6636,13 @@ export type UserUpdateWithoutDepartmentRelInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -6577,6 +6682,7 @@ export type UserUncheckedUpdateWithoutDepartmentRelInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6587,13 +6693,13 @@ export type UserUncheckedUpdateWithoutDepartmentRelInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -6633,6 +6739,7 @@ export type UserUncheckedUpdateManyWithoutDepartmentRelInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6673,6 +6780,7 @@ export type UserCreateManyPositionRelInput = {
   refreshTokenHash?: string | null
   refreshTokenExpiresAt?: Date | string | null
   refreshTokenVersion?: number
+  lastLoginAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   companyId: string
@@ -6712,6 +6820,7 @@ export type UserUpdateWithoutPositionRelInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   departmentRel?: Prisma.DepartmentUpdateOneWithoutUsersNestedInput
@@ -6723,13 +6832,13 @@ export type UserUpdateWithoutPositionRelInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUpdateManyWithoutUserNestedInput
@@ -6769,6 +6878,7 @@ export type UserUncheckedUpdateWithoutPositionRelInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6779,13 +6889,13 @@ export type UserUncheckedUpdateWithoutPositionRelInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   targetedActivityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutTargetUserNestedInput
+  loginLogs?: Prisma.LoginLogUncheckedUpdateManyWithoutUserNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutUserNestedInput
   uploadedDocuments?: Prisma.DocumentUncheckedUpdateManyWithoutUploaderNestedInput
   pointEvents?: Prisma.PointEventUncheckedUpdateManyWithoutUserNestedInput
   integrations?: Prisma.IntegrationUncheckedUpdateManyWithoutUserNestedInput
   termAcceptance?: Prisma.TermAcceptanceUncheckedUpdateOneWithoutUserNestedInput
   faceRegistration?: Prisma.FaceRegistrationUncheckedUpdateOneWithoutUserNestedInput
-  certificateTodos?: Prisma.CertificateTodoUncheckedUpdateManyWithoutUserNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutUserNestedInput
   assignedTickets?: Prisma.TicketUncheckedUpdateManyWithoutAssigneeNestedInput
   ticketMessages?: Prisma.TicketMessageUncheckedUpdateManyWithoutUserNestedInput
@@ -6825,6 +6935,7 @@ export type UserUncheckedUpdateManyWithoutPositionRelInput = {
   refreshTokenHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6843,11 +6954,11 @@ export type UserCountOutputType = {
   notifications: number
   activityLogs: number
   targetedActivityLogs: number
+  loginLogs: number
   documents: number
   uploadedDocuments: number
   pointEvents: number
   integrations: number
-  certificateTodos: number
   tickets: number
   assignedTickets: number
   ticketMessages: number
@@ -6860,11 +6971,11 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
   activityLogs?: boolean | UserCountOutputTypeCountActivityLogsArgs
   targetedActivityLogs?: boolean | UserCountOutputTypeCountTargetedActivityLogsArgs
+  loginLogs?: boolean | UserCountOutputTypeCountLoginLogsArgs
   documents?: boolean | UserCountOutputTypeCountDocumentsArgs
   uploadedDocuments?: boolean | UserCountOutputTypeCountUploadedDocumentsArgs
   pointEvents?: boolean | UserCountOutputTypeCountPointEventsArgs
   integrations?: boolean | UserCountOutputTypeCountIntegrationsArgs
-  certificateTodos?: boolean | UserCountOutputTypeCountCertificateTodosArgs
   tickets?: boolean | UserCountOutputTypeCountTicketsArgs
   assignedTickets?: boolean | UserCountOutputTypeCountAssignedTicketsArgs
   ticketMessages?: boolean | UserCountOutputTypeCountTicketMessagesArgs
@@ -6925,6 +7036,13 @@ export type UserCountOutputTypeCountTargetedActivityLogsArgs<ExtArgs extends run
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountLoginLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LoginLogWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountDocumentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.DocumentWhereInput
 }
@@ -6948,13 +7066,6 @@ export type UserCountOutputTypeCountPointEventsArgs<ExtArgs extends runtime.Type
  */
 export type UserCountOutputTypeCountIntegrationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.IntegrationWhereInput
-}
-
-/**
- * UserCountOutputType without action
- */
-export type UserCountOutputTypeCountCertificateTodosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.CertificateTodoWhereInput
 }
 
 /**
@@ -7014,6 +7125,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   refreshTokenHash?: boolean
   refreshTokenExpiresAt?: boolean
   refreshTokenVersion?: boolean
+  lastLoginAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   companyId?: boolean
@@ -7028,13 +7140,13 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   activityLogs?: boolean | Prisma.User$activityLogsArgs<ExtArgs>
   targetedActivityLogs?: boolean | Prisma.User$targetedActivityLogsArgs<ExtArgs>
+  loginLogs?: boolean | Prisma.User$loginLogsArgs<ExtArgs>
   documents?: boolean | Prisma.User$documentsArgs<ExtArgs>
   uploadedDocuments?: boolean | Prisma.User$uploadedDocumentsArgs<ExtArgs>
   pointEvents?: boolean | Prisma.User$pointEventsArgs<ExtArgs>
   integrations?: boolean | Prisma.User$integrationsArgs<ExtArgs>
   termAcceptance?: boolean | Prisma.User$termAcceptanceArgs<ExtArgs>
   faceRegistration?: boolean | Prisma.User$faceRegistrationArgs<ExtArgs>
-  certificateTodos?: boolean | Prisma.User$certificateTodosArgs<ExtArgs>
   tickets?: boolean | Prisma.User$ticketsArgs<ExtArgs>
   assignedTickets?: boolean | Prisma.User$assignedTicketsArgs<ExtArgs>
   ticketMessages?: boolean | Prisma.User$ticketMessagesArgs<ExtArgs>
@@ -7076,6 +7188,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   refreshTokenHash?: boolean
   refreshTokenExpiresAt?: boolean
   refreshTokenVersion?: boolean
+  lastLoginAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   companyId?: boolean
@@ -7121,6 +7234,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   refreshTokenHash?: boolean
   refreshTokenExpiresAt?: boolean
   refreshTokenVersion?: boolean
+  lastLoginAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   companyId?: boolean
@@ -7166,13 +7280,14 @@ export type UserSelectScalar = {
   refreshTokenHash?: boolean
   refreshTokenExpiresAt?: boolean
   refreshTokenVersion?: boolean
+  lastLoginAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   companyId?: boolean
   branchId?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "name" | "cpf" | "phone" | "avatar" | "role" | "department" | "departmentId" | "position" | "positionId" | "contractType" | "employeeCode" | "weeklyHours" | "workSchedule" | "hireDate" | "birthDate" | "address" | "isActive" | "lastAccessAt" | "registrationNumber" | "emailVerified" | "verificationCode" | "verificationExpiresAt" | "reportNotificationDay" | "themeMode" | "themeAccent" | "permissions" | "resetPasswordCode" | "resetPasswordExpiresAt" | "refreshTokenHash" | "refreshTokenExpiresAt" | "refreshTokenVersion" | "createdAt" | "updatedAt" | "companyId" | "branchId", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "name" | "cpf" | "phone" | "avatar" | "role" | "department" | "departmentId" | "position" | "positionId" | "contractType" | "employeeCode" | "weeklyHours" | "workSchedule" | "hireDate" | "birthDate" | "address" | "isActive" | "lastAccessAt" | "registrationNumber" | "emailVerified" | "verificationCode" | "verificationExpiresAt" | "reportNotificationDay" | "themeMode" | "themeAccent" | "permissions" | "resetPasswordCode" | "resetPasswordExpiresAt" | "refreshTokenHash" | "refreshTokenExpiresAt" | "refreshTokenVersion" | "lastLoginAt" | "createdAt" | "updatedAt" | "companyId" | "branchId", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   departmentRel?: boolean | Prisma.User$departmentRelArgs<ExtArgs>
   positionRel?: boolean | Prisma.User$positionRelArgs<ExtArgs>
@@ -7184,13 +7299,13 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   activityLogs?: boolean | Prisma.User$activityLogsArgs<ExtArgs>
   targetedActivityLogs?: boolean | Prisma.User$targetedActivityLogsArgs<ExtArgs>
+  loginLogs?: boolean | Prisma.User$loginLogsArgs<ExtArgs>
   documents?: boolean | Prisma.User$documentsArgs<ExtArgs>
   uploadedDocuments?: boolean | Prisma.User$uploadedDocumentsArgs<ExtArgs>
   pointEvents?: boolean | Prisma.User$pointEventsArgs<ExtArgs>
   integrations?: boolean | Prisma.User$integrationsArgs<ExtArgs>
   termAcceptance?: boolean | Prisma.User$termAcceptanceArgs<ExtArgs>
   faceRegistration?: boolean | Prisma.User$faceRegistrationArgs<ExtArgs>
-  certificateTodos?: boolean | Prisma.User$certificateTodosArgs<ExtArgs>
   tickets?: boolean | Prisma.User$ticketsArgs<ExtArgs>
   assignedTickets?: boolean | Prisma.User$assignedTicketsArgs<ExtArgs>
   ticketMessages?: boolean | Prisma.User$ticketMessagesArgs<ExtArgs>
@@ -7222,13 +7337,13 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
     activityLogs: Prisma.$ActivityLogPayload<ExtArgs>[]
     targetedActivityLogs: Prisma.$ActivityLogPayload<ExtArgs>[]
+    loginLogs: Prisma.$LoginLogPayload<ExtArgs>[]
     documents: Prisma.$DocumentPayload<ExtArgs>[]
     uploadedDocuments: Prisma.$DocumentPayload<ExtArgs>[]
     pointEvents: Prisma.$PointEventPayload<ExtArgs>[]
     integrations: Prisma.$IntegrationPayload<ExtArgs>[]
     termAcceptance: Prisma.$TermAcceptancePayload<ExtArgs> | null
     faceRegistration: Prisma.$FaceRegistrationPayload<ExtArgs> | null
-    certificateTodos: Prisma.$CertificateTodoPayload<ExtArgs>[]
     tickets: Prisma.$TicketPayload<ExtArgs>[]
     assignedTickets: Prisma.$TicketPayload<ExtArgs>[]
     ticketMessages: Prisma.$TicketMessagePayload<ExtArgs>[]
@@ -7268,6 +7383,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     refreshTokenHash: string | null
     refreshTokenExpiresAt: Date | null
     refreshTokenVersion: number
+    lastLoginAt: Date | null
     createdAt: Date
     updatedAt: Date
     companyId: string
@@ -7676,13 +7792,13 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   activityLogs<T extends Prisma.User$activityLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$activityLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   targetedActivityLogs<T extends Prisma.User$targetedActivityLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$targetedActivityLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  loginLogs<T extends Prisma.User$loginLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$loginLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LoginLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   documents<T extends Prisma.User$documentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$documentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   uploadedDocuments<T extends Prisma.User$uploadedDocumentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$uploadedDocumentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pointEvents<T extends Prisma.User$pointEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$pointEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PointEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   integrations<T extends Prisma.User$integrationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$integrationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IntegrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   termAcceptance<T extends Prisma.User$termAcceptanceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$termAcceptanceArgs<ExtArgs>>): Prisma.Prisma__TermAcceptanceClient<runtime.Types.Result.GetResult<Prisma.$TermAcceptancePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   faceRegistration<T extends Prisma.User$faceRegistrationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$faceRegistrationArgs<ExtArgs>>): Prisma.Prisma__FaceRegistrationClient<runtime.Types.Result.GetResult<Prisma.$FaceRegistrationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  certificateTodos<T extends Prisma.User$certificateTodosArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$certificateTodosArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CertificateTodoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tickets<T extends Prisma.User$ticketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ticketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assignedTickets<T extends Prisma.User$assignedTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   ticketMessages<T extends Prisma.User$ticketMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ticketMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TicketMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -7749,6 +7865,7 @@ export interface UserFieldRefs {
   readonly refreshTokenHash: Prisma.FieldRef<"User", 'String'>
   readonly refreshTokenExpiresAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly refreshTokenVersion: Prisma.FieldRef<"User", 'Int'>
+  readonly lastLoginAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly companyId: Prisma.FieldRef<"User", 'String'>
@@ -8355,6 +8472,30 @@ export type User$targetedActivityLogsArgs<ExtArgs extends runtime.Types.Extensio
 }
 
 /**
+ * User.loginLogs
+ */
+export type User$loginLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LoginLog
+   */
+  select?: Prisma.LoginLogSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LoginLog
+   */
+  omit?: Prisma.LoginLogOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LoginLogInclude<ExtArgs> | null
+  where?: Prisma.LoginLogWhereInput
+  orderBy?: Prisma.LoginLogOrderByWithRelationInput | Prisma.LoginLogOrderByWithRelationInput[]
+  cursor?: Prisma.LoginLogWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LoginLogScalarFieldEnum | Prisma.LoginLogScalarFieldEnum[]
+}
+
+/**
  * User.documents
  */
 export type User$documentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -8486,30 +8627,6 @@ export type User$faceRegistrationArgs<ExtArgs extends runtime.Types.Extensions.I
    */
   include?: Prisma.FaceRegistrationInclude<ExtArgs> | null
   where?: Prisma.FaceRegistrationWhereInput
-}
-
-/**
- * User.certificateTodos
- */
-export type User$certificateTodosArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the CertificateTodo
-   */
-  select?: Prisma.CertificateTodoSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the CertificateTodo
-   */
-  omit?: Prisma.CertificateTodoOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.CertificateTodoInclude<ExtArgs> | null
-  where?: Prisma.CertificateTodoWhereInput
-  orderBy?: Prisma.CertificateTodoOrderByWithRelationInput | Prisma.CertificateTodoOrderByWithRelationInput[]
-  cursor?: Prisma.CertificateTodoWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.CertificateTodoScalarFieldEnum | Prisma.CertificateTodoScalarFieldEnum[]
 }
 
 /**

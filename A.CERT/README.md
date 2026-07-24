@@ -195,7 +195,6 @@ A.CERT/
 | **Core** | `persons`, `properties`, `dossiers`, `certificates`, `dossier_participants` |
 | **Autenticação** | `users`, `user_sessions`, `user_permissions` |
 | **Multiempresas** | `companies`, `company_settings` |
-| **RH** | `departments`, `positions`, `justifications`, `time_records`, `team_activities` |
 | **Notificações** | `notifications` |
 | **Sistema** | `organs`, `certificate_templates`, `settings`, `support_tickets`, `audit_log`, `activities` |
 | **Relacionamentos** | `property_owners`, `property_timeline`, `person_relationships` |

@@ -395,7 +395,6 @@ export const ModelName = {
   Notification: 'Notification',
   ActivityLog: 'ActivityLog',
   Document: 'Document',
-  CertificateTodo: 'CertificateTodo',
   Integration: 'Integration',
   TermAcceptance: 'TermAcceptance',
   FaceRegistration: 'FaceRegistration',
@@ -403,7 +402,8 @@ export const ModelName = {
   TicketMessage: 'TicketMessage',
   TicketAttachment: 'TicketAttachment',
   MonthClosing: 'MonthClosing',
-  CompanyConfig: 'CompanyConfig'
+  CompanyConfig: 'CompanyConfig',
+  LoginLog: 'LoginLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -419,7 +419,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "company" | "branch" | "department" | "position" | "user" | "timeRecord" | "pointEvent" | "justification" | "notification" | "activityLog" | "document" | "certificateTodo" | "integration" | "termAcceptance" | "faceRegistration" | "ticket" | "ticketMessage" | "ticketAttachment" | "monthClosing" | "companyConfig"
+    modelProps: "company" | "branch" | "department" | "position" | "user" | "timeRecord" | "pointEvent" | "justification" | "notification" | "activityLog" | "document" | "integration" | "termAcceptance" | "faceRegistration" | "ticket" | "ticketMessage" | "ticketAttachment" | "monthClosing" | "companyConfig" | "loginLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1237,80 +1237,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    CertificateTodo: {
-      payload: Prisma.$CertificateTodoPayload<ExtArgs>
-      fields: Prisma.CertificateTodoFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.CertificateTodoFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.CertificateTodoFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
-        }
-        findFirst: {
-          args: Prisma.CertificateTodoFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.CertificateTodoFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
-        }
-        findMany: {
-          args: Prisma.CertificateTodoFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>[]
-        }
-        create: {
-          args: Prisma.CertificateTodoCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
-        }
-        createMany: {
-          args: Prisma.CertificateTodoCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.CertificateTodoCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>[]
-        }
-        delete: {
-          args: Prisma.CertificateTodoDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
-        }
-        update: {
-          args: Prisma.CertificateTodoUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
-        }
-        deleteMany: {
-          args: Prisma.CertificateTodoDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.CertificateTodoUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.CertificateTodoUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>[]
-        }
-        upsert: {
-          args: Prisma.CertificateTodoUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$CertificateTodoPayload>
-        }
-        aggregate: {
-          args: Prisma.CertificateTodoAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateCertificateTodo>
-        }
-        groupBy: {
-          args: Prisma.CertificateTodoGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.CertificateTodoGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.CertificateTodoCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.CertificateTodoCountAggregateOutputType> | number
-        }
-      }
-    }
     Integration: {
       payload: Prisma.$IntegrationPayload<ExtArgs>
       fields: Prisma.IntegrationFieldRefs
@@ -1903,6 +1829,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    LoginLog: {
+      payload: Prisma.$LoginLogPayload<ExtArgs>
+      fields: Prisma.LoginLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LoginLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LoginLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        findFirst: {
+          args: Prisma.LoginLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LoginLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        findMany: {
+          args: Prisma.LoginLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>[]
+        }
+        create: {
+          args: Prisma.LoginLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        createMany: {
+          args: Prisma.LoginLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LoginLogCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>[]
+        }
+        delete: {
+          args: Prisma.LoginLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        update: {
+          args: Prisma.LoginLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.LoginLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LoginLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LoginLogUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>[]
+        }
+        upsert: {
+          args: Prisma.LoginLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        aggregate: {
+          args: Prisma.LoginLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLoginLog>
+        }
+        groupBy: {
+          args: Prisma.LoginLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoginLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LoginLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoginLogCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2041,6 +2041,7 @@ export const UserScalarFieldEnum = {
   refreshTokenHash: 'refreshTokenHash',
   refreshTokenExpiresAt: 'refreshTokenExpiresAt',
   refreshTokenVersion: 'refreshTokenVersion',
+  lastLoginAt: 'lastLoginAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   companyId: 'companyId',
@@ -2165,20 +2166,6 @@ export const DocumentScalarFieldEnum = {
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
 
 
-export const CertificateTodoScalarFieldEnum = {
-  id: 'id',
-  certificateKey: 'certificateKey',
-  status: 'status',
-  notes: 'notes',
-  obtainedAt: 'obtainedAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  userId: 'userId'
-} as const
-
-export type CertificateTodoScalarFieldEnum = (typeof CertificateTodoScalarFieldEnum)[keyof typeof CertificateTodoScalarFieldEnum]
-
-
 export const IntegrationScalarFieldEnum = {
   id: 'id',
   provider: 'provider',
@@ -2293,6 +2280,21 @@ export const CompanyConfigScalarFieldEnum = {
 } as const
 
 export type CompanyConfigScalarFieldEnum = (typeof CompanyConfigScalarFieldEnum)[keyof typeof CompanyConfigScalarFieldEnum]
+
+
+export const LoginLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ip: 'ip',
+  userAgent: 'userAgent',
+  device: 'device',
+  browser: 'browser',
+  os: 'os',
+  location: 'location',
+  createdAt: 'createdAt'
+} as const
+
+export type LoginLogScalarFieldEnum = (typeof LoginLogScalarFieldEnum)[keyof typeof LoginLogScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2518,20 +2520,6 @@ export type ListEnumNotificationTypeFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
- * Reference to a field of type 'CertificateStatus'
- */
-export type EnumCertificateStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CertificateStatus'>
-    
-
-
-/**
- * Reference to a field of type 'CertificateStatus[]'
- */
-export type ListEnumCertificateStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CertificateStatus[]'>
-    
-
-
-/**
  * Reference to a field of type 'IntegrationProvider'
  */
 export type EnumIntegrationProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntegrationProvider'>
@@ -2693,7 +2681,6 @@ export type GlobalOmitConfig = {
   notification?: Prisma.NotificationOmit
   activityLog?: Prisma.ActivityLogOmit
   document?: Prisma.DocumentOmit
-  certificateTodo?: Prisma.CertificateTodoOmit
   integration?: Prisma.IntegrationOmit
   termAcceptance?: Prisma.TermAcceptanceOmit
   faceRegistration?: Prisma.FaceRegistrationOmit
@@ -2702,6 +2689,7 @@ export type GlobalOmitConfig = {
   ticketAttachment?: Prisma.TicketAttachmentOmit
   monthClosing?: Prisma.MonthClosingOmit
   companyConfig?: Prisma.CompanyConfigOmit
+  loginLog?: Prisma.LoginLogOmit
 }
 
 /* Types for Logging */
