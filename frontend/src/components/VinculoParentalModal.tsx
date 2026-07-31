@@ -252,11 +252,6 @@ export default function VinculoParentalModal({ personId, personName, onClose }: 
                           <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>
                             {rel.name}
                           </span>
-                          {rel.is_pre_cadastro === 1 && (
-                            <span title="Pré-cadastro" style={{ fontSize: "11px", fontWeight: 600,
-                              color: "var(--badge-amber-text)", background: "var(--badge-amber-bg)",
-                              padding: "1px 6px", borderRadius: "4px", flexShrink: 0 }}>⚠️</span>
-                          )}
                         </div>
                         <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                           {formatDoc(rel.cpf, rel.cnpj)}

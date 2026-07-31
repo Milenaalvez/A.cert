@@ -18,7 +18,7 @@ const SEL_SUBMIT  = '[id="gerarCertidaoForm:btnEmitirCertidao"]';
 export class TSTConnector implements IConnector {
   readonly nome = 'TST';
 
-  readonly #throttle = criarRateLimit(3000);
+  readonly #throttle = criarRateLimit(1000);
 
   async consultar(
     dados: DadosProprietario,
@@ -35,7 +35,7 @@ export class TSTConnector implements IConnector {
 
       // ═══ PASSO 1: Ir direto pro iframe CNDT ═══
       await page.goto('https://cndt-certidao.tst.jus.br/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await wait(5000);
+      await wait(2000);
       LOG(`URL: ${page.url()}`);
 
       // ═══ PASSO 2: Clicar "Emitir Certidão" ═══
@@ -66,7 +66,7 @@ export class TSTConnector implements IConnector {
         return { status: 'error', orgao: this.nome, dataConsulta, error: 'Botao Emitir nao encontrado no iframe CNDT' };
       }
 
-      await wait(3000);
+      await wait(1500);
 
       // ═══ PASSO 3: Aguardar input CPF ═══
       const cpfReady = await page.waitForSelector(SEL_CPF, { visible: true, timeout: 30000 }).catch(() => null);
@@ -135,7 +135,7 @@ export class TSTConnector implements IConnector {
       // Aguarda captura (setupDownloadCapture rodando)
       const capturado = await Promise.race([
         tstCapture.promise,
-        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+        new Promise<null>(r => setTimeout(() => r(null), 20000)),
       ]);
       if (capturado && capturado.length > 500) {
         pdfBuffer = capturado;

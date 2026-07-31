@@ -397,6 +397,7 @@ model Notification {
   userId    String  @map("user_id")
   title     String
   message   String
+  details   String?
   type      String  @default("info")
   isRead    Int     @default(0) @map("is_read")
   link      String?

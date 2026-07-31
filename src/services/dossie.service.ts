@@ -605,7 +605,7 @@ export async function gerarDossiePDFFromDB(data: {
 
       // Embed the cert PDF
       try {
-        const certAbsPath = path.join(baseDir, '..', '..', cert.document_path);
+        const certAbsPath = path.isAbsolute(cert.document_path) ? cert.document_path : path.join(baseDir, '..', '..', cert.document_path);
         if (fs.existsSync(certAbsPath)) {
           const certDoc = await PDFDocument.load(fs.readFileSync(certAbsPath));
           if (certDoc.getPageCount() > 0) {

@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import NovoDossieModal from "./NovoDossieModal";
 import PageLoadingOverlay from "./PageLoadingOverlay";
+import AuthRequiredPage from "./AuthRequiredPage";
 import ElectronTitleBar from "./ElectronTitleBar";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { useT } from "@/i18n/useT";
@@ -61,7 +62,7 @@ export default function DashboardLayoutClient({
       localStorage.setItem("acert_last_page", pathname);
     }
     if (typeof window !== "undefined" && window.location.search.includes("tour=1")) {
-      const timer = setTimeout(() => iniciarTour(), 600);
+      const timer = setTimeout(() => iniciarTour(router), 600);
       return () => clearTimeout(timer);
     }
   }, [pathname]);
@@ -136,10 +137,13 @@ function DashboardInner({
   showNovoDossie: boolean; setShowNovoDossie: React.Dispatch<React.SetStateAction<boolean>>; pageLoading: boolean;
   sidebarWidth: number; children: React.ReactNode;
 }) {
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
+
+  if (authLoading) return <PageLoadingOverlay />;
+  if (!user) return <AuthRequiredPage />;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-app">
+    <div className="min-h-screen bg-app">
       <ElectronTitleBar />
       <div style={{ display: "flex" }}>
       {/* Mobile hamburger */}

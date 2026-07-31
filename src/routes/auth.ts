@@ -335,6 +335,10 @@ router.post('/login', async (req, res) => {
     );
 
     if (!user) {
+      await executeRaw(
+        'INSERT INTO audit_log (id, user_id, user_name, action, module, detail, ip_address, result, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+        randomUUID(), '', email.toLowerCase().trim(), 'Tentativa de login', 'Autenticação', 'Usuário não encontrado', getClientIp(req), 'error', new Date().toISOString()
+      ).catch(() => {});
       res.status(401).json({ error: 'Email ou senha incorretos' });
       return;
     }
@@ -346,19 +350,28 @@ router.post('/login', async (req, res) => {
 
     const senhaValida = bcrypt.compareSync(password, user.password_hash);
     if (!senhaValida) {
+      await executeRaw(
+        'INSERT INTO audit_log (id, user_id, user_name, action, module, detail, ip_address, result, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+        randomUUID(), user.id, user.name, 'Tentativa de login', 'Autenticação', 'Senha incorreta', getClientIp(req), 'error', new Date().toISOString()
+      ).catch(() => {});
       res.status(401).json({ error: 'Email ou senha incorretos' });
       return;
     }
 
-    await executeRaw("UPDATE users SET last_access_at = NOW() WHERE id = $1", user.id);
+    await executeRaw("UPDATE users SET last_access_at = $1 WHERE id = $2", new Date().toISOString(), user.id);
 
     const ua = parseUserAgent(req.headers["user-agent"] || "");
     const ip = getClientIp(req);
     await executeRaw(
       `INSERT INTO user_sessions (id, user_id, device, browser, os, ip_address, location, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW())`,
-      randomUUID(), user.id, ua.device, ua.browser, ua.os, ip, "Brasília / DF"
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)`,
+      randomUUID(), user.id, ua.device, ua.browser, ua.os, ip, "Brasil", new Date().toISOString()
     );
+
+    await executeRaw(
+      'INSERT INTO audit_log (id, user_id, user_name, action, module, detail, ip_address, result, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      randomUUID(), user.id, user.name, 'Login', 'Autenticação', `Login via ${ua.browser || 'desconhecido'}`, ip, 'success', new Date().toISOString()
+    ).catch(() => {});
 
     if (user.password_change_required) {
       const token = gerarToken({ userId: user.id, email: user.email });

@@ -55,13 +55,17 @@ const PAGINAS_URL: Record<string, string> = {
   suporte: "/dashboard/suporte",
 };
 
-export function iniciarTour() {
+export function iniciarTour(router?: any) {
   if (typeof window === "undefined") return;
 
   const currentPath = window.location.pathname;
 
   if (!window.location.search.includes("tour=1")) {
-    window.location.href = "/dashboard?tour=1";
+    if (router && router.push) {
+      router.push("/dashboard?tour=1");
+    } else {
+      window.location.href = "/dashboard?tour=1";
+    }
     return;
   }
 
@@ -80,33 +84,64 @@ export function iniciarTour() {
     const nextIndex = currentIndex + 1;
     if (nextIndex < TOUR_PAGINAS.length) {
       const nextUrl = PAGINAS_URL[TOUR_PAGINAS[nextIndex].page];
-      if (nextUrl) window.location.href = `${nextUrl}?tour=1`;
+      if (nextUrl) {
+        if (router && router.push) {
+          router.push(`${nextUrl}?tour=1`);
+        } else {
+          window.location.href = `${nextUrl}?tour=1`;
+        }
+      }
     }
+    // Se for a última página, simplesmente fecha o tour (não redireciona)
   }
 
   import("driver.js").then(({ driver }) => {
     const isLast = currentIndex === TOUR_PAGINAS.length - 1;
-    const steps = pagina.steps.map((s, i) => ({
-      element: s.element,
-      popover: {
-        title: `${pagina.titulo} — passo ${i + 1} de ${pagina.steps.length}`,
-        description: i === pagina.steps.length - 1 && !isLast
-          ? `${s.description}\n\nAo concluir, o tour continuará na próxima página.`
-          : s.description,
-        side: (i === 0 ? "right" : "bottom") as any,
-        align: "start" as any,
-      },
-    }));
+
+    const steps = pagina.steps
+      .filter(s => {
+        // Filtra passos cujos elementos realmente existem no DOM
+        return document.querySelector(s.element) !== null;
+      })
+      .map((s, i, filtered) => ({
+        element: s.element,
+        popover: {
+          title: `${pagina.titulo} — passo ${i + 1} de ${filtered.length}`,
+          description: i === filtered.length - 1 && !isLast
+            ? `${s.description}\n\nAo concluir, o tour continuará na próxima página.`
+            : i === filtered.length - 1 && isLast
+              ? `${s.description}\n\nParabéns! Você concluiu o tour pela plataforma.`
+              : s.description,
+          side: (i === 0 ? "right" : "bottom") as any,
+          align: "start" as any,
+        },
+      }));
+
+    if (steps.length === 0) {
+      console.log("[Tour] Nenhum elemento encontrado nesta página, indo para a próxima...");
+      setTimeout(goNext, 500);
+      return;
+    }
 
     const driverObj = driver({
       showProgress: true,
       animate: true,
       steps,
       onDestroyStarted: () => {
-        setTimeout(goNext, 200);
+        if (!isLast) {
+          setTimeout(goNext, 300);
+        }
+        driverObj.destroy();
+      },
+      onDestroyed: () => {
+        // Limpa o driver completamente
       },
     });
 
     driverObj.drive();
-  }).catch(err => console.error("[Tour] Erro:", err));
+  }).catch(err => {
+    console.error("[Tour] Erro ao carregar driver.js:", err);
+    // Fallback: vai para a próxima página
+    setTimeout(goNext, 500);
+  });
 }

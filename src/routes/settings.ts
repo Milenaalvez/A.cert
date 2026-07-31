@@ -20,8 +20,8 @@ if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 async function logAudit(userId: string, userName: string, action: string, module: string, detail?: string, ipAddress?: string, result?: string) {
   try {
     await executeRaw(
-      'INSERT INTO audit_log (id, user_id, user_name, action, module, detail, ip_address, result) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      randomUUID(), userId, userName, action, module, detail || null, ipAddress || '', result || 'success'
+      'INSERT INTO audit_log (id, user_id, user_name, action, module, detail, ip_address, result, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      randomUUID(), userId, userName, action, module, detail || null, ipAddress || '', result || 'success', new Date().toISOString()
     );
   } catch {}
 }

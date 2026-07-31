@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Search, Plus, Users, AlertCircle, BadgeCheck, TrendingUp,
   Eye, MoreVertical, Edit3, FolderOpen, ScrollText, Archive, Trash2, Link2,
-  ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText,
+  Download, FileSpreadsheet, FileText,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { StatsCard } from "@/components/StatsCard";
@@ -30,7 +30,7 @@ interface ApiResponse {
   stats: { total: number; vinculadas: number; documentacaoCompleta: number; pendenciasDocumentais: number };
 }
 
-const PAGE_SIZE = 15;
+const BATCH_SIZE = 20;
 const TABS = [
   { key: "todas", label: "Todas" },
   { key: "fisica", label: "Pessoa Física" },
@@ -229,12 +229,14 @@ export default function PessoasPage() {
   const [vinculoId, setVinculoId] = useState<string | null>(null);
   const [vinculoName, setVinculoName] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ type: "archive" | "delete"; id: string; name: string } | null>(null);
-  const [page, setPage] = useState(1);
+  const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [actionBadge, setActionBadge] = useState<{ tab: string; delta: number } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [showNovaPessoa, setShowNovaPessoa] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -266,10 +268,8 @@ export default function PessoasPage() {
       (p.phone && p.phone.includes(searchQuery)))
     : filtered;
 
-  const totalPages = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  if (safePage !== page) setPage(safePage);
-  const paginated = searched.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const hasMore = displayCount < searched.length;
+  const paginated = searched.slice(0, displayCount);
 
   const allSelected = paginated.length > 0 && selected.size === paginated.length && paginated.every(p => selected.has(p.id));
   const toggleAll = () => {
@@ -286,8 +286,13 @@ export default function PessoasPage() {
         setMenuOpenId(null);
       }
     };
+    const scrollHandler = () => { setMenuOpenId(null); };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
   }, [menuOpenId, exportOpen]);
 
   useEffect(() => {
@@ -297,9 +302,25 @@ export default function PessoasPage() {
     }
   }, [actionBadge]);
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        setLoadingMore(true);
+        setTimeout(() => {
+          setDisplayCount(prev => Math.min(prev + BATCH_SIZE, searched.length));
+          setLoadingMore(false);
+        }, 200);
+      }
+    }, { rootMargin: "100px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, searched.length]);
+
   const handleTab = (t: typeof tab) => {
     setTab(t);
-    setPage(1);
+    setDisplayCount(BATCH_SIZE);
     setSelected(new Set());
     setSearchQuery("");
   };
@@ -370,7 +391,7 @@ export default function PessoasPage() {
             <div className="flex items-center gap-3 shrink-0 pt-0.5">
               <div className="relative">
                 <Search size={17} strokeWidth={2} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-                <input data-tour="pessoas-busca" type="text" placeholder="Buscar por nome, CPF, e-mail ou telefone..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }} style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", paddingLeft: "42px", paddingRight: "16px", width: "340px", outline: "none" }} />
+                <input data-tour="pessoas-busca" type="text" placeholder="Buscar por nome, CPF, e-mail ou telefone..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setDisplayCount(BATCH_SIZE); }} style={{ height: "44px", borderRadius: "8px", border: "1px solid var(--border-default)", fontSize: "14px", color: "var(--text-primary)", background: "var(--bg-app)", paddingLeft: "42px", paddingRight: "16px", width: "340px", outline: "none" }} />
               </div>
               <button data-tour="pessoas-nova" onClick={() => setShowNovaPessoa(true)} style={{ display: "flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={16} strokeWidth={2.5} />Nova Pessoa</button>
             </div>
@@ -565,14 +586,14 @@ export default function PessoasPage() {
                         background: "var(--bg-surface)", borderRadius: "10px",
                         border: "1px solid var(--border-default)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
                         minWidth: "200px", overflow: "hidden",
-                      }}>
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setDetailId(p.id); }} style={menuItemStyle}><Edit3 size={14} strokeWidth={1.5} /> Edição rápida</button>
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); router.push(`/dashboard/dossies?person=${p.id}`); }} style={menuItemStyle}><FolderOpen size={14} strokeWidth={1.5} /> Dossiês vinculados</button>
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); router.push(`/dashboard/certidoes?person=${p.id}`); }} style={menuItemStyle}><ScrollText size={14} strokeWidth={1.5} /> Ver certidões</button>
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setVinculoId(p.id); setVinculoName(p.name); }} style={menuItemStyle}><Link2 size={14} strokeWidth={1.5} /> Vínculo parental</button>
+                      }} className="pessoas-menu">
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setDetailId(p.id); }} style={menuItemStyle} className="menu-item"><Edit3 size={14} strokeWidth={1.5} /> Edição rápida</button>
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); router.push(`/dashboard/dossies?person=${p.id}`); }} style={menuItemStyle} className="menu-item"><FolderOpen size={14} strokeWidth={1.5} /> Dossiês vinculados</button>
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); router.push(`/dashboard/certidoes?person=${p.id}`); }} style={menuItemStyle} className="menu-item"><ScrollText size={14} strokeWidth={1.5} /> Ver certidões</button>
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setVinculoId(p.id); setVinculoName(p.name); }} style={menuItemStyle} className="menu-item"><Link2 size={14} strokeWidth={1.5} /> Vínculo parental</button>
                         <div style={{ height: "1px", background: "var(--border-light)", margin: "4px 0" }} />
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "archive", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }}><Archive size={14} strokeWidth={1.5} /> Arquivar</button>
-                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "delete", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }}><Trash2 size={14} strokeWidth={1.5} /> Mover p/ lixeira</button>
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "archive", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }} className="menu-item"><Archive size={14} strokeWidth={1.5} /> Arquivar</button>
+                        <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmAction({ type: "delete", id: p.id, name: p.name }); }} style={{ ...menuItemStyle, color: "var(--text-secondary)" }} className="menu-item"><Trash2 size={14} strokeWidth={1.5} /> Mover p/ lixeira</button>
                       </div>
                     )}
                   </td>
@@ -593,36 +614,25 @@ export default function PessoasPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              Mostrando {paginated.length} de {searched.length} pessoas
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1}
-                style={{ width: "32px", height: "32px", borderRadius: "6px", border: "1px solid var(--border-default)", background: "transparent", cursor: safePage <= 1 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: safePage <= 1 ? 0.4 : 1 }}>
-                <ChevronLeft size={14} strokeWidth={1.5} style={{ color: "var(--text-secondary)" }} />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                <button key={n} onClick={() => setPage(n)}
-                  style={{ width: "32px", height: "32px", borderRadius: "6px", border: "1px solid var(--border-default)", fontSize: "12px", fontWeight: n === safePage ? 700 : 500, cursor: "pointer", background: n === safePage ? "#FF7A00" : "transparent", color: n === safePage ? "#FFF" : "var(--text-secondary)", transition: "all 0.1s", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {n}
-                </button>
-              ))}
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}
-                style={{ width: "32px", height: "32px", borderRadius: "6px", border: "1px solid var(--border-default)", background: "transparent", cursor: safePage >= totalPages ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: safePage >= totalPages ? 0.4 : 1 }}>
-                <ChevronRight size={14} strokeWidth={1.5} style={{ color: "var(--text-secondary)" }} />
-              </button>
+        {/* Infinite Scroll Footer */}
+        <div ref={sentinelRef} style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingTop: "16px", borderTop: hasMore || loadingMore ? "1px solid var(--border-light)" : "none", marginTop: "20px" }}>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            Mostrando {paginated.length} de {searched.length} pessoas
+          </span>
+          {loadingMore && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "16px" }}>
+              <div className="w-4 h-4 border-2 border-default border-t-[#FF7A00] rounded-full animate-spin" />
+              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Carregando...</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Animations */}
+      {/* Animations & menu hover */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes pulseGreen { 0% { transform:scale(1);opacity:1 } 50% { transform:scale(1.4);opacity:0.8 } 100% { transform:scale(1);opacity:1 } }
         @keyframes pulseRed { 0% { transform:scale(1);opacity:1 } 50% { transform:scale(1.4);opacity:0.8 } 100% { transform:scale(1);opacity:1 } }
+        .menu-item:hover { background: var(--bg-hover) !important; }
       `}} />
 
       {/* Person Detail Modal */}

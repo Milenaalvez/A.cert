@@ -6,6 +6,8 @@ import type { IConnector, ConsultaJob, DadosProprietario, ConnectorResult } from
 import { criarConectores } from '../connectors/index.js';
 import prisma, { executeRaw, queryRawOne } from '../lib/prisma.js';
 import { acquireDisplayForJob, releaseDisplayForJob, getCurrentDisplayId } from '../utils/browser.js';
+import { wait } from '../utils/retry-manager.service.js';
+import { createNotification } from '../routes/notifications.js';
 
 const LOG = (msg: string) => console.log(`[Orquestrador] ${msg}`);
 
@@ -62,10 +64,28 @@ async function persistirResultado(
   if (resultado.status !== 'success') return;
 
   try {
-    if (dossierId) {
+    // Auto-link: se nao tem dossierId, busca o dossie mais recente da pessoa
+    let effectiveDossierId = dossierId;
+    if (!effectiveDossierId) {
+      const recent = await queryRawOne(
+        `SELECT dp.dossier_id 
+         FROM dossier_participants dp 
+         JOIN dossiers d ON dp.dossier_id = d.id 
+         WHERE dp.person_id = $1 
+         ORDER BY d.created_at DESC 
+         LIMIT 1`,
+        personId
+      );
+      if (recent) {
+        effectiveDossierId = (recent as any).dossier_id;
+        LOG(`Auto-link: certificado associado ao dossie ${effectiveDossierId}`);
+      }
+    }
+
+    if (effectiveDossierId) {
       await executeRaw(
         'INSERT INTO dossier_participants (dossier_id, person_id, role) VALUES ($1, $2, $3) ON CONFLICT (dossier_id, person_id) DO NOTHING',
-        dossierId, personId, 'proprietario'
+        effectiveDossierId, personId, 'proprietario'
       );
     }
 
@@ -75,13 +95,13 @@ async function persistirResultado(
 
     let docPath: string | null = null;
     if (resultado.documento) {
-      docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento, dossierId || undefined);
+      docPath = await salvarDocumento(jobId, resultado.orgao, resultado.documento, effectiveDossierId || undefined);
     }
 
     // Upsert: se ja existe certidao do mesmo orgao para a mesma pessoa/dossie, atualiza
     const existing = await queryRawOne(
-      'SELECT id FROM certificates WHERE person_id = $1 AND organ = $2 AND name = $3 AND ($4::uuid IS NULL OR dossier_id = $4)',
-      personId, resultado.orgao, certName, dossierId || null
+      'SELECT id FROM certificates WHERE person_id = $1 AND organ = $2 AND name = $3 AND ($4::text IS NULL OR dossier_id::text = $4::text)',
+      personId, resultado.orgao, certName, effectiveDossierId || null
     );
     if (existing) {
       await executeRaw(
@@ -91,12 +111,12 @@ async function persistirResultado(
     } else {
       await executeRaw(
         'INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, obtained_at, document_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-        certId, dossierId || null, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
+        certId, effectiveDossierId || null, personId, certName, resultado.orgao, 'Obtida', resultado.protocolo || null, now, docPath, now
       );
     }
 
-    if (dossierId) {
-      await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, dossierId);
+    if (effectiveDossierId) {
+      await executeRaw('UPDATE dossiers SET updated_at = $1 WHERE id = $2', now, effectiveDossierId);
     }
 
     LOG(`Certificado salvo: ${certName} (${resultado.orgao}) → pessoa ${personId}`);
@@ -105,7 +125,7 @@ async function persistirResultado(
   }
 }
 
-const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '70000', 10);
+const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '60000', 10);
 
 const JOBS = new Map<string, ConsultaJob>();
 
@@ -146,7 +166,12 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
       LOG(`Display ${displayId} alocado para job ${jobId}`);
     }
 
-    for (const connector of conectores) {
+    for (let i = 0; i < conectores.length; i++) {
+      const connector = conectores[i];
+      if (i > 0) {
+        LOG(`Pausa de 5s entre conectores...`);
+        await wait(2000);
+      }
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
         const resultado = await withTimeout(
@@ -179,6 +204,37 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
 
     job.status = 'complete';
     job.fim = new Date().toISOString();
+
+    // Notificacao de job concluido
+    if (job.dados.userId) {
+      const sucessos = job.resultados.filter(r => r.status === 'success');
+      const erros = job.resultados.filter(r => r.status === 'error');
+      const partes: string[] = [];
+      if (sucessos.length > 0) partes.push(`${sucessos.length} certidão(ões) obtida(s)`);
+      if (erros.length > 0) partes.push(`${erros.length} falha(s)`);
+      const msg = partes.length > 0 ? partes.join(', ') : 'Nenhum resultado';
+
+      const nomesSucesso = sucessos.map(r => r.orgao).join(', ') || 'nenhuma';
+      const nomesErro = erros.map(r => r.orgao).join(', ') || 'nenhuma';
+      const fullMsg = `${msg}. Certidões obtidas: ${nomesSucesso}. ${
+        erros.length > 0 ? `Falhas: ${nomesErro}. ` : ''
+      }Acesse o dossiê ou a página da pessoa para visualizar os PDFs.`;
+
+      const link = job.dados.dossierId
+        ? `/dashboard/dossies/${job.dados.dossierId}`
+        : job.dados.personId
+          ? `/dashboard/pessoas/${job.dados.personId}`
+          : undefined;
+
+      await createNotification(
+        job.dados.userId,
+        'Consulta concluída',
+        fullMsg,
+        erros.length === 0 ? 'success' : erros.length < sucessos.length ? 'warning' : 'error',
+        link,
+        job.id,
+      );
+    }
   })();
 
   return job;

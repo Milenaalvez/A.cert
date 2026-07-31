@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { useTheme } from "@/contexts/ThemeContext"
 import { useT } from "@/i18n/useT"
+import NotificationModal from "./NotificationModal"
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -110,6 +111,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
   const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifsLoading, setNotifsLoading] = useState(false)
+  const [selectedNotif, setSelectedNotif] = useState<any | null>(null)
 
   const [mounted, setMounted] = useState(false)
   const [sectionState, setSectionState] = useState<Record<string, boolean>>({})
@@ -335,6 +337,26 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
           }
         `}</style>
 
+        <style>{`
+          .notif-scroll::-webkit-scrollbar {
+            width: 4px;
+          }
+          .notif-scroll::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .notif-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px;
+          }
+          .notif-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.15);
+          }
+          .notif-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.08) transparent;
+          }
+        `}</style>
+
         {/* ══════ CONTEÚDO CENTRAL SCROLLÁVEL ══════ */}
         <nav className="flex-1 flex flex-col overflow-y-auto sidebar-scroll">
           {/* Novo Dossiê */}
@@ -432,14 +454,6 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                     <span className="text-white">{user?.name ? getInitials(user.name) : 'U'}</span>
                   )}
                 </div>
-                {notifCount > 0 && (
-                  <div
-                    className={`absolute flex items-center justify-center rounded-full text-[10px] font-bold text-white bg-[#DC2626] border-2 border-[#0B1220] ${collapsed ? "-top-1 -right-1 w-[18px] h-[18px]" : ""}`}
-                    style={collapsed ? {} : { top: -2, right: -4, minWidth: 18, height: 18, padding: "0 4px" }}
-                  >
-                    {notifCount}
-                  </div>
-                )}
               </div>
               {!collapsed && (
                 <>
@@ -447,7 +461,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                     <div className="flex items-center gap-2 w-full">
                       <span className="text-[14px] font-semibold text-white truncate">{user?.name || 'Usuário'}</span>
                       {notifCount > 0 && (
-                        <span className="shrink-0 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center" style={{ minWidth: 18, height: 18, padding: "0 5px" }}>{notifCount}</span>
+                        <span className="shrink-0 rounded-full bg-[#DC2626] flex items-center justify-center" style={{ width: 8, height: 8 }} />
                       )}
                     </div>
                     <span className="text-[12px] text-white/60 truncate w-full">{getRoleLabel(user?.role, user?.position)}</span>
@@ -479,22 +493,29 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 >
                   {showNotifications ? (
                     <>
-                      <div style={{ padding: "20px 24px 0" }}>
+                      <div style={{ padding: "20px 24px 12px" }}>
                         <button
                           onClick={() => setShowNotifications(false)}
-                          className="flex items-center gap-2 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer mb-3"
                         >
                           <ChevronRight size={14} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
-                          Voltar ao perfil
+                          Fechar
                         </button>
-                        <div className="mt-4 mb-3 flex items-center justify-between">
-                          <h3 className="text-[14px] font-semibold text-white">
-                            Notificações
-                            {notifCount > 0 && <span className="ml-2 text-[11px] font-normal text-white/40">{notifCount} nova{notifCount > 1 ? "s" : ""}</span>}
-                          </h3>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-[15px] font-semibold text-white">
+                              Notificações
+                            </h3>
+                            {notifCount > 0 && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#DC2626]/15 px-2.5 py-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]" />
+                                <span className="text-[11px] font-semibold text-[#DC2626]">{notifCount}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex flex-col" style={{ minHeight: 300, maxHeight: 420, overflowY: "auto" }}>
+                      <div className="flex flex-col notif-scroll" style={{ minHeight: 300, maxHeight: 420, overflowY: "auto" }}>
                         {notifsLoading ? (
                           <div className="flex items-center justify-center" style={{ height: 300 }}>
                             <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -506,23 +527,38 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                             <p className="text-[11px] text-white/20 mt-1">As notificações do sistema aparecerão aqui.</p>
                           </div>
                         ) : (
-                          notifications.map((n: any) => (
+                          notifications.map((n: any) => {
+                            const typeColors: Record<string, string> = { success: '#22C55E', warning: '#F59E0B', error: '#EF4444', info: '#3B82F6' };
+                            const accent = typeColors[n.type] || typeColors.info;
+                            return (
                             <div
                               key={n.id}
-                              className={`flex items-start gap-3 px-6 py-3.5 border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.02] transition-colors ${!n.isRead ? "bg-white/[0.02]" : ""}`}
-                              onClick={() => { markAsRead(n.id); if (n.link) { closeAll(); router.push(n.link); } }}
+                              className="hover:bg-white/[0.03] transition-colors cursor-pointer"
+                              style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)', borderLeft: !n.isRead ? `3px solid ${accent}` : '3px solid transparent' }}
+                              onClick={() => { markAsRead(n.id); setSelectedNotif(n); }}
                             >
-                              <div
-                                className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                                style={{ background: n.isRead ? "transparent" : "#FF7A00" }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[13px] text-white/90 leading-snug">{n.title}</p>
-                                <p className="text-[11px] text-white/40 mt-0.5">{n.message}</p>
+                              <p className={`text-[13px] leading-snug ${!n.isRead ? 'font-semibold text-white' : 'font-normal text-white/80'}`}>
+                                {n.title}
+                              </p>
+                              <p className="text-[12px] text-white/40 mt-2 leading-relaxed line-clamp-2">
+                                {n.message}
+                              </p>
+                              <div className="flex items-center gap-2 mt-3">
+                                <span
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold"
+                                  style={{ background: typeColors[n.type] + '1A', color: accent }}
+                                >
+                                  {n.type === 'success' ? 'Concluído' : n.type === 'warning' ? 'Aviso' : n.type === 'error' ? 'Erro' : 'Info'}
+                                </span>
+                                <button
+                                  className="text-[11px] font-semibold text-[#FF7A00] hover:text-[#FF9A30] transition-colors cursor-pointer ml-auto"
+                                  onClick={(e) => { e.stopPropagation(); markAsRead(n.id); setSelectedNotif(n); }}
+                                >
+                                  Ver mais
+                                </button>
                               </div>
                             </div>
-                          ))
-                        )}
+                          )}))}
                       </div>
                       {notifications.filter((n: any) => !n.isRead).length > 0 && (
                         <>
@@ -586,10 +622,13 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                           <button
                             key={i}
                             onClick={() => { if ("action" in item) (item as any).action(); else { closeAll(); router.push((item as any).path); } }}
-                            className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                            className="flex items-center gap-3 w-full h-12 px-7 text-[13px] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer relative"
                           >
                             <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
                             <span className="flex-1 text-left">{item.label}</span>
+                            {item.icon === Bell && notifCount > 0 && (
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#DC2626] ring-2 ring-[#07101F]" />
+                            )}
                             <ChevronRight size={14} strokeWidth={2} className="text-white/30 shrink-0" />
                           </button>
                         ))}
@@ -651,6 +690,12 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
           )}
         </button>
       </div>
+
+      <NotificationModal
+        notification={selectedNotif}
+        onClose={() => setSelectedNotif(null)}
+        onNavigate={(link) => { setSelectedNotif(null); closeAll(); router.push(link); }}
+      />
     </>
   )
 }

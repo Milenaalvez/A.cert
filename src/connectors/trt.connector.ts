@@ -17,7 +17,7 @@ const EMISSAO_URL = 'https://pje.trt10.jus.br/certidoes/trabalhista/emissao';
 async function esperarResultadoPDF(
   page: import('puppeteer').Page,
   capturePromise: Promise<Uint8Array | null>,
-  timeoutMs = 30000
+  timeoutMs = 20000
 ): Promise<Uint8Array | null> {
   LOG('Aguardando captura...');
   const resultado = await Promise.race([
@@ -29,7 +29,7 @@ async function esperarResultadoPDF(
     return resultado;
   }
   LOG('Tentando page.pdf()...');
-  await wait(2000);
+  await wait(1000);
   try {
     const pdf = await page.pdf({ format: 'A4', printBackground: true });
     if (pdf.length > 500 && pdf.slice(0, 5).toString() === '%PDF-') {
@@ -76,7 +76,7 @@ async function diagnosticar(page: import('puppeteer').Page, label: string): Prom
 
 export class TRTConnector implements IConnector {
   readonly nome = 'TRT';
-  readonly #throttle = criarRateLimit(3000);
+  readonly #throttle = criarRateLimit(1000);
 
   async consultar(
     dados: DadosProprietario,
@@ -103,9 +103,9 @@ export class TRTConnector implements IConnector {
           const hasForm = document.querySelector('input, button, label') !== null;
           return !loading && hasForm;
         },
-        { timeout: 35000 }
+        { timeout: 20000 }
       ).catch(() => LOG('Timeout esperando Angular'));
-      await wait(4000);
+      await wait(2000);
 
       await diagnosticar(page, 'pagina inicial');
 
@@ -282,7 +282,7 @@ export class TRTConnector implements IConnector {
           return { status: 'error', orgao: this.nome, dataConsulta, error: '[TRT] CAPTCHA nao resolvido' };
         }
         LOG('CAPTCHA resolvido');
-        await wait(3000);
+        await wait(1500);
       }
 
       // ═══════════════════════════════════════════════════════════
@@ -298,12 +298,12 @@ export class TRTConnector implements IConnector {
             return body.includes('certidão emitida') || body.includes('certidao emitida')
               || body.includes('nada consta') || body.includes('protocolo');
           },
-          { timeout: 35000 }
+          { timeout: 20000 }
         );
       } catch {
         LOG('Timeout aguardando resultado');
       }
-      await wait(3000);
+      await wait(1500);
 
       const pdf = await esperarResultadoPDF(page, capture.promise);
       capture.cleanup();

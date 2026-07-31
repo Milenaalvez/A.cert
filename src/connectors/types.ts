@@ -1,4 +1,5 @@
 export interface DadosProprietario {
+  userId?: string;
   personId?: string;
   dossierId?: string;
   nome: string;

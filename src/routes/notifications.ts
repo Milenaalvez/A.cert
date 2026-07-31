@@ -71,3 +71,17 @@ export async function createNotification(userId: string, title: string, message:
     console.error('[Notifications] Erro ao criar:', err);
   }
 }
+
+export async function broadcastToAll(title: string, message: string, type = 'info', link?: string) {
+  try {
+    const users = await queryRaw('SELECT id FROM users') as any[];
+    for (const u of users) {
+      await createNotification(u.id, title, message, type, link || undefined, undefined);
+    }
+    console.log(`[Notifications] Broadcast enviado para ${users.length} usuarios: "${title}"`);
+    return users.length;
+  } catch (err) {
+    console.error('[Notifications] Erro no broadcast:', err);
+    return 0;
+  }
+}

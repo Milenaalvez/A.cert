@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -48,8 +48,9 @@ const TABS = [
 export default function DossierDetailClient() {
   const { t } = useT();
   const { settings } = useSettings();
-  const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const rawPathname = usePathname();
+  const id = rawPathname ? rawPathname.split('/').filter(Boolean).pop()?.replace(/^_$/, '') || '' : '';
   const deadlineDays = parseInt(settings.dossier_deadline || "30", 10);
   const searchParams = useSearchParams();
   const emitir = searchParams.get("emitir") === "true";
@@ -85,6 +86,17 @@ export default function DossierDetailClient() {
       .then(r => { if (!r.ok) throw new Error("Falha ao carregar"); return r.json(); })
       .then(setDossier).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, [id]);
+
+  // Force reload when restored from browser bfcache
+  useEffect(() => {
+    const handler = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener('pageshow', handler);
+    return () => window.removeEventListener('pageshow', handler);
+  }, []);
 
   const sc = STATUS_COLORS[dossier?.status || ""] || STATUS_COLORS["Pendente"];
 
@@ -838,7 +850,7 @@ export default function DossierDetailClient() {
       )}
 
       <ConfirmModal open={showArchiveConfirm} title="Arquivar dossiê" message={`Tem certeza que deseja arquivar o dossiê ${dossier?.identifier}?`} confirmLabel="Sim, Arquivar" cancelLabel={t("common.cancel")} variant="warning"
-        onConfirm={async () => { if (!dossier) return; try { const token = localStorage.getItem("acert_token"); await fetch(`/api/dossiers/${dossier.id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ status: "Cancelado" }) }); setDossier(prev => prev ? { ...prev, status: "Cancelado" } : prev); } catch {} setShowArchiveConfirm(false); }}
+        onConfirm={async () => { if (!dossier) return; try { const token = localStorage.getItem("acert_token"); await fetch(`/api/dossiers/${dossier.id}/archive`, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} }); setDossier(prev => prev ? { ...prev, archived_at: new Date().toISOString() } : prev); router.push('/dashboard/dossies'); } catch {} setShowArchiveConfirm(false); }}
         onCancel={() => setShowArchiveConfirm(false)} onClose={() => setShowArchiveConfirm(false)} />
 
       {showGenerateModal && dossier && (

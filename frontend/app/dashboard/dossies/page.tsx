@@ -47,8 +47,11 @@ function DossierCard({ dossier }: { dossier: Dossier }) {
           <span className="text-[11px] font-semibold px-3 py-0.5 shrink-0 rounded-[4px]" style={{ background: sc.bg, color: sc.text }}>{dossier.status}</span>
         </div>
         <div className="min-w-0">
-          <div className="text-[14px] font-semibold text-body truncate">{dossier.person?.name || "Sem titular"}</div>
-          {dossier.property && <div className="text-[12px] text-secondary truncate mt-1">{dossier.property.type}{dossier.property.address ? ` — ${dossier.property.address.split("—")[0]?.trim() || dossier.property.address}` : ""}</div>}
+          <div className="text-[14px] font-semibold text-body truncate">{dossier.property?.identifier || dossier.person?.name || "Sem identificação"}</div>
+          <div className="text-[12px] text-secondary truncate mt-1">
+            {dossier.person ? dossier.person.name : "Sem titular"}
+            {dossier.property?.type ? ` — ${dossier.property.type}` : ""}
+          </div>
         </div>
         {dossier.certificateCount > 0 ? (
           <div>
