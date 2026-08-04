@@ -115,6 +115,41 @@ router.post('/', authMiddleware, async (req, res) => {
       }
     }
 
+    for (const p of participants) {
+      const cpfDigits = (p.cpf || '').replace(/\D/g, '');
+      let participantId = p.id;
+      if (!participantId || participantId.startsWith('pre_')) {
+        if (cpfDigits.length === 11) {
+          const existing = await queryRawOne(`SELECT id FROM persons WHERE cpf = $1`, cpfDigits);
+          if (existing) participantId = existing.id;
+        }
+      }
+      if (participantId && !participantId.startsWith('pre_')) {
+        // 1. Vincula certidões órfãs (sem dossiê) diretamente
+        await executeRaw(
+          `UPDATE certificates SET dossier_id = $1 WHERE person_id = $2 AND (dossier_id IS NULL OR dossier_id = '')`,
+          dossierId, participantId
+        );
+        // 2. Copia certidões que já pertencem a outros dossiês para o novo
+        await executeRaw(`
+          INSERT INTO certificates (id, dossier_id, person_id, name, organ, status, protocol, document_path, cert_type, obtained_at, created_at, sort_order)
+          SELECT gen_random_uuid(), $1, person_id, name, organ, status, protocol, document_path, cert_type, obtained_at, NOW(), COALESCE(sort_order, 0)
+          FROM certificates
+          WHERE person_id = $2
+            AND dossier_id IS NOT NULL
+            AND dossier_id != ''
+            AND dossier_id != $1
+            AND NOT EXISTS (
+              SELECT 1 FROM certificates c2
+              WHERE c2.person_id = $2
+                AND c2.dossier_id = $1
+                AND c2.organ = certificates.organ
+                AND c2.name = certificates.name
+            )
+        `, dossierId, participantId);
+      }
+    }
+
     if (firstPersonId) {
       await executeRaw(`UPDATE dossiers SET person_id = $1 WHERE id = $2`, firstPersonId, dossierId);
     }
@@ -512,7 +547,7 @@ router.get('/:id', async (_req, res) => {
 
     const certificates = await queryRaw(`
       SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.document_path, c.person_id, c.sort_order
-      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.sort_order ASC, c.created_at ASC
+      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.obtained_at ASC NULLS LAST, c.created_at ASC
     `, id);
 
     const activities = await queryRaw(`
@@ -839,7 +874,7 @@ router.post('/:id/generate', authMiddleware, async (req, res) => {
 
     const certificates = await queryRaw(`
       SELECT c.id, c.name, c.organ, c.status, c.protocol, c.obtained_at, c.created_at, c.person_id, c.document_path, c.sort_order
-      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.sort_order ASC, c.created_at ASC
+      FROM certificates c WHERE c.dossier_id = $1 ORDER BY c.obtained_at ASC NULLS LAST, c.created_at ASC
     `, id);
 
     const personComplete = dossier.person_cpf && dossier.person_cpf.length > 0;

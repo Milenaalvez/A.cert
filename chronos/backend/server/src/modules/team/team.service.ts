@@ -50,7 +50,7 @@ export async function generateRegistrationNumber(): Promise<string> {
 function logAction(userId: string, action: string, description: string, entityType: string, entityId: string, targetUserId?: string, metadata?: any) {
   return prisma.activityLog.create({
     data: { userId, action, description, entityType, entityId, targetUserId, metadata: metadata || {} },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
 }
 
 async function canViewAll(actorId?: string) {
@@ -158,20 +158,24 @@ export async function createTeamMember(companyId: string, data: {
   })
 
   const company = await prisma.company.findUnique({ where: { id: companyId } })
-  sendWelcomeEmail(
-    user.email,
-    user.name,
-    registrationNumber,
-    data.position || data.role || 'Membro',
-    company?.name || 'Empresa',
-    `${env.appUrl}/?action=verify-email&token=${verificationCode}`
-  ).catch((err: any) => console.error('[Team] Erro ao enviar welcome email:', err?.message))
+  try {
+    await sendWelcomeEmail(
+      user.email,
+      user.name,
+      registrationNumber,
+      data.position || data.role || 'Membro',
+      company?.name || 'Empresa',
+      `${env.appUrl}/?action=verify-email&token=${verificationCode}`
+    )
+  } catch (err: any) {
+    console.error('[Team] Erro ao enviar welcome email:', err?.message || err)
+  }
 
   createNotification(user.id, {
     title: 'Bem-vindo ao Chronos',
     message: 'Sua conta foi criada com sucesso. Seus registros de jornada começarão a ser contabilizados a partir da sua data de admissão.',
     type: 'INFO',
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
 
   try {
     const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
@@ -235,7 +239,7 @@ export async function updateTeamMember(id: string, companyId: string, actorId: s
         type: 'SYSTEM',
         link: '/configuracoes',
       },
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
   }
   if (data.position && data.position !== user.position) {
     changes.push(`função alterada para "${data.position}"`)
@@ -250,7 +254,7 @@ export async function updateTeamMember(id: string, companyId: string, actorId: s
           message: 'Sua conta foi desativada pela administração.',
           type: 'WARNING',
         },
-      }).catch(() => {})
+      }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
     }
   }
 
@@ -272,7 +276,7 @@ export async function deleteTeamMember(id: string, companyId: string, actorId: s
       message: `Sua conta foi desativada por ${actorName}.`,
       type: 'WARNING',
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
   logAction(actorId, 'DEACTIVATE_MEMBER', `${actorName} desativou ${user.name}`, 'User', id, id, { actorName })
   return { message: 'Colaborador desativado com sucesso' }
 }
@@ -305,7 +309,7 @@ export async function resetTeamMemberPassword(id: string, companyId: string, act
       type: 'SYSTEM',
       link: '/configuracoes',
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
   logAction(actorId, 'RESET_PASSWORD', `${actorName} redefiniu a senha de ${user.name}`, 'User', id, id, { actorName })
 
   return { tempPassword, message: 'Senha redefinida com sucesso' }

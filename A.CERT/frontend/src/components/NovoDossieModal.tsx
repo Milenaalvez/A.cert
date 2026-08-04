@@ -173,7 +173,10 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
     if (q.length < 2 && q.length > 0) { setCartorioResults([]); return; }
     setSearchingCartorio(true);
     try {
-      const r = await fetch(`/api/properties/cartorios?q=${encodeURIComponent(q)}`);
+      const token = localStorage.getItem("acert_token");
+      const r = await fetch(`/api/properties/cartorios?q=${encodeURIComponent(q)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await r.json();
       setCartorioResults(data);
     } catch { setCartorioResults([]); }
@@ -301,7 +304,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
       setPreCpfError("CPF inválido");
       return;
     }
-    const newPerson = { id: `pre_${Date.now()}`, name: preNome.trim(), cpf: preCpf.trim(), preCadastro: true, role: personRole, birthDate: preNasc, motherName: preMae.trim() || undefined, fatherName: prePai.trim() || undefined, email: preEmail.trim() || undefined };
+    const newPerson = { id: `pre_${Date.now()}`, name: preNome.trim(), cpf: preCpf.trim(), role: personRole, birthDate: preNasc, motherName: preMae.trim() || undefined, fatherName: prePai.trim() || undefined, email: preEmail.trim() || undefined };
     setSelectedPeople(prev => [...prev, newPerson]);
     setPreNome("");
     setPreCpf("");
@@ -628,15 +631,14 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                       return (
                       <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 64, padding: "12px 16px", borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--bg-subtle)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: p.preCadastro ? "#D97706" : "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
                             {p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", display: "block", lineHeight: 1.3 }}>{p.name}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
                               {p.cpf && <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{formatDoc(p.cpf)}</span>}
-                              <span style={{ fontSize: 11, fontWeight: 600, color: "#FF7A00", background: "rgba(255,122,0,0.1)", padding: "2px 8px", borderRadius: 4 }}>{roleLabel[p.role] || p.role}</span>
-                              {p.preCadastro && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--badge-amber-text)", background: "var(--badge-amber-bg)", padding: "2px 8px", borderRadius: 4 }}>Cadastro pendente</span>}
+                               <span style={{ fontSize: 11, fontWeight: 600, color: "#FF7A00", background: "rgba(255,122,0,0.1)", padding: "2px 8px", borderRadius: 4 }}>{roleLabel[p.role] || p.role}</span>
                             </div>
                           </div>
                         </div>
@@ -670,7 +672,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                           </button>
                           <button onClick={() => { setShowPreCadastro(true); setNoResultsFound(false); }}
                             style={{ height: 42, padding: "0 14px", borderRadius: 6, border: "1px solid var(--border-default)", fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", flexShrink: 0 }}>
-                            <Plus size={14} strokeWidth={2} />Pré-cadastro
+                             <Plus size={14} strokeWidth={2} />Cadastro rápido
                           </button>
                         </div>
                         {personResults.length > 0 && (
@@ -694,7 +696,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                                     </div>
                                   </div>
                                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    {isPreReg && <span style={{ fontSize: 10, fontWeight: 600, color: "var(--badge-amber-text)", background: "var(--badge-amber-bg)", padding: "1px 6px", borderRadius: 4 }}>Pré-cadastro</span>}
+                                     {isPreReg && <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", background: "var(--bg-subtle)", padding: "1px 6px", borderRadius: 4 }}>Cadastro rápido</span>}
                                     {alreadyAdded && <span style={{ fontSize: 10, color: "#059669", fontWeight: 600 }}>Adicionado</span>}
                                   </div>
                                 </button>
@@ -710,7 +712,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                             </div>
                             <button onClick={() => { setShowPreCadastro(true); setNoResultsFound(false); }}
                               style={{ height: 30, padding: "0 12px", borderRadius: 5, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              Realizar pré-cadastro →
+                               Cadastro rápido →
                             </button>
                           </div>
                         )}
@@ -718,7 +720,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                     ) : (
                       <div style={{ display: "flex", gap: 8, padding: "14px", borderRadius: 8, border: "1px solid rgba(217,119,6,0.25)", background: "var(--badge-amber-bg)" }}>
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-amber-text)" }}>Pré-cadastro rápido</span>
+                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>Cadastro rápido</span>
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                             <input type="text" placeholder="Nome completo *" value={preNome} onChange={(e) => setPreNome(e.target.value)}
                               style={{ ...inputBase, background: "var(--bg-surface)" }} />
@@ -752,10 +754,9 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                             <input type="text" placeholder="Nome do Pai (opcional)" value={prePai} onChange={(e) => setPrePai(e.target.value)}
                               style={{ ...inputBase, background: "var(--bg-surface)" }} />
                           </div>
-                          <span style={{ fontSize: 10, color: "var(--badge-amber-text-secondary)" }}>A pessoa será marcada como cadastro pendente e precisará ser completada depois.</span>
                           <div style={{ display: "flex", gap: 6 }}>
                             <button onClick={addPreCadastro} disabled={!preNome.trim() || !preCpf.trim() || !!preCpfError || cpfStatus === "verifying"}
-                              style={{ height: 32, padding: "0 14px", borderRadius: 5, border: "none", background: "#D97706", color: "#FFF", fontSize: 11, fontWeight: 600, cursor: "pointer", opacity: !preNome.trim() || !preCpf.trim() || !!preCpfError || cpfStatus === "verifying" ? 0.5 : 1 }}>Adicionar</button>
+                               style={{ height: 32, padding: "0 14px", borderRadius: 5, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 11, fontWeight: 600, cursor: "pointer", opacity: !preNome.trim() || !preCpf.trim() || !!preCpfError || cpfStatus === "verifying" ? 0.5 : 1 }}>Adicionar</button>
                             <button onClick={() => { setShowPreCadastro(false); setPreNome(""); setPreCpf(""); setPreCpfError(""); setCpfStatus("idle"); }}
                               style={{ height: 32, padding: "0 14px", borderRadius: 5, border: "1px solid var(--border-default)", background: "transparent", fontSize: 11, fontWeight: 500, color: "var(--text-secondary)", cursor: "pointer" }}>Cancelar</button>
                           </div>
@@ -800,7 +801,7 @@ export default function NovoDossieModal({ onClose, onCreated }: { onClose: () =>
                       const roleLabel: Record<string, string> = { proprietario: 'Proprietário', comprador: 'Comprador', vendedor: 'Vendedor', locador: 'Locador', locatario: 'Locatário' };
                       return (
                         <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: p.preCadastro ? "#D97706" : "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                           <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#FF7A00", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
                             {p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
                           <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</span>

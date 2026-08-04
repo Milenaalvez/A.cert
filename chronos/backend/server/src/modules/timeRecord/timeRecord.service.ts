@@ -90,7 +90,7 @@ export async function upsertRecord(userId: string, data: {
     else if (clamped < 240) status = 'ABSENCE' as RecordStatus
 
     // Auto-resolve "missing clock-in" notification
-    deleteNotificationByMetadata(userId, { type: 'missing_clockin' }).catch(() => {})
+    deleteNotificationByMetadata(userId, { type: 'missing_clockin' }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
     const reviewStatus = 'PENDING_REVIEW' as const
 
@@ -148,7 +148,7 @@ export async function upsertRecord(userId: string, data: {
           type: 'APPROVAL',
           link: '/equipe',
           metadata: { type: 'time_review', userId, date: data.date, recordId: result.id },
-        }).catch(() => {})
+        }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
       }
     }
 
@@ -171,7 +171,7 @@ export async function upsertRecord(userId: string, data: {
         targetUserId: userId,
         metadata: { date: data.date, clockIn: data.clockIn, clockOut: data.clockOut, breakStart: data.breakStart, breakEnd: data.breakEnd, totalMinutes: clamped },
       },
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
     createNotification(userId, {
       title: isToday ? 'Jornada enviada para análise' : 'Registro enviado para análise',
@@ -181,13 +181,13 @@ export async function upsertRecord(userId: string, data: {
       type: 'INFO',
       link: '/calendario',
       metadata: { type: 'record_created', date: data.date },
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
     return result
   }
 
   // Partial record: only clock-in, no clock-out yet
-  deleteNotificationByMetadata(userId, { type: 'missing_clockin' }).catch(() => {})
+  deleteNotificationByMetadata(userId, { type: 'missing_clockin' }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   const existing = await prisma.timeRecord.findUnique({
     where: { userId_date: { userId, date } },
@@ -230,14 +230,14 @@ export async function upsertRecord(userId: string, data: {
       entityId: result.id,
       targetUserId: userId,
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   createNotification(userId, {
     title: 'Entrada registrada',
     message: `Sua entrada às ${data.clockIn} foi registrada. Não esqueça de registrar a saída no final do expediente.`,
     type: 'INFO',
     metadata: { type: 'clockin_only', date: data.date },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   return result
 }
@@ -275,7 +275,7 @@ export async function approveRecord(id: string, reviewerId: string, companyId: s
       link: '/calendario',
       metadata: { type: 'time_approved', recordId: id, date: record.date.toISOString().split('T')[0] },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   prisma.activityLog.create({
     data: {
@@ -289,7 +289,7 @@ export async function approveRecord(id: string, reviewerId: string, companyId: s
       newValue: 'Aprovado',
       metadata: { note, reviewStatus: 'APPROVED' },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   return updated
 }
@@ -322,7 +322,7 @@ export async function rejectRecord(id: string, reviewerId: string, companyId: st
       link: '/calendario',
       metadata: { type: 'time_rejected', recordId: id, date: record.date.toISOString().split('T')[0] },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   prisma.activityLog.create({
     data: {
@@ -336,7 +336,7 @@ export async function rejectRecord(id: string, reviewerId: string, companyId: st
       newValue: `Recusado: ${note || 'Sem motivo'}`,
       metadata: { note, reviewStatus: 'REJECTED' },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[TimeRecord] Erro:', err?.message || err))
 
   return updated
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { MapPin, Smartphone, ShieldCheck, Clock, LogIn, LogOut, Coffee, Undo2, CheckCircle2, XCircle, AlertTriangle, Loader2, User, Wifi, ArrowUpRight, ArrowDownLeft, ScanLine, Maximize2, X, Monitor, Globe } from "lucide-react"
+import { MapPin, Smartphone, ShieldCheck, Clock, LogIn, LogOut, Coffee, Undo2, CheckCircle2, XCircle, AlertTriangle, Loader2, User, Wifi, ArrowUpRight, ArrowDownLeft, ScanLine, Maximize2, X, Monitor, Globe, QrCode } from "lucide-react"
 import { PageHeader } from "../componentes/PageHeader"
 import { PointVerificationModal } from "../componentes/PointVerificationModal"
 import { LocationMap } from "../componentes/LocationMap"
 import { pointRecords as apiPointRecords, faceRegistration as apiFaceRegistration } from "../services/api"
 import type { PointEvent, PointType, DeviceInfo, LocationData } from "../types"
 import { loadFaceModels } from "../utils/face"
+import QRCode from "qrcode"
 
 const POINT_CONFIG: Record<PointType, { label: string; desc: string; icon: any }> = {
   ENTRY: { label: "Entrada", desc: "Início da jornada", icon: LogIn },
@@ -219,6 +220,21 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
   const [pendingScheduleType, setPendingScheduleType] = useState<PointType | null>(null)
   const [outsideSchedule, setOutsideSchedule] = useState(false)
 
+  // Method choice state
+  const [methodChoiceOpen, setMethodChoiceOpen] = useState(false)
+  const [pendingMethodType, setPendingMethodType] = useState<PointType | null>(null)
+
+  // QR Code state
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [qrToken, setQrToken] = useState<string | null>(null)
+  const [qrPointType, setQrPointType] = useState<PointType | null>(null)
+  const [qrExpiresAt, setQrExpiresAt] = useState<number>(0)
+  const [qrPolling, setQrPolling] = useState(false)
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const qrCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [qrCountdown, setQrCountdown] = useState(60)
+
   // Live location tracking
   const [liveCoords, setLiveCoords] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null)
   const watchRef = useRef<number | null>(null)
@@ -243,7 +259,7 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
       if (data.descriptors && data.descriptors.length > 0) {
         setFaceRegistered(true)
         setFaceDescriptors(data.descriptors)
-        loadFaceModels().catch(() => {})
+        loadFaceModels().catch((err) => console.warn('[Face] Modelos nao carregados (webgl nao disponivel):', err?.message || err))
       } else {
         setFaceRegistered(false)
       }
@@ -427,18 +443,66 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
     }
   }, [selectedType, location, faceRegistered, faceDescriptors, fetchEvents, onPointCreated])
 
+  // ── QR Code ──
+  const generateQR = useCallback(async (type: PointType) => {
+    try {
+      const token = localStorage.getItem("chronos_token")
+      const r = await fetch("/api/point-records/qr-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ pointType: type }),
+      })
+      if (!r.ok) throw new Error("Erro ao gerar QR Code")
+      const data = await r.json()
+      const checkinUrl = `${window.location.origin}/api/point-records/qr-checkin?t=${data.token}`
+      const qrData = await QRCode.toDataURL(checkinUrl, { width: 280, margin: 2 })
+      setQrDataUrl(qrData)
+      setQrToken(data.token)
+      setQrPointType(type)
+      setQrExpiresAt(Date.now() + 60_000)
+      setQrCountdown(60)
+      setQrModalOpen(true)
+      setQrPolling(true)
+    } catch (err: any) {
+      setError(err.message || "Erro ao gerar QR Code")
+    }
+  }, [])
+
+  const closeQrModal = useCallback(() => {
+    setQrModalOpen(false)
+    setQrDataUrl(null)
+    setQrToken(null)
+    setQrPointType(null)
+    setQrPolling(false)
+    if (qrPollRef.current) { clearInterval(qrPollRef.current); qrPollRef.current = null }
+    if (qrCountdownRef.current) { clearInterval(qrCountdownRef.current); qrCountdownRef.current = null }
+  }, [])
+
   const openModal = useCallback((type: PointType) => {
     if (!outsideSchedule && !isWorkday(todayISO(), user?.workSchedule)) {
       setPendingScheduleType(type)
       setScheduleWarningOpen(true)
       return
     }
-    setSelectedType(type)
+    setPendingMethodType(type)
+    setMethodChoiceOpen(true)
+  }, [user?.workSchedule, outsideSchedule])
+
+  const handleMethodFacial = useCallback(() => {
+    setMethodChoiceOpen(false)
+    if (!pendingMethodType) return
+    setSelectedType(pendingMethodType)
     setError(null)
     setSuccessMsg(null)
     setLocationModalOpen(false)
     setModalOpen(true)
-  }, [user?.workSchedule, outsideSchedule])
+  }, [pendingMethodType])
+
+  const handleMethodQR = useCallback(() => {
+    setMethodChoiceOpen(false)
+    if (!pendingMethodType) return
+    generateQR(pendingMethodType)
+  }, [pendingMethodType, generateQR])
 
   const closeModal = useCallback(() => {
     setModalOpen(false)
@@ -461,6 +525,39 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
     setScheduleWarningOpen(false)
     setPendingScheduleType(null)
   }, [])
+
+  // QR countdown
+  useEffect(() => {
+    if (!qrModalOpen) return
+    qrCountdownRef.current = setInterval(() => {
+      setQrCountdown(prev => {
+        if (prev <= 1) {
+          closeQrModal()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => { if (qrCountdownRef.current) clearInterval(qrCountdownRef.current) }
+  }, [qrModalOpen, closeQrModal])
+
+  // QR polling: check if event was created
+  useEffect(() => {
+    if (!qrPolling) return
+    qrPollRef.current = setInterval(async () => {
+      try {
+        const events = await apiPointRecords.list(todayISO())
+        setTodayEvents(events)
+        const recordedTypesNow = new Set(events.map(e => e.pointType))
+        if (qrPointType && recordedTypesNow.has(qrPointType)) {
+          closeQrModal()
+          setSuccessMsg("Ponto registrado via QR Code!")
+          onPointCreated?.()
+        }
+      } catch {}
+    }, 1500)
+    return () => { if (qrPollRef.current) clearInterval(qrPollRef.current) }
+  }, [qrPolling, qrPointType, closeQrModal, onPointCreated])
 
   const eventStatusIcon = (type: PointType) => {
     if (recordedTypes.has(type)) return <CheckCircle2 size={16} className="text-[var(--accent-green)]" />
@@ -543,7 +640,7 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
                     )}
                     {isNext && !done && (
                       <div className="absolute top-2 right-2">
-                        <ScanLine size={14} className="text-[var(--accent-primary)]/60" />
+                        <QrCode size={14} className="text-[var(--accent-primary)]/60" />
                       </div>
                     )}
                   </button>
@@ -569,7 +666,12 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
               <div className="flex items-start gap-5">
                 <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border-2 border-[var(--accent-primary)]/20">
                   {user?.avatar ? (
-                    <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                    <>
+                      <img src={user.avatar} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                      <div className="w-full h-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--sidebar-bg)] flex items-center justify-center hidden">
+                        <User size={28} className="text-white" />
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--sidebar-bg)] flex items-center justify-center">
                       <User size={28} className="text-white" />
@@ -958,6 +1060,51 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
         />
       )}
 
+      {/* ─── METHOD CHOICE MODAL ─── */}
+      {methodChoiceOpen && pendingMethodType && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setMethodChoiceOpen(false)}>
+          <div className="relative w-full max-w-md bg-surface rounded-2xl border border-default overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-3 right-3">
+              <button onClick={() => setMethodChoiceOpen(false)} className="w-8 h-8 rounded-lg bg-elevated hover:bg-elevated/80 flex items-center justify-center transition-colors">
+                <X size={14} className="text-secondary" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-6 p-6 pt-10">
+              <div className="text-center">
+                <h2 className="text-lg font-bold text-primary">Como deseja registrar?</h2>
+                <p className="text-sm text-secondary mt-1">{POINT_CONFIG[pendingMethodType].label} — {POINT_CONFIG[pendingMethodType].desc}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={handleMethodFacial}
+                  className="flex flex-col items-center gap-3 p-5 rounded-xl bg-[var(--accent-primary)]/5 border border-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/20 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center group-hover:bg-[var(--accent-primary)]/15 transition-colors">
+                    <ScanLine size={24} className="text-[var(--accent-primary)]" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-primary">Reconhecimento Facial</p>
+                    <p className="text-[10px] text-muted mt-1">Senha + câmera</p>
+                  </div>
+                </button>
+                <button
+                  onClick={handleMethodQR}
+                  className="flex flex-col items-center gap-3 p-5 rounded-xl bg-[var(--accent-green)]/5 border border-[var(--accent-green)]/10 hover:bg-[var(--accent-green)]/10 hover:border-[var(--accent-green)]/20 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--accent-green)]/10 flex items-center justify-center group-hover:bg-[var(--accent-green)]/15 transition-colors">
+                    <QrCode size={24} className="text-[var(--accent-green)]" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-primary">QR Code</p>
+                    <p className="text-[10px] text-muted mt-1">Escaneie com celular</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── SCHEDULE WARNING MODAL ─── */}
       {scheduleWarningOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -993,6 +1140,37 @@ export function RegistrarPontoPage({ user, onPointCreated }: RegistrarPontoPageP
                 >
                   Continuar mesmo assim
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── QR CODE MODAL ─── */}
+      {qrModalOpen && qrDataUrl && qrPointType && (
+        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeQrModal}>
+          <div className="relative w-full max-w-sm bg-surface rounded-2xl border border-default overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-3 right-3">
+              <button onClick={closeQrModal} className="w-8 h-8 rounded-lg bg-elevated hover:bg-elevated/80 flex items-center justify-center transition-colors">
+                <X size={14} className="text-secondary" />
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-5 p-8 pt-12">
+              <div className="w-14 h-14 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center">
+                <QrCode size={28} className="text-[var(--accent-primary)]" />
+              </div>
+              <div className="text-center">
+                <h2 className="text-base font-bold text-primary">QR Code — {POINT_CONFIG[qrPointType].label}</h2>
+                <p className="text-xs text-secondary mt-1">Escaneie com a câmera do celular para registrar</p>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-default/50">
+                <img src={qrDataUrl} alt="QR Code" className="w-[220px] h-[220px]" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--accent-green)] animate-pulse" />
+                <span className="text-xs text-secondary">
+                  Aguardando escaneamento... <span className="font-bold text-primary">{qrCountdown}s</span>
+                </span>
               </div>
             </div>
           </div>

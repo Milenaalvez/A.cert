@@ -17,6 +17,7 @@ var _default = exports["default"] = {
   0x08: 'Backspace',
   0x09: 'Tab',
   0x0a: 'NumpadClear',
+  0x0c: 'NumpadClear',
   0x0d: 'Enter',
   0x10: 'ShiftLeft',
   0x11: 'ControlLeft',

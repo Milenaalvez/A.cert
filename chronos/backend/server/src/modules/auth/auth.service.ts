@@ -19,7 +19,7 @@ import { createNotification } from '../notification/notification.service.js'
 function logActivity(userId: string, action: string, description: string, entityType: string, entityId: string, targetUserId?: string, metadata?: any) {
   return prisma.activityLog.create({
     data: { userId, action, description, entityType, entityId, targetUserId, metadata: metadata || {} },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Auth] Erro ao registrar activity log:', err?.message || err))
 }
 
 function parseUserAgent(ua: string): { device: string; browser: string; os: string } {
@@ -183,20 +183,24 @@ export async function registerUser(data: {
     companyId: company.id,
   })
 
-  sendWelcomeEmail(
-    emailLower,
-    nameTrimmed,
-    registrationNumber,
-    data.position || role,
-    company.name,
-    `${env.appUrl}/?action=verify-email&token=${verificationCode}`
-  ).catch((err: any) => console.error('[Auth] Erro ao enviar welcome email:', err?.message))
+  try {
+    await sendWelcomeEmail(
+      emailLower,
+      nameTrimmed,
+      registrationNumber,
+      data.position || role,
+      company.name,
+      `${env.appUrl}/?action=verify-email&token=${verificationCode}`
+    )
+  } catch (err: any) {
+    console.error('[Auth] Erro ao enviar welcome email:', err?.message || err)
+  }
 
   createNotification(user.id, {
     title: 'Bem-vindo ao Chronos',
     message: 'Sua conta foi criada com sucesso. Seus registros de jornada começarão a ser contabilizados a partir da sua data de admissão.',
     type: 'INFO',
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Auth] Erro:', err?.message || err))
 
   try {
     await supabaseAdmin.auth.admin.createUser({
@@ -238,11 +242,15 @@ export async function sendVerificationCode(email: string) {
     data: { verificationCode, verificationExpiresAt },
   })
 
-  sendVerificationEmail(
-    user.email,
-    user.name,
-    `${env.appUrl}/?action=verify-email&token=${verificationCode}`
-  ).catch((err: any) => console.error('[Auth] Erro ao enviar verification email:', err?.message))
+  try {
+    await sendVerificationEmail(
+      user.email,
+      user.name,
+      `${env.appUrl}/?action=verify-email&token=${verificationCode}`
+    )
+  } catch (err: any) {
+    console.error('[Auth] Erro ao enviar verification email:', err?.message || err)
+  }
 
   logActivity(user.id, 'VERIFICATION_RESENT', `Novo link de verificação enviado para ${user.email}`, 'User', user.id, user.id)
 
@@ -302,7 +310,9 @@ export async function loginUser(login: string, password: string, rememberMe = fa
     throw Object.assign(new Error('Conta desativada. Entre em contato com o RH.'), { statusCode: 403 })
   }
 
-  migrateUserToSupabase(user.email, password, user.name).catch(() => {})
+  migrateUserToSupabase(user.email, password, user.name).catch((err: any) => {
+    console.warn('[Auth] Erro ao migrar para Supabase Auth (não crítico):', err?.message || err)
+  })
 
   await trackLogin(user.id, user.name, userAgent, ip)
   return loginResponse(user, rememberMe)
@@ -395,11 +405,15 @@ export async function forgotPassword(email: string) {
     },
   })
 
-  sendPasswordResetEmail(
-    user.email,
-    user.name,
-    `${env.appUrl}/?action=reset-password&token=${resetToken}`
-  ).catch((err: any) => console.error('[Auth] Erro ao enviar reset password email:', err?.message))
+  try {
+    await sendPasswordResetEmail(
+      user.email,
+      user.name,
+      `${env.appUrl}/?action=reset-password&token=${resetToken}`
+    )
+  } catch (err: any) {
+    console.error('[Auth] Erro ao enviar reset password email:', err?.message || err)
+  }
 
   logActivity(user.id, 'PASSWORD_RESET_REQUESTED', `Recuperação de senha solicitada para ${user.email}`, 'User', user.id, user.id)
 
@@ -433,7 +447,11 @@ export async function updatePassword(token: string, newPassword: string) {
     },
   })
 
-  sendSecurityNotification(user.email, user.name).catch(() => {})
+  try {
+    await sendSecurityNotification(user.email, user.name)
+  } catch (err: any) {
+    console.error('[Auth] Erro ao enviar notificação de segurança:', err?.message || err)
+  }
 
   await prisma.notification.create({
     data: {
@@ -442,7 +460,7 @@ export async function updatePassword(token: string, newPassword: string) {
       title: 'Senha alterada',
       message: 'Sua senha foi atualizada com sucesso.',
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Auth] Erro:', err?.message || err))
 
   logActivity(user.id, 'PASSWORD_CHANGED', `Senha alterada para ${user.email}`, 'User', user.id, user.id, {
     method: 'reset_token',

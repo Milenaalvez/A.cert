@@ -180,7 +180,7 @@ export async function createTicket(
       entityId: ticket!.id,
       metadata: { category: data.category },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
   if (assignedTo) {
     notificationService.createNotification(assignedTo, {
@@ -188,7 +188,7 @@ export async function createTicket(
       message: `${ticket!.protocol} - ${ticket!.title}`,
       type: 'INFO',
       link: `/solicitacoes/${ticket!.id}`,
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
     const assigneeUser = await prisma.user.findUnique({
       where: { id: assignedTo },
@@ -199,14 +199,18 @@ export async function createTicket(
         where: { id: userId },
         select: { name: true },
       })
-      sendTicketCreatedEmail(
-        assigneeUser.email,
-        requester?.name || 'Colaborador',
-        ticket!.protocol,
-        ticket!.title,
-        ticket!.id,
-        data.category,
-      ).catch((err) => console.error('[Email] Erro ao notificar responsável:', err))
+      try {
+        await sendTicketCreatedEmail(
+          assigneeUser.email,
+          requester?.name || 'Colaborador',
+          ticket!.protocol,
+          ticket!.title,
+          ticket!.id,
+          data.category,
+        )
+      } catch (err) {
+        console.error('[Email] Erro ao notificar responsável:', err)
+      }
     }
   }
 
@@ -267,7 +271,7 @@ export async function addTicketMessage(
       message: `${ticket.protocol} - ${message.slice(0, 100)}`,
       type: 'INFO',
       link: `/solicitacoes/${ticketId}`,
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
     const notifyUser = await prisma.user.findUnique({
       where: { id: notifyUserId },
@@ -278,15 +282,19 @@ export async function addTicketMessage(
       select: { name: true },
     })
     if (notifyUser?.email) {
-      sendTicketNewMessageEmail(
-        notifyUser.email,
-        notifyUser.name,
-        ticket.protocol,
-        ticket.title,
-        message,
-        ticketId,
-        author?.name || 'Usuário',
-      ).catch((err) => console.error('[Email] Erro ao notificar mensagem:', err))
+      try {
+        await sendTicketNewMessageEmail(
+          notifyUser.email,
+          notifyUser.name,
+          ticket.protocol,
+          ticket.title,
+          message,
+          ticketId,
+          author?.name || 'Usuário',
+        )
+      } catch (err) {
+        console.error('[Email] Erro ao notificar mensagem:', err)
+      }
     }
   }
 
@@ -298,7 +306,7 @@ export async function addTicketMessage(
       entityType: 'Ticket',
       entityId: ticketId,
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
   return {
     message: msg,
@@ -338,21 +346,25 @@ export async function assignTicket(ticketId: string, userId: string, companyId: 
       message: `${ticket.protocol} - ${updated.assignee?.name || 'Alguém'} está analisando sua solicitação`,
       type: 'INFO',
       link: `/solicitacoes/${ticketId}`,
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
     const requester = await prisma.user.findUnique({
       where: { id: ticket.userId },
       select: { email: true, name: true },
     })
     if (requester?.email && updated.assignee?.name) {
-      sendTicketAssignedEmail(
-        requester.email,
-        requester.name,
-        ticket.protocol,
-        ticket.title,
-        updated.assignee.name,
-        ticketId,
-      ).catch((err) => console.error('[Email] Erro ao notificar atribuição:', err))
+      try {
+        await sendTicketAssignedEmail(
+          requester.email,
+          requester.name,
+          ticket.protocol,
+          ticket.title,
+          updated.assignee.name,
+          ticketId,
+        )
+      } catch (err) {
+        console.error('[Email] Erro ao notificar atribuição:', err)
+      }
     }
   }
 
@@ -365,7 +377,7 @@ export async function assignTicket(ticketId: string, userId: string, companyId: 
       entityId: ticketId,
       newValue: userId,
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
   return updated
 }
@@ -421,17 +433,21 @@ export async function updateTicketStatus(
     message: notifMsg,
     type: 'INFO',
     link: `/solicitacoes/${ticketId}`,
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Ticket] Erro:', err?.message || err))
 
-  sendTicketUpdateEmail(
-    ticket.user.email,
-    ticket.user.name,
-    ticket.protocol,
-    ticket.title,
-    status,
-    message,
-    ticketId,
-  ).catch((err) => console.error('[Email] Erro ao notificar atualização de status:', err))
+  try {
+    await sendTicketUpdateEmail(
+      ticket.user.email,
+      ticket.user.name,
+      ticket.protocol,
+      ticket.title,
+      status,
+      message,
+      ticketId,
+    )
+  } catch (err) {
+    console.error('[Email] Erro ao notificar atualização de status:', err)
+  }
 
   prisma.activityLog.create({
     data: {
@@ -443,7 +459,7 @@ export async function updateTicketStatus(
       oldValue: ticket.status,
       newValue: status,
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Ticket] Erro ao registrar activity log:', err?.message || err))
 
   return updated
 }

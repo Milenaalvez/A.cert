@@ -425,7 +425,10 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold bg-[#395886] text-white shrink-0">
                           {detailTicket.user?.avatar ? (
-                            <img src={detailTicket.user.avatar} alt="" className="w-full h-full object-cover rounded-md" />
+                            <>
+                              <img src={detailTicket.user.avatar} alt="" className="w-full h-full object-cover rounded-md" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                              <span className="hidden">{detailTicket.user ? getInitials(detailTicket.user.name) : "?"}</span>
+                            </>
                           ) : detailTicket.user ? getInitials(detailTicket.user.name) : "?"}
                         </div>
                         <span className="text-primary truncate">{detailTicket.user?.name || "---"}</span>
@@ -477,7 +480,10 @@ export function SolicitacoesPage({ user }: { user?: { id: string; role: string; 
                         <div key={msg.id} className="flex gap-3">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold bg-[#395886] text-white shrink-0 mt-0.5">
                             {msg.user.avatar ? (
-                              <img src={msg.user.avatar} alt="" className="w-full h-full object-cover rounded-lg" />
+                              <>
+                                <img src={msg.user.avatar} alt="" className="w-full h-full object-cover rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                                <span className="hidden">{getInitials(msg.user.name)}</span>
+                              </>
                             ) : getInitials(msg.user.name)}
                           </div>
                           <div className="flex-1 min-w-0">

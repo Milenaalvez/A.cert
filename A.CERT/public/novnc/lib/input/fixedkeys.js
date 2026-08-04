@@ -57,9 +57,25 @@ var _default = exports["default"] = {
   'ArrowUp': 'ArrowUp',
   // 3.1.4. Numpad Section
 
-  'NumLock': 'NumLock',
-  'NumpadBackspace': 'Backspace',
-  'NumpadClear': 'Clear',
+  'NumLock':          'NumLock',
+  'NumpadBackspace':  'Backspace',
+  'NumpadClear':      'Clear',
+  'Numpad0':          '0',
+  'Numpad1':          '1',
+  'Numpad2':          '2',
+  'Numpad3':          '3',
+  'Numpad4':          '4',
+  'Numpad5':          '5',
+  'Numpad6':          '6',
+  'Numpad7':          '7',
+  'Numpad8':          '8',
+  'Numpad9':          '9',
+  'NumpadEnter':      'Enter',
+  'NumpadAdd':        '+',
+  'NumpadSubtract':   '-',
+  'NumpadMultiply':   '*',
+  'NumpadDivide':     '/',
+  'NumpadDecimal':    '.',
   // 3.1.5. Function Section
 
   'Escape': 'Escape',

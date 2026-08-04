@@ -72,7 +72,7 @@ export async function uploadDocument(
       targetUserId: userId,
       metadata: { category: data.category, type: data.type },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Document] Erro:', err?.message || err))
 
   return doc
 }
@@ -103,7 +103,7 @@ export async function deleteDocument(id: string, userId: string, actorId: string
   if (doc.userId !== userId && actorRole !== 'ADMIN' && actorRole !== 'RH' && actorRole !== 'DEVELOPER' && actorRole !== 'SUPER_ADMIN') return false
   if (doc.uploadedBy !== actorId && actorRole !== 'ADMIN' && actorRole !== 'RH' && actorRole !== 'DEVELOPER' && actorRole !== 'SUPER_ADMIN') return false
 
-  await prisma.document.delete({ where: { id } }).catch(() => {})
+  await prisma.document.delete({ where: { id } }).catch((err: any) => console.error('[Document] Erro:', err?.message || err))
 
   prisma.activityLog.create({
     data: {
@@ -114,7 +114,7 @@ export async function deleteDocument(id: string, userId: string, actorId: string
       entityId: id,
       targetUserId: userId,
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Document] Erro:', err?.message || err))
 
   return true
 }

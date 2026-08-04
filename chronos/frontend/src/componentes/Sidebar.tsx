@@ -380,7 +380,12 @@ export function Sidebar({ activePage, onNavigate, onLogout, onSwitchAccount, use
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-semibold shadow-sm overflow-hidden">
                 {user?.avatar ? (
-                  <img src={`${user.avatar}?t=${avatarVersion}`} alt="" className="w-full h-full object-cover" />
+                  <>
+                    <img src={`${user.avatar}?t=${avatarVersion}`} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                    <div className="w-full h-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--sidebar-bg)] flex items-center justify-center text-[#FFFFFF] hidden">
+                      {user?.name ? getInitials(user.name) : 'U'}
+                    </div>
+                  </>
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--sidebar-bg)] flex items-center justify-center text-[#FFFFFF]">
                     {user?.name ? getInitials(user.name) : 'U'}
@@ -425,7 +430,10 @@ export function Sidebar({ activePage, onNavigate, onLogout, onSwitchAccount, use
                     >
                       <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold bg-[#395886]">
                         {acc.avatar ? (
-                          <img src={acc.avatar} alt="" className="w-full h-full object-cover rounded-md" />
+                          <>
+                            <img src={acc.avatar} alt="" className="w-full h-full object-cover rounded-md" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                            <span className="hidden">{getInitials(acc.name)}</span>
+                          </>
                         ) : (
                           getInitials(acc.name)
                         )}

@@ -691,7 +691,12 @@ export function EquipePage({ user, onViewProfile, allRecords = [], justificacoes
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       {m.avatar ? (
-                        <img src={m.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        <>
+                          <img src={m.avatar} alt="" className="w-9 h-9 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                          <div className="w-9 h-9 rounded-full bg-elevated/40 flex items-center justify-center hidden">
+                            <Users size={15} className="text-muted" />
+                          </div>
+                        </>
                       ) : (
                         <div className="w-9 h-9 rounded-full bg-elevated/40 flex items-center justify-center">
                           <Users size={15} className="text-muted" />
@@ -1184,7 +1189,12 @@ export function EquipePage({ user, onViewProfile, allRecords = [], justificacoes
               <div className="flex items-center gap-3.5">
                 <div className="relative">
                   {selMember.avatar ? (
-                    <img src={selMember.avatar} alt="" className="w-12 h-12 rounded-full object-cover" />
+                    <>
+                      <img src={selMember.avatar} alt="" className="w-12 h-12 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                      <div className="w-12 h-12 rounded-full bg-elevated/40 flex items-center justify-center hidden">
+                        <Users size={20} className="text-muted" />
+                      </div>
+                    </>
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-elevated/40 flex items-center justify-center">
                       <Users size={20} className="text-muted" />

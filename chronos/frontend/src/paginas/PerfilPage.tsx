@@ -301,8 +301,8 @@ export function PerfilPage({ memberId, user, onBack, onNavigate, embedded, onAva
       setProfile((prev) => prev ? { ...prev, avatar: result.avatarUrl } : prev)
       setAvatarVersion((v) => v + 1)
       onAvatarUpdate?.(result.avatarUrl)
-    } catch {
-      alert("Erro ao enviar imagem.")
+    } catch (err: any) {
+      alert(err?.message || "Erro ao enviar imagem.")
     } finally {
       setAvatarUploading(false)
     }
@@ -591,7 +591,12 @@ export function PerfilPage({ memberId, user, onBack, onNavigate, embedded, onAva
           <div className="flex items-start gap-5">
             <div className="relative shrink-0 group">
               {p.avatar ? (
-                <img src={`${p.avatar}?t=${avatarVersion}`} alt="" className="w-[140px] h-[140px] rounded-xl object-cover" />
+                <>
+                  <img src={`${p.avatar}?t=${avatarVersion}`} alt="" className="w-[140px] h-[140px] rounded-xl object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                  <div className="w-[140px] h-[140px] rounded-xl bg-white/[0.04] flex items-center justify-center hidden">
+                    <Users size={40} className="text-muted" />
+                  </div>
+                </>
               ) : (
                 <div className="w-[140px] h-[140px] rounded-xl bg-white/[0.04] flex items-center justify-center">
                   <Users size={40} className="text-muted" />

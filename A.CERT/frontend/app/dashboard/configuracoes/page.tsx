@@ -883,38 +883,44 @@ function ConfiguracoesContent() {
                 <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: "0 6px" }}>
                   <thead>
                     <tr className="text-[10px] font-semibold text-muted uppercase tracking-wider">
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", minWidth: "150px" }}>Data/Hora</th>
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", minWidth: "130px" }}>Usuário</th>
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", minWidth: "140px" }}>Ação</th>
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", minWidth: "100px" }}>Módulo</th>
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", minWidth: "120px" }}>IP</th>
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)", minWidth: "90px" }}>Resultado</th>
-                      <th className="text-left px-4 py-2" style={{ borderBottom: "1px solid var(--border-default)" }}>Detalhes</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)", minWidth: "150px" }}>Data/Hora</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)", minWidth: "130px" }}>Usuário</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)", minWidth: "140px" }}>Ação</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)", minWidth: "100px" }}>Módulo</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)", minWidth: "120px" }}>IP</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)", minWidth: "90px" }}>Resultado</th>
+                      <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-default)" }}>Detalhes</th>
                     </tr>
                   </thead>
                   <tbody>
                     {auditLoading ? (
                       <tr><td colSpan={7} className="py-16 text-center"><RefreshCw size={22} className="animate-spin mx-auto text-[#FF7A00]" /></td></tr>
                     ) : !Array.isArray(auditLogs) || auditLogs.length === 0 ? (
-                      <tr><td colSpan={7} className="py-12 text-center text-[13px] text-secondary">Nenhum registro de auditoria encontrado.</td></tr>
+                      <tr><td colSpan={7} style={{ padding: "48px 0", textAlign: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+                          <Activity size={32} strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
+                          <span style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>Nenhum registro encontrado</span>
+                          <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Ainda não há eventos de auditoria registrados.</span>
+                        </div>
+                      </td></tr>
                     ) : auditLogs.map((log: any) => (
                       <tr key={log.id} className="group transition-colors" style={{ borderRadius: "8px" }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
-                        <td className="px-4 py-3 text-[12px] text-muted font-mono">{formatDate(log.created_at)}</td>
-                        <td className="px-4 py-3 text-[13px] text-primary">{log.user_name}</td>
-                        <td className="px-4 py-3 text-[13px] text-primary">{log.action}</td>
-                        <td className="px-4 py-3 text-[12px] text-[#FF7A00] font-medium">{log.module}</td>
-                        <td className="px-4 py-3 text-[12px] text-muted font-mono">{log.ip_address || "—"}</td>
-                        <td className="px-4 py-3">
+                        <td style={{ padding: "12px 12px", fontSize: "12px", color: "var(--text-muted)", fontFamily: "monospace" }}>{formatDate(log.created_at)}</td>
+                        <td style={{ padding: "12px 12px", fontSize: "13px", color: "var(--text-primary)" }}>{log.user_name}</td>
+                        <td style={{ padding: "12px 12px", fontSize: "13px", color: "var(--text-primary)" }}>{log.action}</td>
+                        <td style={{ padding: "12px 12px", fontSize: "12px", color: "#FF7A00", fontWeight: 500 }}>{log.module}</td>
+                        <td style={{ padding: "12px 12px", fontSize: "12px", color: "var(--text-muted)", fontFamily: "monospace" }}>{log.ip_address || "—"}</td>
+                        <td style={{ padding: "12px 12px" }}>
                           {log.result === "error" ? (
-                            <span className="text-[11px] font-semibold text-[#DC2626] bg-[#DC2626]/10 px-2 py-0.5 rounded">Erro</span>
+                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#DC2626", background: "rgba(220,38,38,0.12)", padding: "2px 8px", borderRadius: "4px" }}>Erro</span>
                           ) : (
-                            <span className="text-[11px] font-semibold text-[#059669] bg-[#059669]/10 px-2 py-0.5 rounded">Sucesso</span>
+                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#059669", background: "rgba(5,150,105,0.12)", padding: "2px 8px", borderRadius: "4px" }}>Sucesso</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[12px] text-muted truncate block" style={{ maxWidth: "260px" }}>{log.detail || "—"}</span>
+                        <td style={{ padding: "12px 12px" }}>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)", maxWidth: "260px", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.detail || "—"}</span>
                         </td>
                       </tr>
                     ))}

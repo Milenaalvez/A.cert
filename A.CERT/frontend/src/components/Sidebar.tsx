@@ -461,7 +461,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                     <div className="flex items-center gap-2 w-full">
                       <span className="text-[14px] font-semibold text-white truncate">{user?.name || 'Usuário'}</span>
                       {notifCount > 0 && (
-                        <span className="shrink-0 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center" style={{ minWidth: 18, height: 18, padding: "0 5px" }}>{notifCount}</span>
+                        <span className="shrink-0 rounded-full bg-[#DC2626] flex items-center justify-center" style={{ width: 8, height: 8 }} />
                       )}
                     </div>
                     <span className="text-[12px] text-white/60 truncate w-full">{getRoleLabel(user?.role, user?.position)}</span>
@@ -493,23 +493,26 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                 >
                   {showNotifications ? (
                     <>
-                      <div style={{ padding: "24px 24px 16px" }}>
+                      <div style={{ padding: "20px 24px 12px" }}>
                         <button
                           onClick={() => setShowNotifications(false)}
-                          className="flex items-center gap-2 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer mb-4"
+                          className="flex items-center gap-1.5 text-[12px] text-white/40 hover:text-white/80 transition-colors cursor-pointer mb-3"
                         >
                           <ChevronRight size={14} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
-                          Voltar ao perfil
+                          Fechar
                         </button>
                         <div className="flex items-center justify-between">
-                          <h3 className="text-[15px] font-semibold text-white">
-                            Notificações
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-[15px] font-semibold text-white">
+                              Notificações
+                            </h3>
                             {notifCount > 0 && (
-                              <span className="ml-2.5 text-[12px] font-semibold text-[#FF7A00]">
-                                · {notifCount} nova{notifCount > 1 ? 's' : ''}
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#DC2626]/15 px-2.5 py-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]" />
+                                <span className="text-[11px] font-semibold text-[#DC2626]">{notifCount}</span>
                               </span>
                             )}
-                          </h3>
+                          </div>
                         </div>
                       </div>
                       <div className="flex flex-col notif-scroll" style={{ minHeight: 300, maxHeight: 420, overflowY: "auto" }}>
@@ -531,7 +534,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                             <div
                               key={n.id}
                               className="hover:bg-white/[0.03] transition-colors cursor-pointer"
-                              style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)', borderLeft: !n.isRead ? `3px solid ${accent}` : '3px solid transparent' }}
+                              style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)', borderLeft: !n.isRead ? `3px solid ${accent}` : '3px solid transparent' }}
                               onClick={() => { markAsRead(n.id); setSelectedNotif(n); }}
                             >
                               <p className={`text-[13px] leading-snug ${!n.isRead ? 'font-semibold text-white' : 'font-normal text-white/80'}`}>
@@ -548,10 +551,10 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                                   {n.type === 'success' ? 'Concluído' : n.type === 'warning' ? 'Aviso' : n.type === 'error' ? 'Erro' : 'Info'}
                                 </span>
                                 <button
-                                  className="text-[11px] font-medium text-[#FF7A00] hover:text-[#FF9A30] transition-colors cursor-pointer ml-auto"
+                                  className="text-[11px] font-semibold text-[#FF7A00] hover:text-[#FF9A30] transition-colors cursor-pointer ml-auto"
                                   onClick={(e) => { e.stopPropagation(); markAsRead(n.id); setSelectedNotif(n); }}
                                 >
-                                  Ver detalhes →
+                                  Ver mais
                                 </button>
                               </div>
                             </div>
@@ -624,7 +627,7 @@ export function Sidebar({ activePage, onNavigate, onLogout, onNovoDossie, user, 
                             <item.icon size={16} strokeWidth={1.5} className="text-white/50 shrink-0" />
                             <span className="flex-1 text-left">{item.label}</span>
                             {item.icon === Bell && notifCount > 0 && (
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#DC2626]" />
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#DC2626] ring-2 ring-[#07101F]" />
                             )}
                             <ChevronRight size={14} strokeWidth={2} className="text-white/30 shrink-0" />
                           </button>

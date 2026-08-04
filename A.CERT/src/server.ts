@@ -44,6 +44,26 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 
+// ═══ Whitelist: rotas públicas (login, registro, captcha, suporte) ═══
+const PUBLIC_PREFIXES = [
+  '/auth/',
+  '/captcha/',
+  '/support/ticket',
+];
+
+// ═══ Middleware global de autenticação ═══
+app.use('/api', (req, res, next) => {
+  const isPublic = PUBLIC_PREFIXES.some(p => req.path.startsWith(p));
+  if (isPublic) return next();
+  return authMiddleware(req, res, next);
+});
+
+// Debug: log all dossier API requests
+app.use('/api/dossiers', (req, _res, next) => {
+  LOG(`[Dossiers] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 app.get('/novnc/view', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.sendFile(path.join(__dirname, '..', 'public', 'novnc', 'viewer.html'));
@@ -252,12 +272,26 @@ app.use(express.static(publicPath, { maxAge: '30d' }));
 const uploadsPublicPath = path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPublicPath, { maxAge: '30d' }));
 
-const srv = express.static(frontendOut);
+// Frontend sem cache — sempre pega versão nova (evita bugs por cache)
+const srv = express.static(frontendOut, { etag: false, cacheControl: false });
 function serveHtmlFile(p: string, res: any) {
-  const fp = path.join(frontendOut, p + '.html');
+  const filename = p === '/' ? 'index.html' : p.slice(1) + '.html';
+  const fp = path.join(frontendOut, filename);
   try {
-    if (fs.existsSync(fp)) { res.sendFile(fp); return true; }
-  } catch {}
+    if (fs.existsSync(fp)) {
+      const content = fs.readFileSync(fp, 'utf-8');
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+      });
+      res.end(content);
+      return true;
+    }
+    LOG(`[Serve] NOT FOUND: ${filename}`);
+  } catch (e: any) {
+    LOG(`[Serve] ERROR: ${filename} - ${e?.message || e}`);
+  }
   return false;
 }
 app.use((req, res, next) => {
@@ -267,17 +301,34 @@ app.use((req, res, next) => {
   srv(req as any, res as any, next);
 });
 
-// Dynamic routes — serve generated placeholder HTML
+// Dynamic routes — serve generated placeholder HTML (no cache for _ fallback)
+function serveNoCache(res: any, fp: string) {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.removeHeader('ETag');
+  res.removeHeader('Last-Modified');
+  if (fs.existsSync(fp)) {
+    res.sendFile(fp, { etag: false, lastModified: false, cacheControl: false });
+  } else {
+    res.status(404).send('Not found');
+  }
+}
 app.get('/confirmar-email/:token', (_req, res) => {
   const fp = path.join(__dirname, '..', 'frontend', 'out', 'confirmar-email', '_.html');
-  if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
+  serveNoCache(res, fp);
 });
 app.get('/dashboard/usuarios/:id', (_req, res) => {
   const fp = path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'usuarios', '_.html');
-  if (fs.existsSync(fp)) res.sendFile(fp); else res.status(404).send('Not found');
+  serveNoCache(res, fp);
 });
 app.get('/dashboard/dossies/:id', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html'));
+  const fp = path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', '_.html');
+  serveNoCache(res, fp);
+});
+app.get('/dashboard/dossies/detalhes', (_req, res) => {
+  const fp = path.join(__dirname, '..', 'frontend', 'out', 'dashboard', 'dossies', 'detalhes.html');
+  serveNoCache(res, fp);
 });
 
 app.get('*', (req, res, next) => {

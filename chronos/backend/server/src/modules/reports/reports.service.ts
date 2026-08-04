@@ -188,7 +188,7 @@ export async function closeMonth(companyId: string, year: number, month: number,
       entityType: 'MonthClosing',
       metadata: { companyId, year, month, action: 'close' },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Reports] Erro:', err?.message || err))
 
   return { ok: true, status: 'closed' }
 }
@@ -213,7 +213,7 @@ export async function reopenMonth(companyId: string, year: number, month: number
       entityType: 'MonthClosing',
       metadata: { companyId, year, month, action: 'reopen' },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Reports] Erro:', err?.message || err))
 
   return { ok: true, status: 'open' }
 }

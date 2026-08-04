@@ -61,21 +61,24 @@ export async function createPointRecord(userId: string, data: {
   hasPhoto?: boolean
   password?: string
   faceVerified?: boolean | null
+  qrVerified?: boolean
 }) {
-  // Verify password
-  if (!data.password) {
-    throw new AppError(400, 'Senha de confirmação é obrigatória')
-  }
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { password: true },
-  })
-  if (!user) {
-    throw new AppError(404, 'Usuário não encontrado')
-  }
-  const passwordValid = await bcrypt.compare(data.password, user.password)
-  if (!passwordValid) {
-    throw new AppError(401, 'Senha inválida')
+  // QR Code flow: skip password verification
+  if (!data.qrVerified) {
+    if (!data.password) {
+      throw new AppError(400, 'Senha de confirmação é obrigatória')
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true },
+    })
+    if (!user) {
+      throw new AppError(404, 'Usuário não encontrado')
+    }
+    const passwordValid = await bcrypt.compare(data.password, user.password)
+    if (!passwordValid) {
+      throw new AppError(401, 'Senha inválida')
+    }
   }
 
   const recordedAt = new Date()
@@ -98,7 +101,7 @@ export async function createPointRecord(userId: string, data: {
       deviceInfo: data.deviceInfo as any ?? null,
       photoData: data.photoData ?? null,
       hasPhoto: data.hasPhoto ?? false,
-      passwordVerified: true,
+      passwordVerified: !!data.qrVerified || true,
       faceVerified: data.faceVerified ?? null,
     },
   })
@@ -178,7 +181,7 @@ export async function createPointRecord(userId: string, data: {
       targetUserId: userId,
       metadata: { pointType: data.pointType, timeValue: data.timeValue, latitude: data.latitude, longitude: data.longitude },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[PointRecord] Erro:', err?.message || err))
 
   return event
 }

@@ -329,8 +329,8 @@ export function ConfiguracoesPage({ userId, user, onAvatarUpdate }: { userId?: s
       setAvatarUrl(result.avatarUrl)
       onAvatarUpdate?.(result.avatarUrl)
       showToast("Foto de perfil atualizada.")
-    } catch {
-      showToast("Erro ao enviar imagem.", "error")
+    } catch (err: any) {
+      showToast(err?.message || "Erro ao enviar imagem.", "error")
     } finally {
       setUploading(false)
     }
@@ -386,7 +386,10 @@ export function ConfiguracoesPage({ userId, user, onAvatarUpdate }: { userId?: s
                 <div className="relative shrink-0">
                   <div className="w-16 h-16 rounded-full bg-elevated/40 overflow-hidden flex items-center justify-center ring-2 ring-[var(--accent-border)]">
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                      <>
+                        <img src={avatarUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                        <User size={24} className="text-muted hidden" />
+                      </>
                     ) : (
                       <User size={24} className="text-muted" />
                     )}

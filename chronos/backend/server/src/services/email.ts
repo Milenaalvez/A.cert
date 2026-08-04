@@ -22,10 +22,18 @@ function getTransporter() {
 async function send(to: string, subject: string, html: string) {
   try {
     if (env.emailProvider === 'sendgrid') {
+      if (!env.sendgridApiKey) {
+        console.warn(`[Email] SendGrid não configurado. Ignorando email para ${to}: ${subject}`)
+        return
+      }
       sgMail.setApiKey(env.sendgridApiKey)
       await sgMail.send({ from: env.smtpFrom, to, subject, html })
       console.log(`[Email] Enviado para ${to} via SendGrid`)
     } else if (env.emailProvider === 'mailerlite') {
+      if (!env.mailerliteApiKey) {
+        console.warn(`[Email] MailerLite não configurado. Ignorando email para ${to}: ${subject}`)
+        return
+      }
       const payload = { from: env.smtpFrom, to, subject, html }
       const res = await fetch('https://api.mailerlite.com/api/v2/transactional/emails', {
         method: 'POST',
@@ -41,6 +49,10 @@ async function send(to: string, subject: string, html: string) {
       }
       console.log(`[Email] Enviado para ${to} via MailerLite`)
     } else if (env.emailProvider === 'brevo') {
+      if (!env.brevoApiKey) {
+        console.warn(`[Email] Brevo não configurado. Ignorando email para ${to}: ${subject}`)
+        return
+      }
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
@@ -60,11 +72,15 @@ async function send(to: string, subject: string, html: string) {
       }
       console.log(`[Email] Enviado para ${to} via Brevo`)
     } else {
+      if (!env.smtpHost || !env.smtpUser || !env.smtpPass) {
+        console.warn(`[Email] SMTP não configurado. Ignorando email para ${to}: ${subject}`)
+        return
+      }
       const info = await getTransporter().sendMail({ from: env.smtpFrom, to, subject, html })
       console.log(`[Email] Enviado para ${to}: ${info.messageId}`)
     }
   } catch (err: any) {
-    console.error(`[Email] ERRO ao enviar para ${to}:`, err.message)
+    console.error(`[Email] ERRO ao enviar para ${to} (${subject}):`, err?.message || err)
   }
 }
 

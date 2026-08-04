@@ -12,16 +12,8 @@ interface DonutChartProps {
 }
 
 export function DonutChart({ segments, totalValue }: DonutChartProps) {
-  const filtered = segments.filter((s) => typeof s.value === "number" && s.value > 0)
+  const filtered = segments.filter((s) => typeof s.value === "number")
   const total = filtered.reduce((a, s) => a + s.value, 0)
-
-  if (!total || total <= 0) {
-    return (
-      <div className="flex items-center justify-center h-48 text-xs text-muted">
-        Nenhum registro para distribuir.
-      </div>
-    )
-  }
 
   const cx = 100
   const cy = 100
@@ -30,10 +22,10 @@ export function DonutChart({ segments, totalValue }: DonutChartProps) {
   const circumference = 2 * Math.PI * radius
 
   let cumulative = 0
-  const circles = filtered.map((s) => {
-    const percent = s.value / total
-    const dash = percent * circumference
-    const gap = circumference - dash
+  const circles = (total > 0 ? filtered.filter((s) => s.value > 0) : filtered).map((s) => {
+    const percent = total > 0 ? s.value / total : 0
+    const dash = total > 0 ? percent * circumference : 0
+    const gap = total > 0 ? circumference - dash : circumference
     const offset = -cumulative * circumference
     cumulative += percent
     return {
@@ -45,11 +37,12 @@ export function DonutChart({ segments, totalValue }: DonutChartProps) {
   })
 
   const displayTotal = formatMinutes(Math.round(totalValue * 60))
-  const largest = [...circles].sort((a, b) => b.percent - a.percent)[0]
+  const largest = total > 0 ? [...circles].sort((a, b) => b.percent - a.percent)[0] : null
 
-  const pct = (v: number) => Number.isFinite(v) ? `${(v * 100).toFixed(0)}%` : "0%"
-  const feedback =
-    largest.percent > 0.8
+  const pct = (v: number) => Number.isFinite(v) && v > 0 ? `${(v * 100).toFixed(0)}%` : "0%"
+  const feedback = !largest
+    ? "Nenhum registro para distribuir."
+    : largest.percent > 0.8
       ? `${pct(largest.percent)} da jornada foi em horário regular.`
       : largest.percent > 0.5
         ? `${pct(largest.percent)} corresponde a ${largest.label.toLowerCase()}.`
@@ -60,7 +53,7 @@ export function DonutChart({ segments, totalValue }: DonutChartProps) {
       <div className="relative shrink-0">
         <svg viewBox="0 0 200 200" className="w-[156px] h-[156px]">
           <circle cx={cx} cy={cy} r={radius} fill="none" className="stroke-[#D5DEEF] dark:stroke-[#1F3250]" strokeWidth={strokeWidth} />
-          {circles.map((s) => (
+          {total > 0 && circles.map((s) => (
             <circle
               key={s.label}
               cx={cx}
@@ -110,7 +103,7 @@ export function DonutChart({ segments, totalValue }: DonutChartProps) {
               <span className="text-sm font-semibold text-primary font-mono">
                 {formatMinutes(Math.round(s.value * 60))}
                 <span className="text-muted font-light mx-1">|</span>
-                <span className="text-muted font-medium">{Number.isFinite(s.percent) ? `${(s.percent * 100).toFixed(0)}%` : "0%"}</span>
+                <span className="text-muted font-medium">{Number.isFinite(s.percent) && s.percent > 0 ? `${(s.percent * 100).toFixed(0)}%` : "0%"}</span>
               </span>
             </div>
           </div>

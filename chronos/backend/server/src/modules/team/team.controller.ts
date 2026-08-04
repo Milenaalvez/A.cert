@@ -34,7 +34,7 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
         targetUserId: result.user.id,
         metadata: { actorName: req.user!.name || 'Administrador' },
       },
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
     res.status(201).json(result)
   } catch (err: any) {
     if (err.statusCode) {
@@ -194,7 +194,7 @@ export async function updatePermissions(req: AuthRequest, res: Response, next: N
         newValue: JSON.stringify(permissions),
         metadata: { actorName: req.user!.name, targetName: user.name },
       },
-    }).catch(() => {})
+    }).catch((err: any) => console.error('[Team] Erro:', err?.message || err))
     res.json({ id: updated.id, permissions: updated.permissions })
   } catch (err) { next(err) }
 }

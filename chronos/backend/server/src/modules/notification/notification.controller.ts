@@ -44,7 +44,7 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
     if (sendEmail && collaboratorEmail) {
       const { sendVacationStatusEmail } = await import('../../services/email.js')
       const reviewerName = req.user!.name || 'RH'
-      sendVacationStatusEmail(collaboratorEmail, collaboratorName || 'Colaborador', type === 'APPROVAL' ? 'aprovado' : 'rejeitado', period || '', reviewerName).catch(() => {})
+      sendVacationStatusEmail(collaboratorEmail, collaboratorName || 'Colaborador', type === 'APPROVAL' ? 'aprovado' : 'rejeitado', period || '', reviewerName).catch((err: any) => console.error('[Notification] Erro:', err?.message || err))
     }
     res.json(notif)
   } catch (err) { next(err) }

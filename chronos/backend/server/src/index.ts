@@ -5,10 +5,43 @@ import sgMail from '@sendgrid/mail'
 import { prisma } from './database/prisma.js'
 import { env } from './config/env.js'
 
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Exceção não capturada:', err)
+  console.error(err.stack)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Rejeição não tratada em:', promise, 'motivo:', reason)
+})
+
+function validateEnv() {
+  const required = [
+    { key: 'DATABASE_URL', value: env.databaseUrl },
+    { key: 'JWT_SECRET', value: env.jwtSecret },
+    { key: 'SUPABASE_URL', value: env.supabaseUrl },
+    { key: 'SUPABASE_SERVICE_ROLE_KEY', value: env.supabaseServiceRoleKey },
+  ]
+  if (env.emailProvider === 'smtp' || env.emailProvider === 'brevo') {
+    required.push(
+      { key: 'SMTP_HOST', value: env.smtpHost },
+      { key: 'SMTP_USER', value: env.smtpUser },
+      { key: 'SMTP_PASS', value: env.smtpPass },
+    )
+  }
+  const missing = required.filter(v => !v.value)
+  if (missing.length > 0) {
+    console.error(`[Startup] ERRO CRÍTICO: Variáveis obrigatórias ausentes: ${missing.map(v => v.key).join(', ')}`)
+    process.exit(1)
+  }
+  console.log('[Startup] ✅ Todas as variáveis de ambiente obrigatórias estão configuradas')
+}
+
+validateEnv()
+
 console.log('[Startup] CWD:', process.cwd())
 console.log('[Startup] PORT:', env.port)
 console.log('[Startup] SUPABASE_URL:', env.supabaseUrl ? 'configurada' : 'ausente')
-console.log('[Startup] SUPABASE_SERVICE_ROLE_KEY:', env.supabaseServiceRoleKey ? 'configurada' : 'AUSENTE - emails não funcionarão')
+console.log('[Startup] SUPABASE_SERVICE_ROLE_KEY:', env.supabaseServiceRoleKey ? 'configurada' : 'AUSENTE')
 console.log('[Startup] EMAIL_PROVIDER:', env.emailProvider)
 if (env.emailProvider === 'sendgrid') {
   console.log('[Startup] SENDGRID_API_KEY:', env.sendgridApiKey ? 'configurada' : 'AUSENTE')

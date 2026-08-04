@@ -71,6 +71,8 @@ function getKeycode(evt) {
           return 'Numpad3';
         case 'ArrowLeft':
           return 'Numpad4';
+        case 'Clear':
+          return 'Numpad5';
         case 'ArrowRight':
           return 'Numpad6';
         case 'Home':
@@ -119,6 +121,9 @@ function getKey(evt) {
     // Broken behaviour in Chrome
     if (evt.key === '\x00' && evt.code === 'NumpadDecimal') {
       return 'Delete';
+    }
+    if (evt.key === '\x00' && evt.code === 'Numpad5') {
+      return 'Clear';
     }
     return evt.key;
   }

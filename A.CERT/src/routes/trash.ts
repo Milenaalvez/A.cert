@@ -136,18 +136,23 @@ router.delete('/:entity/:id', authMiddleware, async (req, res) => {
     if (entity === 'dossies') {
       await executeRaw('DELETE FROM certificates WHERE dossier_id = $1', id);
       await executeRaw('DELETE FROM activities WHERE dossier_ref = $1', id);
-    }
-
-    if (entity === 'usuarios') {
+      await executeRaw('DELETE FROM dossiers WHERE id = $1', id);
+    } else if (entity === 'usuarios') {
+      await executeRaw('DELETE FROM notifications WHERE user_id = $1', id);
       await executeRaw('DELETE FROM user_sessions WHERE user_id = $1', id);
       await executeRaw('DELETE FROM user_permissions WHERE user_id = $1', id);
       await executeRaw('DELETE FROM users WHERE id = $1', id);
     } else if (entity === 'pessoas') {
+      await executeRaw('DELETE FROM dossier_participants WHERE person_id = $1', id);
+      await executeRaw('DELETE FROM property_owners WHERE person_id = $1', id);
+      await executeRaw('DELETE FROM person_relationships WHERE person_id = $1 OR related_person_id = $1', id);
+      await executeRaw('UPDATE properties SET owner_id = NULL WHERE owner_id = $1', id);
+      await executeRaw('UPDATE dossiers SET person_id = NULL WHERE person_id = $1', id);
+      await executeRaw('UPDATE certificates SET person_id = NULL WHERE person_id = $1', id);
       await executeRaw('DELETE FROM persons WHERE id = $1', id);
     } else if (entity === 'imoveis') {
+      await executeRaw('UPDATE dossiers SET property_id = NULL WHERE property_id = $1', id);
       await executeRaw('DELETE FROM properties WHERE id = $1', id);
-    } else if (entity === 'dossies') {
-      await executeRaw('DELETE FROM dossiers WHERE id = $1', id);
     } else {
       res.status(400).json({ error: 'Entidade inválida' });
       return;

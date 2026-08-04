@@ -125,7 +125,7 @@ async function persistirResultado(
   }
 }
 
-const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '70000', 10);
+const CONNECTOR_TIMEOUT_MS = parseInt(process.env.CONNECTOR_TIMEOUT_MS || '60000', 10);
 
 const JOBS = new Map<string, ConsultaJob>();
 
@@ -170,7 +170,7 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
       const connector = conectores[i];
       if (i > 0) {
         LOG(`Pausa de 5s entre conectores...`);
-        await wait(5000);
+        await wait(2000);
       }
       LOG(`>>> Iniciando conector: ${connector.nome}`);
       try {
@@ -216,14 +216,9 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
 
       const nomesSucesso = sucessos.map(r => r.orgao).join(', ') || 'nenhuma';
       const nomesErro = erros.map(r => r.orgao).join(', ') || 'nenhuma';
-      const details = [
-        `Resultado da consulta para ${job.dados.nome}:`,
-        '',
-        ...(sucessos.length > 0 ? [`Certidões obtidas com sucesso: ${nomesSucesso}.`] : []),
-        ...(erros.length > 0 ? [`Não foi possível obter: ${nomesErro}.`] : []),
-        '',
-        'Acesse o dossiê ou a página da pessoa para visualizar os PDFs.',
-      ].join('\n');
+      const fullMsg = `${msg}. Certidões obtidas: ${nomesSucesso}. ${
+        erros.length > 0 ? `Falhas: ${nomesErro}. ` : ''
+      }Acesse o dossiê ou a página da pessoa para visualizar os PDFs.`;
 
       const link = job.dados.dossierId
         ? `/dashboard/dossies/${job.dados.dossierId}`
@@ -234,11 +229,10 @@ export function iniciarJob(dados: DadosProprietario, onlyOrgans?: string[]): Con
       await createNotification(
         job.dados.userId,
         'Consulta concluída',
-        msg,
+        fullMsg,
         erros.length === 0 ? 'success' : erros.length < sucessos.length ? 'warning' : 'error',
         link,
         job.id,
-        details,
       );
     }
   })();

@@ -93,8 +93,27 @@ async function selecionarOrgaoAutocomplete(
   page: import('puppeteer').Page,
   termo: string,
 ): Promise<string | null> {
-  // 1. Abre o painel clicando no input
-  await page.click('#mat-mdc-chip-list-input-0');
+  // 1. Abre o painel clicando no input — tenta varios IDs (muda entre iterações)
+  const clicou = await page.evaluate(() => {
+    const inputs = document.querySelectorAll<HTMLInputElement>(
+      'input[id*="chip-list-input"], input[aria-autocomplete="list"], input.mat-mdc-chip-input'
+    );
+    for (const inp of inputs) {
+      if (inp.offsetParent !== null) {
+        (inp as HTMLElement).click();
+        return inp.id || 'ok';
+      }
+    }
+    // fallback: clica no chip-list todo
+    const chipList = document.querySelector('.mat-mdc-chip-list, mat-chip-list');
+    if (chipList) { (chipList as HTMLElement).click(); return 'chip-list'; }
+    return null;
+  });
+  if (!clicou) {
+    LOG('[Órgão] input do chip-list nao encontrado');
+    return null;
+  }
+
   await wait(600);
 
   // Aguarda o painel
@@ -113,7 +132,9 @@ async function selecionarOrgaoAutocomplete(
     })).filter(o => o.text.length > 1);
   });
   LOG(`[Órgão] ${opcoes.length} opções no painel, buscando "${termo}"`);
-  for (const o of opcoes) LOG(`  [${o.index}] "${o.text}"`);
+  for (const o of opcoes.slice(0, 20)) LOG(`  [${o.index}] "${o.text}"`);
+
+  if (opcoes.length === 0) return null;
 
   // 3. Clica na opção que contém o termo
   const termoLower = termo.toLowerCase();
@@ -161,9 +182,19 @@ async function preencherFormulario(
   await aceitarCookies(page);
 
   LOG('Aguardando formulario...');
-  await page.waitForSelector('#mat-mdc-chip-list-input-0, #mat-input-0', {
+  let formLoaded = await page.waitForSelector('input[id*="chip-list-input"], input[id*="mat-input"], input[type="text"]:not([readonly])', {
     visible: true, timeout: 20000,
-  }).catch(() => LOG('timeout'));
+  }).then(() => true).catch(() => false);
+
+  if (!formLoaded) {
+    LOG('Form nao carregou, recarregando...');
+    await page.goto(FORM_URL, { waitUntil: 'networkidle0', timeout: 30000 }).catch(() => {});
+    await wait(3000);
+    await aceitarCookies(page);
+    await page.waitForSelector('input[id*="chip-list-input"], input[id*="mat-input"], input[type="text"]:not([readonly])', {
+      visible: true, timeout: 30000,
+    }).catch(() => LOG('timeout recarga'));
+  }
   await wait(2000);
 
   // PASSO 1: TIPO DE CERTIDÃO
@@ -178,15 +209,32 @@ async function preencherFormulario(
     await wait(600);
   }
 
-  // PASSO 3: CPF
-  await page.evaluate(() => {
+  // PASSO 3: CPF — encontra o input pelo label ou pela classe do Angular
+  const cpfInputId = await page.evaluate(() => {
     const labels = Array.from(document.querySelectorAll('label'));
     for (const l of labels) {
-      if ((l.textContent || '').trim() === 'CPF') { (l as HTMLElement).click(); return; }
+      if ((l.textContent || '').trim() === 'CPF') {
+        (l as HTMLElement).click();
+        return null; // label clicked, input will focus
+      }
     }
+    return null;
   });
   await wait(300);
-  await page.click('#mat-input-0');
+  // Encontra o input de CPF (id pode variar entre iterações)
+  const cpfClicked = await page.evaluate(() => {
+    const inputs = document.querySelectorAll<HTMLInputElement>('input[id*="mat-input"]');
+    for (const inp of inputs) {
+      if (inp.offsetParent !== null && !(inp.readOnly)) {
+        inp.focus(); inp.click();
+        return inp.id;
+      }
+    }
+    return null;
+  });
+  if (!cpfClicked) {
+    throw new Error('Input CPF nao encontrado');
+  }
   await wait(200);
   await page.keyboard.type(cpfDigits, { delay: 15 });
   LOG(`CPF: ${cpfDigits}`);
@@ -302,11 +350,7 @@ async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Ui
   await wait(1500);
   if (page.isClosed()) { LOG('Pagina fechada'); return null; }
 
-  // PDF embutido
-  const pdfEmbed = await capturarPDFEmbedNaPagina(page);
-  if (pdfEmbed && pdfEmbed.length > 500) { LOG(`PDF embed: ${pdfEmbed.length} bytes`); return pdfEmbed; }
-
-  // Extrai ID e codigo do DOM
+  // Extrai ID e codigo do DOM (1ª estratégia)
   const { certId, certCodigo } = await page.evaluate(() => {
     let id = '', codigo = '';
     document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(a => {
@@ -317,14 +361,11 @@ async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Ui
     return { certId: id, certCodigo: codigo };
   });
 
-  if (!certId || !certCodigo) {
-    LOG(`ID ou codigo nao encontrados no DOM`);
-    return null;
-  }
-  LOG(`Certidao ID=${certId} Codigo=${certCodigo.slice(0, 10)}...`);
+  if (certId && certCodigo) {
+    LOG(`Certidao ID=${certId} Codigo=${certCodigo.slice(0, 10)}...`);
 
-  // Cookies da sessao
-  const cookies = await page.cookies();
+    // 2ª estratégia: fetch() Node.js para 7 URLs (GET + POST) em 2 domínios
+    const cookies = await page.cookies();
   const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
   const headers = {
     Cookie: cookieHeader,
@@ -375,9 +416,14 @@ async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Ui
       }
     } catch {}
   }
+  }
+
+  // 3ª estratégia: PDF embutido (embed/object/iframe)
+  const pdfEmbed = await capturarPDFEmbedNaPagina(page);
+  if (pdfEmbed && pdfEmbed.length > 500) { LOG(`PDF embed: ${pdfEmbed.length} bytes`); return pdfEmbed; }
 
   // Debug
-  LOG('Nenhum PDF encontrado via APIs');
+  LOG('Nenhum PDF encontrado via APIs nem embed');
   try {
     const debugDir = path.join(DOWNLOAD_DIR, '..', 'debug');
     if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
@@ -413,41 +459,54 @@ export class TRF1Connector implements IConnector {
 
     const pdfs: Uint8Array[] = [];
     const errors: string[] = [];
-    const throttle = criarRateLimit(4000);
+    const throttle = criarRateLimit(2000);
+
+    let page = await createPage();
 
     for (let i = 0; i < tipos.length; i++) {
       const tipo = tipos[i];
       if (i > 0) {
-        LOG('Aguardando 8s (browser recovery)...');
-        await wait(8000);
+        LOG('Aguardando 3s (recovery)...');
+        await wait(3000);
       }
 
-      let page: import('puppeteer').Page | null = null;
-      // Retry createPage ate 3x
-      for (let retry = 0; retry < 3 && !page; retry++) {
-        try {
-          page = await createPage();
-        } catch (e: any) {
-          if (retry < 2) { LOG(`createPage tentativa ${retry + 1} falhou: ${e.message}`); await wait(3000); }
-          else { errors.push(`${tipo}: criar pagina: ${e.message}`); }
-        }
-      }
-
-      if (!page) {
-        errors.push(`${tipo}: nao conseguiu criar pagina`);
-        continue;
-      }
+      const cleanupRef: { fn: (() => void) | null } = { fn: null };
 
       try {
         await throttle();
         LOG(`--- [${i + 1}/${tipos.length}] ${tipo} ---`);
         await preencherFormulario(page, dados, tipo);
 
-        // Verifica se a página ainda está viva após o submit
         if (page.isClosed()) {
           errors.push(`${tipo}: pagina fechada apos submit`);
+          page = await createPage();
           continue;
         }
+
+        // ── ANTES do CAPTCHA: intercepta respostas PDF ──
+        // O segredo: o servidor TRF1 retorna o PDF como resposta
+        // HTTP direta quando o form e submetido apos CAPTCHA.
+        // Capturamos ANTES da navegacao acontecer.
+        const responsePromise = new Promise<Uint8Array | null>((resolve) => {
+          const timeout = setTimeout(() => resolve(null), 45000);
+          const handler = async (response: import('puppeteer').HTTPResponse) => {
+            const url = response.url();
+            const ct = (response.headers()['content-type'] || '');
+            const cd = (response.headers()['content-disposition'] || '');
+            if (url.includes('api/certidao/pdf') || url.includes('/pdf') || ct.includes('pdf') || cd.includes('attachment')) {
+              try {
+                const buf = await response.buffer();
+                if (buf.length > 500 && buf[0] === 0x25) {
+                  clearTimeout(timeout);
+                  page.off('response', handler);
+                  resolve(new Uint8Array(buf));
+                }
+              } catch {}
+            }
+          };
+          page.on('response', handler);
+          cleanupRef.fn = (() => { clearTimeout(timeout); page.off('response', handler); }) as () => void;
+        });
 
         let captchaType = null;
         for (let t = 0; t < 30; t++) {
@@ -462,47 +521,26 @@ export class TRF1Connector implements IConnector {
           await focusPageForCaptcha(page, captchaType).catch(() => {});
           const ok = await esperarCaptchaInterativo(page, captchaType).catch(() => false);
           if (!ok || page.isClosed()) {
-            await page.close().catch(() => {});
             errors.push(`${tipo}: CAPTCHA nao resolvido`);
+            cleanupRef.fn?.();
+            page = await createPage();
             continue;
           }
           LOG('CAPTCHA resolvido');
-          // Aguarda navegacao para pagina de resultado
-          try { await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }); } catch {}
-          await wait(1000);
-
-          // Aguarda elementos da pagina de resultado aparecerem (Angular render)
-          LOG('Aguardando render da pagina de resultado...');
-          const resultSelectors = [
-            'button',                          // botoes (Imprimir, Baixar, etc)
-            '.mat-mdc-card',                   // card do Angular Material
-            'table',                           // tabela de dados
-            '.certidao-conteudo',              // container de certidao
-            '[class*="result"]',               // qualquer div com "result" na classe
-            '.container',                      // container Bootstrap
-            'mat-card',                        // card do Angular Material (antigo)
-          ];
-          let resultRendered = false;
-          for (const sel of resultSelectors) {
-            try {
-              await page.waitForSelector(sel, { visible: true, timeout: 10000 });
-              LOG(`Elemento "${sel}" encontrado na pagina`);
-              resultRendered = true;
-              break;
-            } catch {}
-          }
-          if (!resultRendered) {
-            LOG('Nenhum elemento esperado encontrado, continuando mesmo assim...');
-            // Tira screenshot pra debug
-            const debugDir = path.join(DOWNLOAD_DIR, '..', 'debug');
-            if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
-            await page.screenshot({ path: path.join(debugDir, `trf1-resultado-${Date.now()}.png`), fullPage: true }).catch(() => {});
-          }
-          await wait(1500);
+          try { await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }); } catch {}
+          await wait(2000);
         }
 
-        const url = page.url();
-        LOG(`URL atual: ${url}`);
+        // Verifica se o interceptor ja capturou o PDF da resposta direta
+        const intercepted = await responsePromise;
+        if (intercepted && intercepted.length > 500) {
+          pdfs.push(intercepted);
+          LOG(`PDF via waitForResponse: ${intercepted.length} bytes`);
+          cleanupRef.fn?.();
+          continue;
+        }
+
+        cleanupRef.fn?.();
 
         const pdf = await capturarPDFAposEmitir(page);
         if (pdf && pdf.length > 500 && new TextDecoder().decode(pdf.slice(0, 5)) === '%PDF-') {
@@ -512,18 +550,18 @@ export class TRF1Connector implements IConnector {
           errors.push(`${tipo}: PDF vazio`);
         }
       } catch (err: unknown) {
+        cleanupRef.fn?.();
         const m = err instanceof Error ? err.message : 'Erro';
-        // "detached Frame" ou "Target closed" = browser crash, pulamos pra próxima run
-        if (m.includes('detached Frame') || m.includes('Target closed') || m.includes('Target.closed')) {
-          LOG(`[${tipo}] Browser crash, pulando run: ${m}`);
-        } else {
-          errors.push(`${tipo}: ${m}`);
-        }
+        errors.push(`${tipo}: ${m}`);
         LOG(`ERRO ${tipo}: ${m}`);
+        // Recria página pra nao reusar página quebrada
+        await page.close().catch(() => {});
+        page = await createPage();
       }
-      await page.close().catch(() => {});
-      page = null;
     }
+
+    await page.close().catch(() => {});
+    page = null as any;
 
     if (pdfs.length === 0) {
       return { status: 'error', orgao: this.nome, dataConsulta, error: `Nenhuma certidao. ${errors.join('; ')}` };

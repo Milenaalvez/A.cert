@@ -98,7 +98,7 @@ function CentralAjudaContent() {
             ))}
           </div>
           <Link
-            href="/dashboard/ajuda/primeiros-passos"
+            href="/dashboard/ajuda"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 42, padding: "0 20px", borderRadius: 6, border: "none", background: "#FF7A00", color: "#FFF", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", marginTop: 20, textDecoration: "none" }}
           >
             Acessar documentação <ChevronRight size={14} strokeWidth={2.5} />

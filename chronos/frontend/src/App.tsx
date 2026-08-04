@@ -37,6 +37,7 @@ import { ConfiguracoesPage } from "./paginas/ConfiguracoesPage"
 import { EquipePage } from "./paginas/EquipePage"
 import { PerfilPage } from "./paginas/PerfilPage"
 import { LoginPage } from "./paginas/LoginPage"
+import { SplashScreen } from "./componentes/SplashScreen"
 import { VerifyEmailPage } from "./paginas/VerifyEmailPage"
 import { ResetPasswordPage } from "./paginas/ResetPasswordPage"
 import { VerificationRequiredPage } from "./paginas/VerificationRequiredPage"
@@ -197,6 +198,8 @@ function generateMissingRecords(existing: TimeRecord[], hireDate?: string): Time
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false)
   const [restoring, setRestoring] = useState(true)
+  const [showSplash, setShowSplash] = useState(false)
+  const [splashUserName, setSplashUserName] = useState("")
   const [user, setUser] = useState<{ id: string; name: string; email: string; role: string; position?: string | null; avatar?: string | null; companyId?: string; hireDate?: string; permissions?: string[]; emailVerified?: boolean; themeMode?: string; themeAccent?: string; cpf?: string | null; phone?: string | null; department?: string | null; registrationNumber?: string | null; employeeCode?: string | null; contractType?: string | null; weeklyHours?: number; workSchedule?: string } | null>(null)
   const [page, setPage] = useState("dashboard")
   const [modalOpen, setModalOpen] = useState(false)
@@ -466,6 +469,8 @@ export default function App() {
   const handleLogin = useCallback((userData?: any, newRefreshToken?: string, remMe?: boolean) => {
     setAuthenticated(true)
     setUser(userData || null)
+    setSplashUserName(userData?.name || "")
+    setShowSplash(true)
     if (newRefreshToken) setRefreshToken(newRefreshToken, remMe)
     setRecords([])
     setRecordsLoaded(false)
@@ -616,6 +621,15 @@ export default function App() {
 
   if (action === 'reset-password' && urlParams.get('token')) {
     return <><ToastContainer /><ResetPasswordPage onReset={() => { window.location.href = window.location.origin + window.location.pathname }} /></>
+  }
+
+  if (showSplash) {
+    return (
+      <>
+        <ToastContainer />
+        <SplashScreen userName={splashUserName} onComplete={() => setShowSplash(false)} />
+      </>
+    )
   }
 
   if (!authenticated) {

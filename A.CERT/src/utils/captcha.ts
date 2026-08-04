@@ -98,9 +98,13 @@ export async function esperarCaptchaInterativo(
   timeoutMs = 180000,
 ): Promise<boolean> {
   const inicio = Date.now();
+  let urlInicial = '';
+  try { urlInicial = page.url(); } catch {}
+
   while (Date.now() - inicio < timeoutMs) {
     try {
       if (page.isClosed()) return false;
+
       const resolvido = await page.evaluate((t: string) => {
         if (t === 'hcaptcha') {
           const ta = document.querySelector('textarea[id*="h-captcha-response"]');
@@ -111,24 +115,81 @@ export async function esperarCaptchaInterativo(
           if (ta && (ta as HTMLTextAreaElement).value.length > 3) return true;
         }
         if (t === 'texto') {
-          const inputs = document.querySelectorAll('input[type="text"], input:not([type])');
+          const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(
+            'input[type="text"]:not([disabled]), input:not([type]):not([disabled])'
+          ));
+
+          // 1) Campo nomeado "captcha" preenchido
           for (const inp of inputs) {
             const name = (inp.getAttribute('name') || '').toLowerCase();
             const id = (inp.id || '').toLowerCase();
             const ph = (inp.getAttribute('placeholder') || '').toLowerCase();
-            if (name.includes('captcha') || id.includes('captcha') || ph.includes('captcha')) {
-              if ((inp as HTMLInputElement).value.length >= 3) return true;
+            if ((name.includes('captcha') || id.includes('captcha') || ph.includes('captcha'))
+              && inp.value.length >= 1) return true;
+          }
+
+          // 2) Campo visivel proximo a imagem de captcha (ex: mat-input-2 do Angular)
+          const img = document.querySelector<HTMLElement>(
+            'img[src*="captcha"], img[alt*="captcha"], img[alt*="seguran"], img[alt*="codigo"], img[src*="securimage"], img[src*="kcaptcha"]'
+          );
+          if (img && img.offsetParent !== null) {
+            const ir = img.getBoundingClientRect();
+            for (const inp of inputs) {
+              if (inp.value.length >= 1 && inp.offsetParent !== null) {
+                const pr = inp.getBoundingClientRect();
+                if (Math.abs(pr.top - ir.top) < 600 && Math.abs(pr.left - ir.left) < 900) {
+                  return true;
+                }
+              }
             }
           }
+
+          // 3) Imagem captcha desapareceu → pagina avancou
+          const imgSumiu = !document.querySelector(
+            'img[src*="captcha"], img[alt*="captcha"], img[alt*="seguran"], img[alt*="codigo"], img[src*="securimage"], img[src*="kcaptcha"]'
+          );
+          if (imgSumiu) {
+            const body = (document.body?.textContent || '').toLowerCase();
+            if (body.includes('certidão') || body.includes('certidao')
+              || body.includes('protocolo') || body.includes('nada consta')
+              || body.includes('download') || body.includes('pdf')) {
+              return true;
+            }
+          }
+
+          // 4) Qualquer input visivel alem do CPF foi preenchido apos submit
+          const temInputCaptcha = inputs.some(inp => {
+            const id = (inp.id || '').toLowerCase();
+            if (id.includes('cpf') || id.includes('cnpj')) return false;
+            return inp.value.length >= 1 && inp.offsetParent !== null;
+          });
+
+          if (temInputCaptcha) {
+            const textos = (document.body?.textContent || '').toLowerCase();
+            if (textos.includes('certidão') || textos.includes('protocolo') || textos.includes('emitida')) {
+              return true;
+            }
+          }
+
+          return false;
         }
         return false;
       }, tipo);
       if (resolvido) return true;
+
+      // Fallback 5: URL mudou
+      try {
+        const atual = page.url();
+        if (urlInicial && atual !== urlInicial && !atual.includes('error') && !atual.includes('block')) {
+          return true;
+        }
+      } catch {}
     } catch {
       // Page may have navigated or frame detached; continue polling
     }
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
   }
+  console.log(`[CAPTCHA] Timeout apos ${timeoutMs}ms — nao resolvido`);
   return false;
 }
 

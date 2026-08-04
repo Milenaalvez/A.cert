@@ -96,7 +96,7 @@ async function preencherInputPorLabel(
 export class TJDFTConnector implements IConnector {
   readonly nome = 'TJDFT';
 
-  readonly #throttle = criarRateLimit(3000);
+  readonly #throttle = criarRateLimit(1000);
 
   async consultar(
     dados: DadosProprietario,
@@ -114,9 +114,9 @@ export class TJDFTConnector implements IConnector {
       const url = 'https://cnc.tjdft.jus.br/solicitacao-externa';
 
       LOG('Navegando...');
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForSelector('.q-field, .q-input, input, button', { timeout: 15000 }).catch(() => {});
-      await wait(2000);
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.waitForSelector('.q-field, .q-input, input, button', { timeout: 10000 }).catch(() => {});
+      await wait(1000);
       await aceitarCookies(page);
       LOG('Pagina carregada');
 
@@ -203,13 +203,13 @@ export class TJDFTConnector implements IConnector {
             const labels = Array.from(document.querySelectorAll('label'));
             return labels.some(l => (l.textContent?.toLowerCase() || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('nome da m'));
           },
-          { timeout: 15000 },
+          { timeout: 10000 },
         );
-        await wait(1500);
+        await wait(1000);
         LOG('Wizard step 2 carregado');
       } catch {
         LOG('Timeout esperando step 2, tentando continuar...');
-        await wait(2000);
+        await wait(1000);
       }
 
       // ----- STEP 2: filiacao -----
@@ -263,8 +263,8 @@ export class TJDFTConnector implements IConnector {
 
       // Aguarda navegação ou resultado após submit
       try {
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
-        await wait(2000);
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
+        await wait(1000);
         LOG(`URL apos submit: ${page.url()}`);
       } catch {}
 
@@ -279,12 +279,12 @@ export class TJDFTConnector implements IConnector {
             if (alerta && (alerta.textContent?.length || 0) > 5) return true;
             return false;
           },
-          { timeout: 20000 },
+          { timeout: 10000 },
         );
       } catch {
         LOG('Timeout aguardando resultado...');
       }
-      await wait(2000);
+      await wait(1000);
 
       // ----- CAPTCHA -----
       const captchaType = await detectarCaptcha(page);
@@ -300,7 +300,7 @@ export class TJDFTConnector implements IConnector {
           return { status: 'error', orgao: this.nome, dataConsulta, error: `[TJDFT] CAPTCHA nao resolvido no tempo limite` };
         }
         LOG('CAPTCHA resolvido, continuando...');
-        await wait(2000);
+        await wait(1000);
       }
 
       if (pageClosed) throw new Error('Pagina fechada');
@@ -333,7 +333,7 @@ export class TJDFTConnector implements IConnector {
       LOG('Aguardando captura de download...');
       const capturado = await Promise.race([
         tjdftCapture.promise,
-        new Promise<null>(r => setTimeout(() => r(null), 30000)),
+        new Promise<null>(r => setTimeout(() => r(null), 20000)),
       ]);
       if (capturado && capturado.length > 500) {
         pdfBuffer = capturado;

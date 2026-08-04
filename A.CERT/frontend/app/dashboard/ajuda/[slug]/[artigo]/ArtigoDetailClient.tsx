@@ -234,13 +234,21 @@ export default function ArtigoDetailClient() {
                     </div>
                   )}
                   {bloco.tipo === "etapa" && (
-                    <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "24px 28px" }}>
+                    <div className="p-6 rounded-[16px] bg-surface border border-default" style={{ padding: "24px 28px", background: bloco.icone === "💬" ? "linear-gradient(135deg, rgba(255,122,0,0.05) 0%, rgba(255,122,0,0.02) 100%)" : undefined, border: bloco.icone === "💬" ? "1px solid rgba(255,122,0,0.15)" : undefined }}>
                       <div className="flex items-start gap-4" style={{ marginBottom: 12 }}>
                         {bloco.icone && <Ico code={bloco.icone} size={28} className="mt-0.5" />}
                         <div className="min-w-0">
                           <h3 className="text-[15px] font-bold text-primary" style={{ marginBottom: 10 }}>{bloco.titulo}</h3>
                           <p className="text-[13px] text-secondary leading-relaxed">{bloco.texto}</p>
-                          {bloco.link && (
+                          {bloco.icone === "💬" ? (
+                            <button
+                              onClick={() => setShowTicket(true)}
+                              className="inline-flex items-center justify-center gap-2.5 h-10 px-6 text-[13px] font-semibold bg-[#FF7A00] text-white hover:bg-[#E06900] rounded-lg cursor-pointer transition-all duration-150 border-0 mt-4 tracking-wide"
+                            >
+                              <MessageSquare size={14} strokeWidth={2} />
+                              Abrir chamado
+                            </button>
+                          ) : bloco.link ? (
                             <button
                               onClick={() => router.push(`/dashboard/ajuda/${bloco.link!.categoria || slug}/${bloco.link!.slug}`)}
                               className="inline-flex items-center gap-1.5 mt-3 text-[13px] font-medium text-[#FF7A00] hover:text-[#E06900] transition-colors cursor-pointer bg-transparent border-none"
@@ -248,7 +256,7 @@ export default function ArtigoDetailClient() {
                               {bloco.link.titulo}
                               <ChevronRight size={14} strokeWidth={2} />
                             </button>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -273,25 +281,6 @@ export default function ArtigoDetailClient() {
                     <ChevronRight size={14} strokeWidth={2} />
                   </button>
                 )}
-              </div>
-
-              <div className="mt-10 p-8 rounded-[16px] bg-surface border border-default" style={{ background: "linear-gradient(135deg, rgba(255,122,0,0.05) 0%, rgba(255,122,0,0.02) 100%)", border: "1px solid rgba(255,122,0,0.15)" }}>
-                <div className="flex items-start gap-5">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,122,0,0.12)" }}>
-                    <MessageSquare size={22} strokeWidth={1.5} color="#FF7A00" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-[16px] font-bold text-primary mb-2">Ainda precisa de ajuda?</h3>
-                    <p className="text-[13px] text-secondary leading-relaxed mb-5">Nossa equipe de suporte está pronta para ajudar. Abra um chamado e responderemos o mais rápido possível.</p>
-                    <button
-                      onClick={() => setShowTicket(true)}
-                      className="inline-flex items-center justify-center gap-2 h-11 px-6 text-[13px] font-semibold bg-[#FF7A00] text-white hover:bg-[#E06900] rounded-lg cursor-pointer transition-all duration-150 border-0"
-                    >
-                      <MessageSquare size={15} strokeWidth={2} />
-                      Abrir chamado de suporte
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

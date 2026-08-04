@@ -1,4 +1,21 @@
 const BASE = '/api/auth';
+const TIMEOUT = 15000;
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = TIMEOUT): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      throw new Error('Tempo expirado. Verifique sua conexão e tente novamente.');
+    }
+    throw new Error('Erro de conexão. Verifique sua internet.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export interface User {
   id: string;
@@ -41,7 +58,7 @@ export async function reenviarConfirmacao(email: string): Promise<{ success: boo
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${BASE}/login`, {
+  const res = await fetchWithTimeout(`${BASE}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),

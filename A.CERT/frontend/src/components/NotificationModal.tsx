@@ -60,56 +60,53 @@ export default function NotificationModal({ notification, onClose, onNavigate }:
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: '44px 44px 32px' }}>
+        <div style={{ padding: '36px 44px 24px' }}>
           <div className="flex items-start justify-between gap-6">
             {/* Close button */}
             <button
               onClick={onClose}
-              className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center hover:bg-white/[0.06] transition-colors cursor-pointer order-2"
+              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/[0.06] transition-colors cursor-pointer order-2"
             >
-              <X size={18} strokeWidth={2} className="text-[#94A3B8]" />
+              <X size={16} strokeWidth={2} className="text-[#94A3B8]" />
             </button>
 
             {/* Icon + Title block */}
-            <div className="flex items-start gap-5 order-1 min-w-0">
+            <div className="flex items-start gap-4 order-1 min-w-0">
               <div
                 className="flex items-center justify-center rounded-xl shrink-0"
-                style={{ width: 56, height: 56, background: cfg.bg }}
+                style={{ width: 48, height: 48, background: cfg.bg }}
               >
-                <Icon size={28} strokeWidth={1.6} color={cfg.color} />
+                <Icon size={24} strokeWidth={1.6} color={cfg.color} />
               </div>
 
               <div className="min-w-0">
                 <span
-                  className="inline-block text-[11px] font-semibold uppercase tracking-wider mb-2"
+                  className="inline-block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
                   style={{ color: cfg.color }}
                 >
                   {cfg.label}
                 </span>
-                <h2 className="text-[19px] font-semibold text-[#F0F3FA] leading-snug break-words">
+                <h2 className="text-[17px] font-semibold text-[#F0F3FA] leading-snug break-words">
                   {notification.title}
                 </h2>
-                <p className="text-[13px] text-[#94A3B8] mt-2">
-                  {formatDate(notification.createdAt)}
-                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Message */}
-        <div style={{ padding: '0 44px 20px' }}>
-          <p className="text-[15px] text-[#CBD5E1] leading-relaxed">
+        <div style={{ padding: '0 44px 24px' }}>
+          <p className="text-[14px] text-[#CBD5E1] leading-relaxed">
             {notification.message}
+          </p>
+          <p className="text-[12px] text-[#94A3B8] mt-3">
+            {formatDate(notification.createdAt)}
           </p>
         </div>
 
         {/* Details section */}
         {hasDetails && (
-          <div style={{ padding: '12px 44px 32px' }}>
-            <h3 className="text-[12px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-4">
-              Detalhes
-            </h3>
+          <div style={{ padding: '0 44px 28px' }}>
             <div
               className="rounded-xl"
               style={{
@@ -118,7 +115,10 @@ export default function NotificationModal({ notification, onClose, onNavigate }:
                 border: '1px solid var(--border-default)',
               }}
             >
-              <div className="text-[14px] text-[#94A3B8] leading-relaxed whitespace-pre-line">
+              <h3 className="text-[12px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
+                O que aconteceu
+              </h3>
+              <div className="text-[14px] text-[#CBD5E1] leading-relaxed whitespace-pre-line">
                 {notification.details}
               </div>
             </div>

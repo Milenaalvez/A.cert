@@ -158,7 +158,12 @@ export function ReviewModal({ record, onClose, onRefresh }: ReviewModalProps) {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
                   {record.user?.avatar ? (
-                    <img src={record.user.avatar} alt="" className="w-full h-full object-cover" />
+                    <>
+                      <img src={record.user.avatar} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                      <div className="w-full h-full bg-elevated/30 flex items-center justify-center text-xs font-bold text-muted hidden">
+                        {record.user?.name?.[0] || "U"}
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full bg-elevated/30 flex items-center justify-center text-xs font-bold text-muted">
                       {record.user?.name?.[0] || "U"}

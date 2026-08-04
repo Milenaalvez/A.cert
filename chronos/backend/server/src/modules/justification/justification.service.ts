@@ -63,7 +63,7 @@ export async function approveJustification(id: string, respondedBy: string, acto
       targetUserId: just.userId,
       metadata: { actorName, reason: just.reason, status: 'APPROVED' },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Justification] Erro:', err?.message || err))
   return just
 }
 
@@ -100,6 +100,6 @@ export async function rejectJustification(id: string, respondedBy: string, actor
       targetUserId: just.userId,
       metadata: { actorName, reason: just.reason, status: 'REJECTED' },
     },
-  }).catch(() => {})
+  }).catch((err: any) => console.error('[Justification] Erro:', err?.message || err))
   return just
 }

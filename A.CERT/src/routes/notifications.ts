@@ -9,7 +9,7 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string || '50', 10);
     const rows = await queryRaw(
-      'SELECT id, title, message, details, type, is_read as "isRead", link, source_ref as "sourceRef", created_at as "createdAt" FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2',
+      'SELECT id, title, message, type, is_read as "isRead", link, source_ref as "sourceRef", created_at as "createdAt" FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2',
       req.user!.userId, limit
     );
     res.json(rows);
@@ -60,23 +60,23 @@ router.post('/mark-all-read', authMiddleware, async (req, res) => {
 
 export { router as notificationsRoutes };
 
-export async function createNotification(userId: string, title: string, message: string, type = 'info', link?: string, sourceRef?: string, details?: string) {
+export async function createNotification(userId: string, title: string, message: string, type = 'info', link?: string, sourceRef?: string) {
   try {
     const id = randomUUID();
     await executeRaw(
-      'INSERT INTO notifications (id, user_id, title, message, details, type, is_read, link, source_ref, created_at) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9)',
-      id, userId, title, message, details || null, type, link || null, sourceRef || null, new Date().toISOString()
+      'INSERT INTO notifications (id, user_id, title, message, type, is_read, link, source_ref, created_at) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8)',
+      id, userId, title, message, type, link || null, sourceRef || null, new Date().toISOString()
     );
   } catch (err) {
     console.error('[Notifications] Erro ao criar:', err);
   }
 }
 
-export async function broadcastToAll(title: string, message: string, type = 'info', link?: string, details?: string) {
+export async function broadcastToAll(title: string, message: string, type = 'info', link?: string) {
   try {
     const users = await queryRaw('SELECT id FROM users') as any[];
     for (const u of users) {
-      await createNotification(u.id, title, message, type, link || undefined, undefined, details);
+      await createNotification(u.id, title, message, type, link || undefined, undefined);
     }
     console.log(`[Notifications] Broadcast enviado para ${users.length} usuarios: "${title}"`);
     return users.length;
