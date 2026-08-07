@@ -508,11 +508,11 @@ export class TRF1Connector implements IConnector {
         });
 
         let captchaType = null;
-        for (let t = 0; t < 30; t++) {
+        for (let t = 0; t < 20; t++) {
           if (page.isClosed()) break;
           captchaType = await detectarCaptcha(page).catch(() => null);
           if (captchaType) break;
-          await wait(500);
+          await wait(200);
         }
         LOG(`CAPTCHA: ${captchaType || 'nenhum'}`);
 
@@ -526,7 +526,7 @@ export class TRF1Connector implements IConnector {
             continue;
           }
           LOG('CAPTCHA resolvido');
-          try { await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }); } catch {}
+          try { await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }); } catch {}
         }
 
         // Verifica se o interceptor ja capturou o PDF da resposta direta

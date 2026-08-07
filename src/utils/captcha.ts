@@ -3,7 +3,7 @@ import type { Page } from 'puppeteer';
 export type CaptchaType = 'hcaptcha' | 'recaptcha' | 'texto' | null;
 
 export async function detectarCaptcha(page: Page): Promise<CaptchaType> {
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 100));
 
   const tipo = await page.evaluate(() => {
     if (document.querySelector('iframe[src*="hcaptcha"], div[class*="h-captcha"], textarea[id*="h-captcha-response"]'))
@@ -32,7 +32,8 @@ export async function detectarCaptcha(page: Page): Promise<CaptchaType> {
       const name = (input.getAttribute('name') || '').toLowerCase();
       const id = (input.id || '').toLowerCase();
       const placeholder = (input.getAttribute('placeholder') || '').toLowerCase();
-      if (name.includes('captcha') || id.includes('captcha') || placeholder.includes('captcha'))
+      if (name.includes('captcha') || id.includes('captcha') || placeholder.includes('captcha')
+          || name.includes('resposta') || id.includes('resposta') || placeholder.includes('resposta'))
         return 'texto';
     }
     return null;
@@ -98,9 +99,15 @@ export async function esperarCaptchaInterativo(
   timeoutMs = 180000,
 ): Promise<boolean> {
   const inicio = Date.now();
+  let urlInicial = '';
+  try { urlInicial = page.url(); } catch {}
+  let ultimoValor = '';
+  let contagemEstavel = 0;
+
   while (Date.now() - inicio < timeoutMs) {
     try {
       if (page.isClosed()) return false;
+
       const resolvido = await page.evaluate((t: string) => {
         if (t === 'hcaptcha') {
           const ta = document.querySelector('textarea[id*="h-captcha-response"]');
@@ -111,24 +118,126 @@ export async function esperarCaptchaInterativo(
           if (ta && (ta as HTMLTextAreaElement).value.length > 3) return true;
         }
         if (t === 'texto') {
-          const inputs = document.querySelectorAll('input[type="text"], input:not([type])');
+          const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(
+            'input[type="text"]:not([disabled]), input:not([type]):not([disabled])'
+          ));
+
+          // 1) Campo nomeado "captcha" ou "resposta" preenchido com 4+ caracteres
           for (const inp of inputs) {
             const name = (inp.getAttribute('name') || '').toLowerCase();
             const id = (inp.id || '').toLowerCase();
             const ph = (inp.getAttribute('placeholder') || '').toLowerCase();
-            if (name.includes('captcha') || id.includes('captcha') || ph.includes('captcha')) {
-              if ((inp as HTMLInputElement).value.length >= 3) return true;
+            if ((name.includes('captcha') || id.includes('captcha') || ph.includes('captcha')
+                || name.includes('resposta') || id.includes('resposta') || ph.includes('resposta'))
+              && inp.value.length >= 4) return 'filled';
+          }
+
+          // 2) Campo visivel proximo a imagem de captcha: valor com 4+ caracteres
+          //    (exclui campos de CPF/CNPJ/nome que podem estar no mesmo form)
+          const img = document.querySelector<HTMLElement>(
+            'img[src*="captcha"], img[alt*="captcha"], img[alt*="seguran"], img[alt*="codigo"], img[src*="securimage"], img[src*="kcaptcha"]'
+          );
+          if (img && img.offsetParent !== null) {
+            const ir = img.getBoundingClientRect();
+            for (const inp of inputs) {
+              const name = (inp.getAttribute('name') || '').toLowerCase();
+              const id = (inp.id || '').toLowerCase();
+              const ph = (inp.getAttribute('placeholder') || '').toLowerCase();
+              const isNonCaptcha = id.includes('cpf') || id.includes('cnpj') || name.includes('cpf')
+                || name.includes('cnpj') || id.includes('nome') || name.includes('nome')
+                || id.includes('email') || name.includes('email');
+              if (!isNonCaptcha && inp.value.length >= 4 && inp.offsetParent !== null) {
+                const pr = inp.getBoundingClientRect();
+                if (Math.abs(pr.top - ir.top) < 600 && Math.abs(pr.left - ir.left) < 900) {
+                  return 'filled';
+                }
+              }
             }
           }
+
+          // 3) Imagem captcha desapareceu → pagina avancou
+          //    Só dispara se existe input de captcha visivel (form ainda ativo)
+          const imgSumiu = !document.querySelector(
+            'img[src*="captcha"], img[alt*="captcha"], img[alt*="seguran"], img[alt*="codigo"], img[src*="securimage"], img[src*="kcaptcha"]'
+          );
+          const temInputCaptchaAtivo = inputs.some(inp => {
+            const name = (inp.getAttribute('name') || '').toLowerCase();
+            const id = (inp.id || '').toLowerCase();
+            const ph = (inp.getAttribute('placeholder') || '').toLowerCase();
+            return (name.includes('captcha') || id.includes('captcha') || ph.includes('captcha')
+                || name.includes('resposta') || id.includes('resposta') || ph.includes('resposta'))
+              && inp.offsetParent !== null;
+          });
+          if (imgSumiu && !temInputCaptchaAtivo) {
+            const body = (document.body?.textContent || '').toLowerCase();
+            if (body.includes('certidão') || body.includes('certidao')
+              || body.includes('protocolo') || body.includes('nada consta')
+              || body.includes('download') || body.includes('pdf')) {
+              return 'done';
+            }
+          }
+
+          // 4) Qualquer input visivel alem do CPF foi preenchido com 4+ caracteres apos submit
+          const temInputCaptcha = inputs.some(inp => {
+            const id = (inp.id || '').toLowerCase();
+            if (id.includes('cpf') || id.includes('cnpj')) return false;
+            return inp.value.length >= 4 && inp.offsetParent !== null;
+          });
+
+          if (temInputCaptcha) {
+            const textos = (document.body?.textContent || '').toLowerCase();
+            if (textos.includes('certidão') || textos.includes('protocolo') || textos.includes('emitida')) {
+              return 'done';
+            }
+          }
+
+          // 5) Captcha com menos de 4 chars? Retorna valor atual para tracking de estabilidade
+          for (const inp of inputs) {
+            const name = (inp.getAttribute('name') || '').toLowerCase();
+            const id = (inp.id || '').toLowerCase();
+            const ph = (inp.getAttribute('placeholder') || '').toLowerCase();
+            if (name.includes('captcha') || id.includes('captcha') || ph.includes('captcha')
+                || name.includes('resposta') || id.includes('resposta') || ph.includes('resposta')) {
+              return inp.value;
+            }
+          }
+
+          return false;
         }
         return false;
       }, tipo);
-      if (resolvido) return true;
+
+      if (resolvido === 'filled' || resolvido === 'done') {
+        return true;
+      }
+
+      // Estabilidade: se o valor do captcha parou de mudar por 3 segundos e tem 3+ chars, resolve
+      if (typeof resolvido === 'string' && resolvido.length >= 3) {
+        if (resolvido === ultimoValor) {
+          contagemEstavel++;
+          if (contagemEstavel >= 3) {
+            console.log(`[CAPTCHA] Valor estavel: "${resolvido}" — resolvido`);
+            return true;
+          }
+        } else {
+          ultimoValor = resolvido;
+          contagemEstavel = 0;
+        }
+      }
+
+      // Fallback 6: URL mudou
+      try {
+        const atual = page.url();
+        if (urlInicial && atual !== urlInicial && !atual.includes('error') && !atual.includes('block')) {
+          return true;
+        }
+      } catch {}
     } catch {
       // Page may have navigated or frame detached; continue polling
     }
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
   }
+  console.log(`[CAPTCHA] Timeout apos ${timeoutMs}ms — nao resolvido`);
   return false;
 }
 
@@ -163,7 +272,7 @@ export async function aguardarCaptchaAposSubmit(
       console.log(`[CAPTCHA] Detectado: ${tipo}`);
       return tipo;
     }
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 200));
   }
 
   return null;
