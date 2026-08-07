@@ -178,7 +178,7 @@ async function preencherFormulario(
     await wait(5000);
     await page.goto(FORM_URL, { waitUntil: 'networkidle0', timeout: 45000 });
   });
-  await wait(2000);
+  await wait(800);
   await aceitarCookies(page);
 
   LOG('Aguardando formulario...');
@@ -195,18 +195,18 @@ async function preencherFormulario(
       visible: true, timeout: 30000,
     }).catch(() => LOG('timeout recarga'));
   }
-  await wait(2000);
+  await wait(500);
 
   // PASSO 1: TIPO DE CERTIDÃO
   await selecionarMatSelect(page, 'Tipo de Certidão', tipo);
-  await wait(500);
+  await wait(200);
 
   // PASSO 2: ÓRGÃOS
   const orgaosAlvo = ['distrito federal', 'tribunal regional federal'];
   for (let i = 0; i < 2; i++) {
     const sel = await selecionarOrgaoAutocomplete(page, orgaosAlvo[i]);
     LOG(`[Órgão ${i + 1}/2]: ${sel || 'FALHOU'}`);
-    await wait(600);
+    await wait(200);
   }
 
   // PASSO 3: CPF — encontra o input pelo label ou pela classe do Angular
@@ -458,15 +458,15 @@ export class TRF1Connector implements IConnector {
 
     const pdfs: Uint8Array[] = [];
     const errors: string[] = [];
-    const throttle = criarRateLimit(2000);
+    const throttle = criarRateLimit(500);
 
     let page = await createPage();
 
     for (let i = 0; i < tipos.length; i++) {
       const tipo = tipos[i];
       if (i > 0) {
-        LOG('Aguardando 3s (recovery)...');
-        await wait(3000);
+        LOG('Aguardando 1s (recovery)...');
+        await wait(1000);
       }
 
       const cleanupRef: { fn: (() => void) | null } = { fn: null };
