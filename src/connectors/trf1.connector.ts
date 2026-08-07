@@ -1,5 +1,6 @@
 import type { IConnector } from './connector.interface.js';
 import type { DadosProprietario, ConnectorResult } from './types.js';
+import type { CaptchaType } from '../utils/captcha.js';
 import { createPage } from '../utils/browser.js';
 import { tentarBaixarPDF, aceitarCookies } from '../utils/dom-helper.js';
 import { detectarCaptcha, esperarCaptchaInterativo } from '../utils/captcha.js';
@@ -458,34 +459,25 @@ export class TRF1Connector implements IConnector {
 
     const pdfs: Uint8Array[] = [];
     const errors: string[] = [];
-    const throttle = criarRateLimit(500);
+    const throttle = criarRateLimit(100);
 
-    let page = await createPage();
-
-    for (let i = 0; i < tipos.length; i++) {
-      const tipo = tipos[i];
-      if (i > 0) {
-        LOG('Aguardando 1s (recovery)...');
-        await wait(1000);
-      }
+    async function processarTipo(tipo: string, i: number): Promise<Uint8Array | null> {
+      if (i > 0) await wait(300);
+      await throttle();
 
       const cleanupRef: { fn: (() => void) | null } = { fn: null };
+      let page: import('puppeteer').Page | null = null;
 
       try {
-        await throttle();
+        page = await createPage();
         LOG(`--- [${i + 1}/${tipos.length}] ${tipo} ---`);
         await preencherFormulario(page, dados, tipo);
 
         if (page.isClosed()) {
           errors.push(`${tipo}: pagina fechada apos submit`);
-          page = await createPage();
-          continue;
+          return null;
         }
 
-        // ── ANTES do CAPTCHA: intercepta respostas PDF ──
-        // O segredo: o servidor TRF1 retorna o PDF como resposta
-        // HTTP direta quando o form e submetido apos CAPTCHA.
-        // Capturamos ANTES da navegacao acontecer.
         const responsePromise = new Promise<Uint8Array | null>((resolve) => {
           const timeout = setTimeout(() => resolve(null), 45000);
           const handler = async (response: import('puppeteer').HTTPResponse) => {
@@ -497,69 +489,71 @@ export class TRF1Connector implements IConnector {
                 const buf = await response.buffer();
                 if (buf.length > 500 && buf[0] === 0x25) {
                   clearTimeout(timeout);
-                  page.off('response', handler);
+                  page!.off('response', handler);
                   resolve(new Uint8Array(buf));
                 }
               } catch {}
             }
           };
-          page.on('response', handler);
-          cleanupRef.fn = (() => { clearTimeout(timeout); page.off('response', handler); }) as () => void;
+          page!.on('response', handler);
+          cleanupRef.fn = (() => { clearTimeout(timeout); page!.off('response', handler); }) as () => void;
         });
 
-        let captchaType = null;
+        let captchaType: CaptchaType = null;
         for (let t = 0; t < 20; t++) {
-          if (page.isClosed()) break;
-          captchaType = await detectarCaptcha(page).catch(() => null);
+          if (page!.isClosed()) break;
+          captchaType = await detectarCaptcha(page!).catch(() => null);
           if (captchaType) break;
           await wait(200);
         }
-        LOG(`CAPTCHA: ${captchaType || 'nenhum'}`);
+        LOG(`CAPTCHA (${tipo}): ${captchaType || 'nenhum'}`);
 
         if (captchaType) {
-          await focusPageForCaptcha(page, captchaType).catch(() => {});
-          const ok = await esperarCaptchaInterativo(page, captchaType).catch(() => false);
-          if (!ok || page.isClosed()) {
+          await focusPageForCaptcha(page!, captchaType).catch(() => {});
+          const ok = await esperarCaptchaInterativo(page!, captchaType).catch(() => false);
+          if (!ok || page!.isClosed()) {
             errors.push(`${tipo}: CAPTCHA nao resolvido`);
             cleanupRef.fn?.();
-            page = await createPage();
-            continue;
+            return null;
           }
-          LOG('CAPTCHA resolvido');
-          try { await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }); } catch {}
+          LOG(`CAPTCHA (${tipo}) resolvido`);
+          try { await page!.waitForNavigation({ waitUntil: 'networkidle0', timeout: 15000 }); } catch {}
         }
 
-        // Verifica se o interceptor ja capturou o PDF da resposta direta
         const intercepted = await responsePromise;
         if (intercepted && intercepted.length > 500) {
-          pdfs.push(intercepted);
-          LOG(`PDF via waitForResponse: ${intercepted.length} bytes`);
+          LOG(`PDF (${tipo}) via waitForResponse: ${intercepted.length} bytes`);
           cleanupRef.fn?.();
-          continue;
+          return intercepted;
         }
 
         cleanupRef.fn?.();
 
-        const pdf = await capturarPDFAposEmitir(page);
+        const pdf = await capturarPDFAposEmitir(page!);
         if (pdf && pdf.length > 500 && new TextDecoder().decode(pdf.slice(0, 5)) === '%PDF-') {
-          pdfs.push(pdf);
-          LOG(`PDF ${tipo}: ${pdf.length} bytes`);
+          LOG(`PDF (${tipo}): ${pdf.length} bytes`);
+          return pdf;
         } else {
           errors.push(`${tipo}: PDF vazio`);
+          return null;
         }
       } catch (err: unknown) {
         cleanupRef.fn?.();
         const m = err instanceof Error ? err.message : 'Erro';
         errors.push(`${tipo}: ${m}`);
-        LOG(`ERRO ${tipo}: ${m}`);
-        // Recria página pra nao reusar página quebrada
-        await page.close().catch(() => {});
-        page = await createPage();
+        LOG(`ERRO (${tipo}): ${m}`);
+        return null;
+      } finally {
+        if (page && !page.isClosed()) {
+          await page.close().catch(() => {});
+        }
       }
     }
 
-    await page.close().catch(() => {});
-    page = null as any;
+    const resultados = await Promise.all(tipos.map((t, i) => processarTipo(t, i)));
+    for (const r of resultados) {
+      if (r && r.length > 500) pdfs.push(r);
+    }
 
     if (pdfs.length === 0) {
       return { status: 'error', orgao: this.nome, dataConsulta, error: `Nenhuma certidao. ${errors.join('; ')}` };
