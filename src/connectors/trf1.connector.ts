@@ -347,7 +347,6 @@ async function capturarPDFAposEmitir(page: import('puppeteer').Page): Promise<Ui
   LOG('Verificando pagina de resultado...');
 
   try { await page.waitForFunction(() => document.readyState === 'complete', { timeout: 20000 }); } catch {}
-  await wait(1500);
   if (page.isClosed()) { LOG('Pagina fechada'); return null; }
 
   // Extrai ID e codigo do DOM (1ª estratégia)
@@ -528,7 +527,6 @@ export class TRF1Connector implements IConnector {
           }
           LOG('CAPTCHA resolvido');
           try { await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }); } catch {}
-          await wait(2000);
         }
 
         // Verifica se o interceptor ja capturou o PDF da resposta direta
